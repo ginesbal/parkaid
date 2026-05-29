@@ -19,10 +19,6 @@ import SessionScreen from './src/screens/SessionScreen/index';
 // services
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
-import { installKeyboardDebug } from './src/utils/keyboardDebug';
-
-// Install keyboard-dismissal instrumentation (no-op in production).
-installKeyboardDebug();
 
 const Tab = createBottomTabNavigator();
 const TAB_CONFIG = {

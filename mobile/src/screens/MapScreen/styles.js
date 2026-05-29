@@ -44,19 +44,20 @@ export const styles = StyleSheet.create({
         elevation: 3,
     },
 
-    searchInputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-
     searchContainer: {
-        flex: 1,
+        width: '100%',
     },
 
     quickActions: {
         flexDirection: 'row',
+        justifyContent: 'flex-end',
         gap: 6,
+    },
+
+    // Used to fade out the quick actions while keeping them mounted, so we
+    // never reflow the header layout mid-animation.
+    quickActionsHidden: {
+        opacity: 0,
     },
 
     quickAction: {

@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // shared components
 import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingCard';
-import DebugLogOverlay from '../../components/DebugLogOverlay';
 
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
@@ -295,45 +294,26 @@ function MapScreen() {
     // onPress that fires from Google Maps' native tap recognizer on iOS.
     const handleSearchFocusChange = useCallback((focused) => {
         if (focused) searchFocusAtRef.current = Date.now();
-        logger.log('dbg_search_focus_change', {
-            focused,
-            focusedAt: searchFocusAtRef.current,
-        }, 'DBG');
         setIsSearchFocused(focused);
     }, []);
 
-    const handleMapPress = useCallback((e) => {
+    const handleMapPress = useCallback(() => {
         // Google Maps iOS SDK fires its native tap recognizer in parallel with
         // RN's touch delivery, so tapping the search bar also triggers this
         // onPress. If the search was focused within the last 400ms, assume the
         // onPress is that echo and ignore it — otherwise the keyboard would
         // dismiss the instant it appears.
         const dtSinceFocus = Date.now() - searchFocusAtRef.current;
-        const bailed = dtSinceFocus < 400;
-        logger.log('dbg_map_onPress', {
-            dtSinceFocus,
-            bailed,
-            isSearchFocused,
-            // position is reported by GoogleMaps iOS — useful to confirm the
-            // tap landed in the search-bar region.
-            position: e?.nativeEvent?.position,
-            coordinate: e?.nativeEvent?.coordinate,
-        }, 'DBG');
-        if (bailed) return;
+        if (dtSinceFocus < 400) return;
         if (isSearchFocused) Keyboard.dismiss();
         setSelectedSpot(null);
         setFlippableCardVisible(false);
     }, [isSearchFocused]);
 
-    const handleMapPanDrag = useCallback((e) => {
-        logger.log('dbg_map_onPanDrag', {
-            dtSinceFocus: Date.now() - searchFocusAtRef.current,
-            isSearchFocused,
-            position: e?.nativeEvent?.position,
-        }, 'DBG');
+    const handleMapPanDrag = useCallback(() => {
         handleMapInteraction();
         setFlippableCardVisible(false);
-    }, [handleMapInteraction, isSearchFocused]);
+    }, [handleMapInteraction]);
 
     // Stable setSearchMode wrapper for MapHeader — keeps memo(MapHeader) intact.
     const handleSearchModeChange = useCallback((mode) => {
@@ -505,9 +485,6 @@ function MapScreen() {
                 }}
                 onNavigate={() => onNavigate(flippableCardSpot)}
             />
-
-            {/* In-app debug overlay — __DEV__ only, renders nothing in prod. */}
-            <DebugLogOverlay />
         </View>
 
 
