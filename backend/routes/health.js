@@ -3,15 +3,12 @@ const router = express.Router();
 const { pool } = require('../config/env');
 const { jlog } = require('../utils/logger');
 
-router.get('/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    jlog('health_check_ok');
-    res.json({ status: 'healthy', message: 'Database connected' });
-  } catch (error) {
-    jlog('health_check_failed', { error: error.message }, 'error');
-    res.status(503).json({ status: 'unhealthy', error: error.message });
-  }
+router.get('/health', (req, res) => {
+  // Liveness only: return 200 whenever the web process is up. We deliberately
+  // do NOT query the database here, so a transient or paused database (common
+  // on Supabase's free tier) can't fail the platform health check and block a
+  // deploy. Use GET /api/test-db for a strict database-connectivity check.
+  res.json({ status: 'ok' });
 });
 
 router.get('/api/test-db', async (req, res) => {

@@ -72,8 +72,8 @@ from Render's shell) to create the schema and load data.
 
 | Method | Endpoint | Notes |
 | ------ | -------- | ----- |
-| `GET`  | `/health` | DB connectivity check (used by Render) |
-| `GET`  | `/api/test-db` | Row count in `parking_spots` |
+| `GET`  | `/health` | Liveness check (used by Render) — always 200 when the process is up |
+| `GET`  | `/api/test-db` | Strict database connectivity + row count in `parking_spots` |
 | `GET`  | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Spatial search. `type`: `on_street`/`off_street`/`residential`/`school`; `free=true` filters unpriced |
 | `GET`  | `/api/places/autocomplete?input=` | Google Places proxy — needs `GOOGLE_PLACES_API_KEY` (optional) |
 | `GET`  | `/api/places/details?place_id=` | Google Places proxy — needs `GOOGLE_PLACES_API_KEY` (optional) |
