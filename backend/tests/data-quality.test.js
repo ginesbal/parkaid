@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../server');
+const { app, pool } = require('../server');
 
 describe('Data Quality', () => {
 
@@ -42,7 +42,6 @@ describe('Data Quality', () => {
     });
 
     afterAll(async () => {
-        const { pool } = require('../server');
         if (pool) await pool.end();
     });
 });

@@ -1,6 +1,10 @@
 const path = require('path');
 const { appendFile, mkdir } = require('fs/promises');
 
+// File logging is opt-in: it only happens when LOG_DIR or LOG_FILE is set.
+// This keeps production/serverless hosts from writing a log file per request
+// to ephemeral disk. Console logging is always on.
+const FILE_LOGGING = !!(process.env.LOG_DIR || process.env.LOG_FILE);
 const LOG_DIR = process.env.LOG_DIR || path.resolve(__dirname, '..', 'logs');
 const LOG_FILE = process.env.LOG_FILE || path.join(LOG_DIR, 'server-activity.log');
 const WRAP_COL = 120;
@@ -90,6 +94,8 @@ async function jlog(event, data = {}, level = 'info') {
   try {
     consoleLog(event, data, level);
 
+    if (!FILE_LOGGING) return;
+
     const payload = {
       t: new Date().toISOString(),
       level,
@@ -111,4 +117,4 @@ async function jlog(event, data = {}, level = 'info') {
   }
 }
 
-module.exports = { jlog, LOG_FILE };
+module.exports = { jlog, LOG_FILE, FILE_LOGGING };

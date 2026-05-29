@@ -1,18 +1,21 @@
 {
-    "name": "curbflow-backend",
+    "name": "parkpal-backend",
     "version": "2.0.0",
     "description": "Calgary parking finder backend",
     "main": "server.js",
+    "engines": {
+        "node": ">=18"
+    },
     "scripts": {
         "start": "node server.js",
         "dev": "nodemon server.js",
+        "migrate": "node scripts/migrate.js",
         "setup": "node scripts/setup.js",
-        "test": "jest --verbose",
+        "test": "jest --verbose --runInBand",
         "test:performance": "jest performance.test.js",
         "test:coverage": "jest --coverage"
     },
     "dependencies": {
-        "@supabase/supabase-js": "^2.57.4",
         "axios": "^1.12.2",
         "cors": "^2.8.5",
         "dotenv": "^16.6.1",

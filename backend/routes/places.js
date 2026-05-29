@@ -3,8 +3,19 @@ const router = express.Router();
 const axios = require('axios');
 const { jlog } = require('../utils/logger');
 
+// The Places proxy is optional. Without a key, return a clear 503 instead of
+// calling Google with key=undefined (which fails with a cryptic REQUEST_DENIED).
+function requirePlacesKey(res) {
+  if (!process.env.GOOGLE_PLACES_API_KEY) {
+    res.status(503).json({ error: 'Places API not configured (set GOOGLE_PLACES_API_KEY)' });
+    return false;
+  }
+  return true;
+}
+
 router.get('/autocomplete', async (req, res) => {
   try {
+    if (!requirePlacesKey(res)) return;
     const { input, components, sessiontoken } = req.query;
 
     if (!input) {
@@ -41,6 +52,7 @@ router.get('/autocomplete', async (req, res) => {
 
 router.get('/details', async (req, res) => {
   try {
+    if (!requirePlacesKey(res)) return;
     const { place_id, sessiontoken, fields } = req.query;
 
     if (!place_id) {
