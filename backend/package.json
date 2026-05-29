@@ -1,5 +1,5 @@
 {
-    "name": "parkpal-backend",
+    "name": "curbflow-backend",
     "version": "2.0.0",
     "description": "Calgary parking finder backend",
     "main": "server.js",

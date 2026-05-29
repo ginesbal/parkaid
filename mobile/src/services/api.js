@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
-const API_URL = Constants.expoConfig.extra.apiUrl
+import { API_URL } from '../constants/config';
 
 
 // cache configuration
@@ -203,32 +202,6 @@ class ParkingAPI {
     });
 
     return this.request(`/api/parking/nearby?${queryParams}`);
-  }
-
-  async getSpot(id) {
-    return this.request(`/api/parking/spot/${id}`);
-  }
-
-  async checkIn(deviceId, spotId, duration = 120) {
-    return this.request('/api/parking/checkin', {
-      method: 'POST',
-      body: { deviceId, spotId, duration }
-    });
-  }
-
-  async checkOut(deviceId, checkInId) {
-    return this.request('/api/parking/checkout', {
-      method: 'POST',
-      body: { deviceId, checkInId }
-    });
-  }
-
-  async getActiveSession(deviceId) {
-    return this.request(`/api/parking/session/${deviceId}`);
-  }
-
-  async getPrediction(spotId) {
-    return this.request(`/api/parking/predict/${spotId}`);
   }
 
   // utilities

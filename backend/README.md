@@ -1,4 +1,4 @@
-# ParkPal Backend
+# CurbFlow Backend
 
 Node.js + Express API for parking search in downtown Calgary. Uses PostGIS
 spatial queries over a Supabase Postgres database.
@@ -75,7 +75,6 @@ from Render's shell) to create the schema and load data.
 | `GET`  | `/health` | DB connectivity check (used by Render) |
 | `GET`  | `/api/test-db` | Row count in `parking_spots` |
 | `GET`  | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Spatial search. `type`: `on_street`/`off_street`/`residential`/`school`; `free=true` filters unpriced |
-| `GET`  | `/api/parking/spot/:id` | Single spot |
 | `GET`  | `/api/places/autocomplete?input=` | Google Places proxy — needs `GOOGLE_PLACES_API_KEY` (optional) |
 | `GET`  | `/api/places/details?place_id=` | Google Places proxy — needs `GOOGLE_PLACES_API_KEY` (optional) |
 

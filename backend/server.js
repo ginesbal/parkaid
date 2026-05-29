@@ -36,7 +36,7 @@ const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log('\n==============================================');
-    console.log('  ParkPal Backend Server');
+    console.log('  CurbFlow Backend Server');
     console.log('==============================================\n');
     console.log(`Server running on http://localhost:${PORT}`);
     if (FILE_LOGGING) console.log(`Logging to: ${LOG_FILE}`);
