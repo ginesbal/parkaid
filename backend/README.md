@@ -123,7 +123,14 @@ push to the connected branch then auto-deploys.
 
 ## Troubleshooting
 
+- **`connect ENETUNREACH …:5432` (an IPv6 address) on Render** — you're using
+  Supabase's **direct** connection (`db.<ref>.supabase.co`), which is IPv6-only.
+  Render (and many hosts) have no outbound IPv6, so it can't connect. **Fix:**
+  use the Supabase **connection pooler** URL instead. In Supabase → **Connect**,
+  pick **Session pooler** (host looks like `aws-0-<region>.pooler.supabase.com`,
+  user `postgres.<ref>`). It's IPv4 and meant for persistent servers like this.
 - **`DATABASE_URL is not set`** — copy `.env.example` to `.env` and fill it in.
 - **`ECONNREFUSED` / timeout** — the Supabase project may be paused; open the
-  dashboard and restore it. Confirm `DATABASE_URL` is the pooler URI.
-- **No spots returned** — run `npm run migrate` then `npm run setup`.
+  dashboard and restore it.
+- **No spots returned / `relation "parking_spots" does not exist`** — run
+  `npm run migrate` then `npm run setup` against that database.
