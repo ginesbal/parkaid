@@ -1,4 +1,4 @@
-# CurbFlow — Smart Parking Finder for Downtown Calgary
+# parkaid — Smart Parking Finder for Downtown Calgary
 
 A full-stack mobile app that helps drivers find parking in downtown Calgary:
 real city parking data, an interactive map, distance-based search, and live
@@ -94,7 +94,7 @@ The Google Places **API key lives only on the server** — the mobile app calls
 ## Project Structure
 
 ```
-CurbFlow/
+parkaid/
 ├── mobile/                  # React Native (Expo) app
 │   └── src/
 │       ├── components/      # Reusable UI (cards, search bar, …)

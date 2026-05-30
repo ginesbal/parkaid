@@ -3,7 +3,7 @@ import { API_URL } from '../constants/config';
 
 
 // cache configuration
-const CACHE_PREFIX = '@CurbFlow:';
+const CACHE_PREFIX = '@parkaid:';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const OFFLINE_TTL = 24 * 60 * 60 * 1000; // 24 hours for offline mode
 

@@ -1,10 +1,10 @@
-# Render Blueprint — push-to-deploy for the CurbFlow backend.
+# Render Blueprint — push-to-deploy for the parkaid backend.
 # In Render: New + -> Blueprint -> pick this repo. Render reads this file,
 # creates the service, and prompts for the one secret (DATABASE_URL).
 # After that, every push to the connected branch auto-deploys.
 services:
   - type: web
-    name: curbflow-backend
+    name: parkaid-backend
     runtime: node
     plan: free
     region: oregon

@@ -1,7 +1,7 @@
 /**
  * Google Maps API Verification Script
  * 
- * This script tests all the Google Maps APIs required by the CurbFlow application.
+ * This script tests all the Google Maps APIs required by the parkaid application.
  * Run this script whenever you:
  * - Set up a new development environment
  * - Change API keys

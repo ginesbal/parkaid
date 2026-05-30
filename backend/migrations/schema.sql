@@ -1,4 +1,4 @@
--- CurbFlow schema. Safe to run repeatedly (idempotent, non-destructive).
+-- parkaid schema. Safe to run repeatedly (idempotent, non-destructive).
 -- Apply with: npm run migrate
 
 -- Required extensions (GEOGRAPHY type + uuid_generate_v4()).

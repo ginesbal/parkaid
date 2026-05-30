@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ParkPal — Case Study</title>
+  <title>parkaid — Case Study</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -271,7 +271,7 @@
 
   <!-- ════════════════ HERO ════════════════ -->
   <header class="hero">
-    <h1>ParkPal</h1>
+    <h1>parkaid</h1>
     <p class="subtitle">A mobile app that helps drivers find and manage parking in downtown Calgary — quickly and stress-free.</p>
     <div class="badges">
       <span class="badge">React Native</span>
@@ -305,7 +305,7 @@
         Parking in downtown Calgary is surprisingly stressful. Information is scattered across street signs, city websites, and multiple third-party apps. Drivers end up circling blocks, unsure where spots are available, what the price is, or which zone rules apply.
       </p>
       <div class="highlight">
-        <strong>The core question ParkPal set out to answer:</strong><br>
+        <strong>The core question parkaid set out to answer:</strong><br>
         "Where can I park right now, how much will it cost, and how far do I have to walk?"
       </div>
       <p>
@@ -334,7 +334,7 @@
 
       <h3>Progressive Disclosure</h3>
       <p>
-        Instead of showing everything at once, ParkPal reveals details in layers:
+        Instead of showing everything at once, parkaid reveals details in layers:
       </p>
       <ul>
         <li><strong>Home screen</strong> — shows the essentials: distance, price, and type for each spot.</li>
@@ -375,7 +375,7 @@
 
       <h3>Calgary Open Data</h3>
       <p>
-        ParkPal uses real parking data from the City of Calgary's open data portal. An ETL (Extract, Transform, Load) pipeline pulls in spot locations, zone boundaries, capacity numbers, and pricing rules, then cleans and loads them into the database.
+        parkaid uses real parking data from the City of Calgary's open data portal. An ETL (Extract, Transform, Load) pipeline pulls in spot locations, zone boundaries, capacity numbers, and pricing rules, then cleans and loads them into the database.
       </p>
 
       <h3>PostGIS for Spatial Queries</h3>
@@ -470,7 +470,7 @@
 
       <h3>State Management — Custom Hooks</h3>
       <p>
-        Instead of using a heavy state library like Redux, ParkPal manages state through four custom React hooks. Each hook owns one slice of the app's data and logic:
+        Instead of using a heavy state library like Redux, parkaid manages state through four custom React hooks. Each hook owns one slice of the app's data and logic:
       </p>
       <ul>
         <li><strong>useLocationManager</strong> — handles GPS permissions, fetches the user's coordinates, reverse-geocodes to a street name, and caches the result locally.</li>
@@ -545,7 +545,7 @@
         </li>
         <li>
           <strong>Offline-first reliability</strong><br>
-          Mobile networks are unreliable — tunnels, elevators, dead zones. ParkPal uses a multi-layer cache: in-memory for instant re-reads, AsyncStorage for persistence across app restarts, and a stale-data fallback (up to 24 hours) when the network is completely unavailable. The user sees slightly outdated info instead of an error screen.
+          Mobile networks are unreliable — tunnels, elevators, dead zones. parkaid uses a multi-layer cache: in-memory for instant re-reads, AsyncStorage for persistence across app restarts, and a stale-data fallback (up to 24 hours) when the network is completely unavailable. The user sees slightly outdated info instead of an error screen.
         </li>
         <li>
           <strong>Complex map interactions</strong><br>
@@ -557,7 +557,7 @@
         </li>
         <li>
           <strong>Google Places API cost optimization</strong><br>
-          Google charges per autocomplete request, but groups requests that share a session token into a single billing event. ParkPal generates a session token and rotates it every three minutes, ensuring that a typical search-and-select flow is billed as one session instead of multiple individual requests.
+          Google charges per autocomplete request, but groups requests that share a session token into a single billing event. parkaid generates a session token and rotates it every three minutes, ensuring that a typical search-and-select flow is billed as one session instead of multiple individual requests.
         </li>
       </ol>
     </section>
@@ -565,7 +565,7 @@
   </main>
 
   <footer>
-    <p>ParkPal Case Study &mdash; Portfolio Project Deep Dive</p>
+    <p>parkaid Case Study &mdash; Portfolio Project Deep Dive</p>
     <p style="margin-top:6px;">React Native &middot; Expo &middot; Node.js &middot; PostgreSQL/PostGIS &middot; Google Maps API</p>
   </footer>
 

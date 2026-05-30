@@ -1,4 +1,4 @@
-package com.curbflow.app
+package com.parkaid.app
 
 import android.app.Application
 import android.content.res.Configuration

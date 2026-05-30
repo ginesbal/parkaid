@@ -1,8 +1,8 @@
-# CurbFlow: A Full Redesign Story
+# parkaid: A Full Redesign Story
 
 ## What This Is
 
-CurbFlow is a parking finder for downtown Calgary. React Native (Expo SDK 54) frontend with three screens — browse nearby spots, locate them on a map, and manage an active parking session. Express.js backend backed by PostgreSQL with PostGIS for spatial queries, proxying the Google Places API and serving parking data from Calgary Open Data.
+parkaid is a parking finder for downtown Calgary. React Native (Expo SDK 54) frontend with three screens — browse nearby spots, locate them on a map, and manage an active parking session. Express.js backend backed by PostgreSQL with PostGIS for spatial queries, proxying the Google Places API and serving parking data from Calgary Open Data.
 
 This was originally a capstone project called ParkPal. The codebase worked, but it had accumulated significant technical debt. This document covers the full overhaul — what was wrong, what changed, and why.
 
@@ -84,16 +84,16 @@ Replaced all three logging systems with a single `Logger.js`:
 
 ## The Rename
 
-ParkPal became CurbFlow across 10+ files:
+ParkPal became parkaid across 10+ files:
 
 - `app.config.js`: name, slug, bundleIdentifier, package
 - `package.json` (both): name fields
 - `server.js`: banner text
-- `api.js`: AsyncStorage cache key prefix `@CurbFlow:`
+- `api.js`: AsyncStorage cache key prefix `@parkaid:`
 - Android: `build.gradle` namespace/applicationId, `strings.xml` app_name, `settings.gradle` rootProject, Kotlin package declarations
 - Both READMEs
 
-The rename had to be atomic — a partial rename (where some files say ParkPal and others say CurbFlow) would break the build. Every reference was updated in a single pass and verified with a project-wide grep.
+The rename had to be atomic — a partial rename (where some files say ParkPal and others say parkaid) would break the build. Every reference was updated in a single pass and verified with a project-wide grep.
 
 ---
 

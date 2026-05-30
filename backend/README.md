@@ -1,4 +1,4 @@
-# CurbFlow Backend
+# parkaid Backend
 
 Node.js + Express API for parking search in downtown Calgary. Uses PostGIS
 spatial queries over a Supabase Postgres database.

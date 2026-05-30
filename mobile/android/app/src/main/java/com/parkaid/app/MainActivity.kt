@@ -1,4 +1,4 @@
-package com.curbflow.app
+package com.parkaid.app
 
 import android.os.Build
 import android.os.Bundle
