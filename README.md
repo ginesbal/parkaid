@@ -1,159 +1,128 @@
-# parkaid — Smart Parking Finder for Downtown Calgary
+# parkaid - Smart Parking Finder for Downtown Calgary
 
-A full-stack mobile app that helps drivers find parking in downtown Calgary:
-real city parking data, an interactive map, distance-based search, and live
-pricing/zone details. **React Native (Expo)** on the front end, **Node/Express +
-PostgreSQL/PostGIS (Supabase)** on the back end, deployed to **Render** with
-push-to-deploy.
+parkaid is a mobile app that helps drivers find parking in downtown Calgary. It
+shows real parking spots from the city's open data on a map, lets you search
+around a location, and shows the price and zone rules for each spot.
 
-> **Status:** Backend live on Render. One environment variable to run
-> (`DATABASE_URL`). Mobile app points at the backend through one setting
-> (`EXPO_PUBLIC_API_URL`).
+The app is built with React Native (Expo). The backend is a Node and Express
+API with a PostgreSQL database on Supabase, and it uses PostGIS (a Postgres
+add-on for location queries) to find nearby spots. The backend runs on Render.
 
----
+The backend is live. It needs one setting to run (`DATABASE_URL`), and the app
+needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
-## Table of Contents
+## What it does
 
-- [Tech Stack](#tech-stack)
-- [How It Fits Together](#how-it-fits-together)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Run It Locally](#run-it-locally)
-- [Deploy the Backend (Render)](#deploy-the-backend-render)
-- [API Endpoints](#api-endpoints)
-- [Engineering Highlights](#engineering-highlights)
-- [Design Decisions](#design-decisions)
-- [Attribution & Author](#attribution--author)
+- Search for parking near your current location, or drop a pin to search
+  somewhere else. There's a radius selector from 250m up to 2km.
+- See spots on a map with markers you can tap for details (price, zone,
+  restrictions, capacity).
+- See a list of nearby spots sorted by distance, with a rough walking time and
+  filters by type (street, lot, residential, school, or free).
+- Keep working when the network drops. Responses are cached on the phone, so
+  the app shows the last data it had instead of an error.
 
----
+## Tech stack
 
-## Tech Stack
+Mobile app
+- React Native with Expo SDK 54 (one codebase for iOS, Android, and web)
+- React Navigation for moving between screens
+- React Native Maps for the map and markers
+- Expo Location for GPS
+- AsyncStorage for caching data on the phone
 
-| Layer | Technology | Notes |
-| ----- | ---------- | ----- |
-| **Mobile** | React Native 0.81 + Expo SDK 54, React 19 | iOS, Android, and web from one codebase |
-| | React Navigation 6 | Tab + native-stack navigation |
-| | React Native Maps | Google Maps rendering + custom markers |
-| | Expo Location | GPS / geolocation |
-| | AsyncStorage | Offline cache + request de-duplication |
-| **Backend** | Node.js (18+) + Express 4 | RESTful JSON API, CORS-enabled |
-| | `pg` (node-postgres) | Direct SQL, pooled connections |
-| | PostGIS | Spatial "find parking within X meters" queries |
-| | axios | Server-side Google Places proxy |
-| **Database** | PostgreSQL via Supabase | Managed Postgres + PostGIS extension |
-| **External data** | Calgary Open Data | ~2,700 real parking spots (street, lot, residential, school) |
-| | Google Places API | Address search / autocomplete (key stays server-side) |
-| **Deploy** | Render (Blueprint) | Push-to-deploy from `render.yaml` |
-| **Testing** | Jest + Supertest | Integration tests against the live API contract |
+Backend
+- Node.js and Express for the API
+- node-postgres (`pg`) to talk to the database with plain SQL
+- PostGIS for the "find spots within X meters" queries
+- axios to call the Google Places API from the server
 
-There is **no Redis and no ORM** — the backend is intentionally small: plain
-Express routes over pooled SQL.
+Database and data
+- PostgreSQL, hosted on Supabase
+- Parking data from Calgary's Open Data (about 2,700 spots)
+- Google Places API for address search
 
----
+Hosting and testing
+- Render hosts the backend and redeploys when you push to GitHub
+- Jest and Supertest for the backend tests
 
-## How It Fits Together
+There's no Redis and no ORM. The backend is small on purpose: just Express
+routes running SQL.
+
+## How it works
 
 ```
-┌─────────────────────┐        HTTPS         ┌──────────────────────────┐
-│   Mobile app        │  ───────────────────▶│   Express API (Render)   │
-│   React Native /    │   /api/parking/...   │                          │
-│   Expo              │   /api/places/...    │   • spatial search (SQL) │
-│                     │◀───────────────────  │   • Google Places proxy  │
-└─────────────────────┘     JSON             └──────────┬───────────────┘
-        │                                                │ pooled SQL (PostGIS)
-        │ EXPO_PUBLIC_API_URL                            ▼
-        │ points at the backend            ┌──────────────────────────┐
-        │                                  │  PostgreSQL + PostGIS     │
-        ▼                                  │  (Supabase)               │
-   Google Maps SDK                         │  parking_spots table      │
-   (map tiles on device)                   └──────────────────────────┘
-                                                         ▲
-                                       one-time load     │
-                                   ┌─────────────────────┘
-                                   │  Calgary Open Data (npm run setup)
+Mobile app          Express API              PostgreSQL + PostGIS
+(React Native)  ->  (on Render)         ->   (Supabase)
+                    finds nearby spots,       parking_spots table
+                    proxies Google Places
 ```
 
-The Google Places **API key lives only on the server** — the mobile app calls
-`/api/places/*` so the key is never shipped in the app bundle.
+When you search, the app sends your location to the backend. The backend runs a
+database query to find the closest spots and sends back a list. The address
+search and map also go through the backend. That way the Google API key stays on
+the server and is never shipped inside the app.
 
----
-
-## Features
-
-- **Location search** — current GPS location, pin-drop for a custom area, and
-  Google Places autocomplete, with a radius selector (250 m – 2 km).
-- **Interactive map** — real parking markers, flippable cards with full spot
-  details (pricing, zone, restrictions, capacity).
-- **Nearby list** — sorted by distance with walking-time estimates and
-  type filters (street / lot / residential / school / free).
-- **Offline-friendly** — responses are cached in AsyncStorage, so the app keeps
-  working (with a clear "offline" state) when the network drops.
-
----
-
-## Project Structure
+## Project structure
 
 ```
 parkaid/
-├── mobile/                  # React Native (Expo) app
-│   └── src/
-│       ├── components/      # Reusable UI (cards, search bar, …)
-│       ├── screens/         # HomeScreen, MapScreen, SessionScreen
-│       ├── hooks/           # useParkingSpots, usePlacesAutocomplete, …
-│       ├── services/        # api.js — single API client
-│       ├── constants/       # config.js — single source of API_URL
-│       └── utils/           # helpers
-│
-├── backend/                 # Node.js + Express API
-│   ├── config/              # env.js — DB pool + env validation
-│   ├── routes/              # health, parking, places
-│   ├── middleware/          # request logging
-│   ├── migrations/          # schema.sql (PostGIS table + indexes)
-│   ├── scripts/             # migrate.js, setup.js (load Calgary data)
-│   ├── tests/               # Jest + Supertest integration tests
-│   ├── utils/               # logger
-│   └── server.js            # app entry point
-│
-├── render.yaml              # Render Blueprint (push-to-deploy config)
-└── README.md
+  mobile/                  React Native (Expo) app
+    src/
+      components/          reusable UI (cards, search bar, and so on)
+      screens/             HomeScreen, MapScreen, SessionScreen
+      hooks/               useParkingSpots, usePlacesAutocomplete, and so on
+      services/            api.js, the single API client
+      constants/           config.js, the single place the API URL is set
+      utils/               helpers
+
+  backend/                 Node and Express API
+    config/                env.js, sets up the DB connection and checks env vars
+    routes/                health, parking, places
+    middleware/            request logging
+    migrations/            schema.sql, the table and indexes
+    scripts/               migrate.js and setup.js (loads Calgary data)
+    tests/                 Jest and Supertest tests
+    utils/                 logger
+    server.js              starts the app
+
+  render.yaml              Render config for auto-deploy
+  README.md
 ```
 
----
+## Running it locally
 
-## Run It Locally
+There are two parts to run: the backend (the API) and the mobile app.
 
-You'll run two pieces: the **backend** (API) and the **mobile** app.
-
-### Prerequisites
-
-- **Node.js 18+** and npm
-- A **Supabase** project (free tier is fine) — this is your database
-- For the app: the **Expo Go** app on your phone, or an iOS/Android simulator
+You'll need:
+- Node.js 18 or newer, and npm
+- A Supabase project (the free tier is fine). This is your database.
+- The Expo Go app on your phone, or an iOS/Android simulator
 
 ### 1. Backend
 
 ```bash
 cd backend
-cp .env.example .env     # then paste your DATABASE_URL into .env (see below)
+cp .env.example .env     # then put your DATABASE_URL in .env (see below)
 npm install
-npm run migrate          # creates the parking_spots table + PostGIS indexes
-npm run setup            # loads ~2,700 real parking spots from Calgary Open Data
-npm start                # serves http://localhost:3000
+npm run migrate          # creates the parking_spots table and indexes
+npm run setup            # loads about 2,700 spots from Calgary Open Data
+npm start                # runs on http://localhost:3000
 ```
 
-**Where `DATABASE_URL` comes from:** in Supabase, click **Connect** (top of the
-dashboard) → choose **Session pooler** → copy the URI → replace `[YOUR-PASSWORD]`
-with your database password. The host should contain `pooler.supabase.com`.
-(See the deploy section for *why the pooler matters*.)
+Where to get `DATABASE_URL`: in Supabase, click Connect at the top, choose
+Session pooler, copy the URL, and replace `[YOUR-PASSWORD]` with your database
+password. The address should contain `pooler.supabase.com`. (The deploy section
+explains why the pooler one matters.)
 
-Quick check it's working:
+Quick check that it works:
 
 ```bash
-curl http://localhost:3000/health        # {"status":"ok"}
+curl http://localhost:3000/health
 curl "http://localhost:3000/api/parking/nearby?lat=51.0447&lng=-114.0719&radius=1000"
 ```
 
-More backend detail (scripts, env vars, troubleshooting) lives in
+There's more backend detail (scripts, env vars, troubleshooting) in
 [`backend/README.md`](backend/README.md).
 
 ### 2. Mobile app
@@ -163,174 +132,147 @@ cd mobile
 npm install
 ```
 
-Create `mobile/.env` with one line pointing at your backend:
+Make a file at `mobile/.env` with one line pointing at your backend:
 
 ```bash
-# Phone/simulator can't reach "localhost" on your computer — use your LAN IP.
+# Your phone can't reach "localhost" on your computer, so use your computer's
+# IP address on your network (for example 192.168.1.20).
 EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
-# (For a deployed backend, use the https Render URL instead.)
 ```
 
-Then start Expo:
+Then start it:
 
 ```bash
-npx expo start -c        # press 'i' for iOS, 'a' for Android, or scan the QR in Expo Go
+npx expo start -c        # press i for iOS, a for Android, or scan the QR code
 ```
 
-> **Tip:** "localhost" inside the app means the *phone*, not your computer.
-> On a real device use your machine's LAN IP (e.g. `192.168.1.20:3000`); once the
-> backend is deployed, just use the Render URL.
+Once the backend is deployed, you can use the Render URL here instead of your
+local IP.
 
----
+## Deploying the backend (Render)
 
-## Deploy the Backend (Render)
+The repo has a `render.yaml` file, which tells Render how to build and run the
+backend. You set this up once, and after that every push to GitHub redeploys it.
 
-The backend is set up for **push-to-deploy**: a [`render.yaml`](render.yaml)
-Blueprint is committed, so Render knows how to build and run everything. You do
-this once, then every `git push` redeploys automatically.
+### Step 1: create the service
 
-### Step 1 — Create the service
+1. Push the repo to GitHub.
+2. In Render, click New, then Blueprint, and pick this repo. The `render.yaml`
+   file has to be on the branch Render reads, which is usually `main`. If it's
+   only on another branch, merge it to `main` or pick that branch.
+3. Render reads the file and asks for one secret: `DATABASE_URL`.
 
-1. Push this repo to GitHub.
-2. In Render: **New + → Blueprint** and pick this repo.
-   `render.yaml` must be on the branch Render reads (its **default branch**,
-   usually `main`). If it's only on a feature branch, merge it to `main` or
-   select that branch.
-3. Render reads the Blueprint and prompts for one secret: **`DATABASE_URL`**.
+### Step 2: use the right database URL
 
-### Step 2 — Use the right database URL ⚠️ (the #1 gotcha)
+This is the part that trips people up. Supabase gives you two connection
+strings, and you want the Session pooler one.
 
-Supabase gives you two kinds of connection string. **Use the pooler one:**
+- Use this: Session pooler. The address contains `pooler.supabase.com`. It works
+  over IPv4, which Render can use.
+- Don't use this: Direct connection. The address looks like
+  `db.<something>.supabase.co`. It only works over IPv6, which Render can't use.
 
-| Use this ✅ | Not this ❌ |
-| ---------- | ---------- |
-| **Session pooler** | **Direct connection** |
-| `…@aws-0-<region>.pooler.supabase.com:5432/postgres` | `…@db.<ref>.supabase.co:5432/postgres` |
-| IPv4 — works on Render | **IPv6-only** — Render can't reach it |
+If you use the direct one, the app will deploy but every database call fails
+with an error like `connect ENETUNREACH` and an IPv6 address. If you see that,
+switch to the pooler URL.
 
-If you use the direct URL, the app deploys but every database call fails with
-`connect ENETUNREACH …:5432` (an IPv6 address). The pooler URL fixes it. In
-Supabase: **Connect → Session pooler**.
+### Step 3: set up the database once
 
-### Step 3 — Initialize the database (once)
-
-The pooled connection is empty until you create the table and load data. From
-Render's **Shell** tab (or locally with the same `DATABASE_URL`):
+A fresh database is empty until you create the table and load the data. Open
+Render's Shell tab (or run these locally with the same `DATABASE_URL`):
 
 ```bash
-npm run migrate     # create the schema
-npm run setup       # load Calgary parking data
+npm run migrate     # create the table
+npm run setup       # load the parking data
 ```
 
-### Step 4 — Verify it's live
+### Step 4: check it's live
 
-Open these in a browser (the first request may take ~30–60s on the free tier —
-it "cold starts" after inactivity):
+Open these in a browser. On the free tier the first request can take 30 to 60
+seconds because the server goes to sleep when it's idle and has to wake up.
 
-- `https://<your-service>.onrender.com/health` → `{"status":"ok"}`
-- `https://<your-service>.onrender.com/api/test-db` → `{"success":true,"totalSpots":...}`
+- `https://<your-service>.onrender.com/health` should return `{"status":"ok"}`
+- `https://<your-service>.onrender.com/api/test-db` should return a count of
+  spots
 
-Then point the mobile app's `EXPO_PUBLIC_API_URL` at that Render URL. Done.
+Then set the app's `EXPO_PUBLIC_API_URL` to that Render URL.
 
-> **Why the deploy is reliable:** `/health` is a lightweight *liveness* check
-> that doesn't touch the database, so a paused/slow Supabase can't fail the
-> deploy. The strict database check lives at `/api/test-db`.
+One thing worth knowing: `/health` only checks that the server is running, not
+that the database is reachable. That's on purpose. If it checked the database
+and Supabase was asleep, the whole deploy would fail. The full database check is
+at `/api/test-db` instead.
 
----
+## API endpoints
 
-## API Endpoints
+| Method | Endpoint | What it does |
+| ------ | -------- | ------------ |
+| GET | `/health` | Says the server is up. Used by Render. Always returns 200 when running. |
+| GET | `/api/test-db` | Checks the database connection and returns how many spots are stored. |
+| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. |
+| GET | `/api/places/autocomplete?input=` | Address search suggestions (calls Google from the server). |
+| GET | `/api/places/details?place_id=` | Details for one address (calls Google from the server). |
 
-| Method | Endpoint | Description |
-| ------ | -------- | ----------- |
-| `GET` | `/health` | Liveness check (used by Render) — always 200 when the server is up |
-| `GET` | `/api/test-db` | Strict database connectivity + row count |
-| `GET` | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Spatial search. `type`: `on_street`/`off_street`/`residential`/`school`; `free=true` filters unpriced |
-| `GET` | `/api/places/autocomplete?input=` | Google Places autocomplete (server-side key) |
-| `GET` | `/api/places/details?place_id=` | Google Places details (server-side key) |
+## What I worked on
 
----
+This started as a school capstone project. It ran on a laptop but wasn't really
+deployable. I took it from that to a backend that deploys and stays running.
+The main things I did:
 
-## Engineering Highlights
+- Got it deploying on Render with push-to-deploy, so pushing to GitHub updates
+  the live backend on its own.
+- Cut the required setup down to one setting (`DATABASE_URL`). The old code
+  crashed on startup because it built a client for a service it never used. I
+  removed that and added a clear error message for when the setting is missing.
+- Fixed three separate deploy problems, and confirmed each fix by actually
+  running it:
+  - The health check was querying the database, so when the database was slow
+    or asleep the deploy failed. I changed it to just confirm the server is up.
+  - The build failed because of a leftover `package-lock.json` at the top of the
+    repo with no `package.json` next to it. I removed it and pointed Render at
+    the backend folder.
+  - Database calls failed because the connection string was the IPv6-only one.
+    Switching to the pooler URL fixed it.
+- Made the backend steadier: it reuses database connections, doesn't crash if a
+  connection drops, and only turns on SSL when it's actually needed.
+- The nearby search runs inside the database using PostGIS with an index, so
+  it stays fast (around 30ms for the closest 100 spots).
+- Wrote a script that pulls four datasets from Calgary's open data and loads
+  them into one table. It's safe to run again without making duplicates.
+- Cleaned up the old code: removed files nothing imported, dropped a dependency
+  we didn't need, and stopped committing `node_modules` (about 1,900 files).
+- Kept the Google API key on the server by having the app call the backend
+  instead of calling Google directly.
+- Added tests that check the API returns the right shape and that the distance
+  search actually works.
 
-Things worth calling out (and résumé-ready bullets):
+## A few choices I made
 
-- **Took a capstone prototype to a reliably deployable service** on Render with
-  push-to-deploy (committed `render.yaml` Blueprint) and a one-command setup.
-- **Reduced required configuration to a single environment variable**
-  (`DATABASE_URL`) by removing an unused client that crashed the server on boot,
-  and added fail-fast validation with a clear error message.
-- **Diagnosed and fixed real deployment failures** end to end: a health-check
-  timeout (made `/health` a DB-independent liveness probe), a monorepo build
-  failure (`rootDir`/orphan lockfile), and a Supabase **IPv6 vs. IPv4 pooler**
-  connectivity issue — each reproduced and verified, not guessed.
-- **Hardened the Node/Express backend for production:** pooled PostgreSQL with an
-  idle-connection error handler, conditional SSL (managed DB vs. local), and
-  opt-in file logging so it doesn't write to ephemeral disk per request.
-- **Engineered efficient geospatial search** with PostgreSQL + PostGIS
-  (`ST_DWithin` / `ST_Distance` over a GiST index), returning the nearest 100
-  spots in ~30 ms.
-- **Built an ETL loader** that ingests four Calgary Open Data datasets into a
-  unified, idempotent schema (`ON CONFLICT` upserts, re-runnable migrations).
-- **Simplified an inherited codebase:** removed dead code, an unused dependency,
-  and ~1,900 accidentally-committed `node_modules` files; aligned the mobile↔
-  backend API contract to exactly what the app uses.
-- **Protected third-party API keys** by proxying Google Places through the
-  backend instead of shipping the key in the mobile bundle.
-- **Wrote integration tests** (Jest + Supertest) that assert the live API
-  response contract and spatial-query correctness.
+- The app reads its backend URL from one place (`constants/config.js`), so the
+  local, network, and production setups don't drift apart.
+- The database does the location filtering and sorting, not the Node code. The
+  API just formats the result. This keeps the server simple.
+- Responses are cached on the phone, so the app still shows something useful
+  when the connection is bad.
+- The server fails loudly at startup if a required setting is missing, but
+  handles a temporary database outage per request instead of crashing.
 
----
+## Credits
 
-## Design Decisions
+This was a capstone project for SAIT, built with a team of five.
 
-**Single source of truth for the API URL.** The mobile app resolves its backend
-URL in exactly one place (`constants/config.js`, from `EXPO_PUBLIC_API_URL`), so
-there's no drift between local, LAN, and production.
+My main contributions:
+- Redesigned the user interface
+- Rebuilt the map screen, including the tappable cards and marker grouping
+- Wrote the custom hooks for location, parking spots, and sessions
+- Added performance work like debouncing, memoization, and lazy loading
+- Restructured the components to be easier to maintain
+- Improved the backend endpoints for the location queries
+- Moved the database to Supabase (Postgres and PostGIS) and set up the Render
+  deployment
 
-**Thin backend, smart database.** Spatial filtering and sorting happen in
-PostGIS (indexed), not in Node — the API just shapes the JSON. This keeps the
-server stateless and easy to scale or restart.
+The original project structure and base features were built with my capstone
+team during Year 2, Semester 2.
 
-**Offline-first client.** Responses are cached in AsyncStorage with TTLs, and
-in-flight requests are de-duplicated, so the UI stays responsive on flaky
-mobile networks.
-
-**Fail loud at boot, degrade gracefully at runtime.** Missing `DATABASE_URL`
-stops the server with a clear message; a momentarily unreachable database
-returns a clean error per-request instead of crashing the process.
-
----
-
-## Attribution & Author
-
-### Project Attribution
-
-This project was developed as a Capstone Project for SAIT in collaboration with
-five team members.
-
-### My Contributions
-
-- **UI/UX Redesign:** Completely revamped the user interface with modern design patterns
-- **Map Screen Architecture:** Redesigned and implemented the interactive map functionality with flippable cards and dynamic clustering
-- **Custom Hooks Development:** Created reusable hooks for location management, parking spots, and session handling
-- **Performance Optimization:** Implemented debouncing, memoization, and lazy loading strategies
-- **Component Refactoring:** Restructured the component architecture for better maintainability
-- **API Integration:** Enhanced backend endpoints for efficient spatial queries
-- **Database & Deployment:** Migrated to Supabase (Postgres/PostGIS) and set up
-  reliable push-to-deploy hosting on Render
-
-### Original Team
-
-- Initial project structure and concept developed with my Capstone Project Team.
-- Base functionality created collaboratively during Year 2 Semester 2 of my program.
-
-### Author
-
-**Ehrl Balquin**
-**LinkedIn:** <https://www.linkedin.com/in/ehrlbalquin/>
-**GitHub:** <https://github.com/ginesbal>
-
----
-
-*This project showcases proficiency in mobile development, API design, database
-management, geospatial queries, and modern deployment workflows.*
+Author: Ehrl Balquin
+LinkedIn: https://www.linkedin.com/in/ehrlbalquin/
+GitHub: https://github.com/ginesbal
