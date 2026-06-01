@@ -43,7 +43,7 @@ class Logger {
 
     async save() {
         try {
-            const key = `curbflow_logs_${this.sessionId}`;
+            const key = `parkaid_logs_${this.sessionId}`;
             await AsyncStorage.setItem(key, JSON.stringify(this.logs));
         } catch (e) {
             // silent fail
@@ -52,11 +52,11 @@ class Logger {
 
     async cleanup() {
         try {
-            const prev = await AsyncStorage.getItem('curbflow_log_session');
+            const prev = await AsyncStorage.getItem('parkaid_log_session');
             if (prev && prev !== this.sessionId.toString()) {
-                await AsyncStorage.removeItem(`curbflow_logs_${prev}`);
+                await AsyncStorage.removeItem(`parkaid_logs_${prev}`);
             }
-            await AsyncStorage.setItem('curbflow_log_session', this.sessionId.toString());
+            await AsyncStorage.setItem('parkaid_log_session', this.sessionId.toString());
         } catch (e) {
             // silent fail
         }

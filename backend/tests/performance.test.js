@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../server'); 
+const { app, pool } = require('../server');
 
 describe('Performance Benchmarks', () => {
     const testLocation = { lat: 51.0447, lng: -114.0719, radius: 1000 };
@@ -32,5 +32,9 @@ describe('Performance Benchmarks', () => {
 
         // Verify it's under your claimed 120ms average
         expect(avg).toBeLessThan(450); // Give some buffer
+    });
+
+    afterAll(async () => {
+        if (pool) await pool.end();
     });
 });

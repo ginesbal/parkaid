@@ -1,0 +1,25 @@
+# Render Blueprint — push-to-deploy for the parkaid backend.
+# In Render: New + -> Blueprint -> pick this repo. Render reads this file,
+# creates the service, and prompts for the one secret (DATABASE_URL).
+# After that, every push to the connected branch auto-deploys.
+services:
+  - type: web
+    name: parkaid-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # The only required secret. Set its value when prompted (or in the
+      # service's Environment tab). Use your Supabase pooler URI (port 6543).
+      - key: DATABASE_URL
+        sync: false
+      # Optional — uncomment to enable the /api/places/* proxy.
+      # - key: GOOGLE_PLACES_API_KEY
+      #   sync: false

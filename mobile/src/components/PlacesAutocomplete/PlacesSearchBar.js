@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { API_URL } from '../../constants/config';
 import { RADIUS, TOKENS, alpha } from '../../constants/theme';
 import usePlacesAutocomplete from '../../hooks/usePlacesAutocomplete';
 
@@ -50,7 +51,7 @@ const devDirectFetcher = async ({ url, params }) => {
 
 // production fetcher: routes through backend to protect api key
 const productionFetcher = async ({ url, params }) => {
-  const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+  const baseUrl = API_URL;
   const endpoint = url === 'autocomplete' ? '/api/places/autocomplete' : '/api/places/details';
   const queryString = new URLSearchParams(params).toString();
   const response = await fetch(`${baseUrl}${endpoint}?${queryString}`);

@@ -1,8 +1,8 @@
 
 export default {
   expo: {
-    name: "CurbFlow",
-    slug: "curbflow",
+    name: "parkaid",
+    slug: "parkaid",
     version: "1.0.0",
     orientation: "portrait",
     icon: "src/utils/assets/icon.png",
@@ -21,14 +21,14 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.curbflow.app"
+      bundleIdentifier: "com.parkaid.app"
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "src/utils/assets/adaptive-icon.png",
         backgroundColor: "#001d4a"
       },
-      package: "com.curbflow.app"
+      package: "com.parkaid.app"
     },
     web: {
       favicon: "src/utils/assets/favicon.png",

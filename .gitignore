@@ -17,3 +17,6 @@ ios/Pods/
 *.log
 backend/logs/
 .DS_Store
+
+# Claude Code local scratch (internal worktrees; settings.local.json stays tracked)
+.claude/worktrees/

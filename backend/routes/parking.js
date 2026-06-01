@@ -3,6 +3,11 @@ const router = express.Router();
 const { pool } = require('../config/env');
 const { jlog } = require('../utils/logger');
 
+// Calgary price-zone -> $/hour. The mobile app reads both `price` and
+// `price_per_hour`, so /nearby returns both from this one source.
+const PRICE_BY_ZONE = { '1': 1.0, '2': 2.0, '3': 3.0, '4': 4.0, '5': 5.0, '6': 6.0 };
+const priceForZone = (zone) => (zone ? PRICE_BY_ZONE[zone] || 0 : 0);
+
 router.get('/nearby', async (req, res) => {
   const started = Date.now();
   try {
@@ -126,12 +131,8 @@ router.get('/nearby', async (req, res) => {
           octant: spot.octant,
         },
 
-        price_per_hour: spot.price_zone
-          ? {
-            '1': 1.0, '2': 2.0, '3': 3.0,
-            '4': 4.0, '5': 5.0, '6': 6.0,
-          }[spot.price_zone] || 0
-          : 0,
+        price: priceForZone(spot.price_zone),
+        price_per_hour: priceForZone(spot.price_zone),
 
         max_duration_minutes: spot.max_time ? parseFloat(spot.max_time) : null,
       })),
@@ -144,38 +145,6 @@ router.get('/nearby', async (req, res) => {
       details: error.detail || 'Unknown error',
     });
   }
-});
-
-router.get('/spot/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `SELECT *, ST_AsGeoJSON(location)::json as coordinates FROM parking_spots WHERE id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      jlog('spot_not_found', { spotId: id });
-      return res.status(404).json({ error: 'Spot not found' });
-    }
-
-    jlog('spot_details_retrieved', { spotId: id });
-    res.json({ success: true, data: result.rows[0] });
-  } catch (error) {
-    jlog('spot_details_error', { error: error.message }, 'error');
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/checkin', async (req, res) => {
-  jlog('checkin_requested', { note: 'feature not yet implemented' });
-  res.json({ success: false, message: 'Check-in feature coming soon', placeholder: true });
-});
-
-router.post('/checkout', async (req, res) => {
-  jlog('checkout_requested', { note: 'feature not yet implemented' });
-  res.json({ success: false, message: 'Checkout feature coming soon', placeholder: true });
 });
 
 module.exports = router;

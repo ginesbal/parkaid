@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains how to properly configure Google Maps APIs for the CurbFlow mobile application. Follow these steps carefully to avoid common configuration errors.
+This document explains how to properly configure Google Maps APIs for the parkaid mobile application. Follow these steps carefully to avoid common configuration errors.
 
 ## Important: Understanding the Two Places APIs
 
