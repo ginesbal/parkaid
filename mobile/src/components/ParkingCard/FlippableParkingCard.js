@@ -13,20 +13,44 @@ import {
 import { TOKENS } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
 import {
+    getCapacity,
+    getMaxStay,
+    getPriceInfo,
+    getRestrictions,
+    getSpotType,
+} from '../../utils/spotInfo';
+import {
     CARD_HEIGHT,
     CARD_WIDTH,
     CONTENT_WIDTH,
     SCREEN_HEIGHT,
     SCREEN_WIDTH
 } from './cardConstants';
-import {
-    getCurrentPrice,
-    getDetailsPages,
-    getSpotType,
-    parseMetadata,
-    parseZoneInfo,
-} from './cardHelpers';
+import { getDetailsPages } from './cardHelpers';
 import { styles } from './cardStyles';
+
+const HERO_STYLE = {
+    paid: styles.priceHeroPaid,
+    free: styles.priceHeroFree,
+    permit: styles.priceHeroPermit,
+    unknown: styles.priceHeroUnknown,
+};
+const HERO_COLOR = {
+    paid: TOKENS.text,
+    free: TOKENS.success,
+    permit: TOKENS.warning,
+    unknown: TOKENS.textMuted,
+};
+const BADGE_STYLE = { danger: styles.badgeDanger, warning: styles.badgeWarning, info: styles.badgeInfo };
+const BADGE_TEXT = { danger: styles.badgeTextDanger, warning: styles.badgeTextWarning, info: styles.badgeTextInfo };
+const BADGE_ICON = { danger: TOKENS.danger, warning: TOKENS.warning, info: TOKENS.textMuted };
+
+const formatDistance = (meters) => {
+    const m = Number(meters);
+    if (!Number.isFinite(m)) return { value: '—', unit: 'm' };
+    if (m < 1000) return { value: String(m), unit: 'm' };
+    return { value: (m / 1000).toFixed(1), unit: 'km' };
+};
 
 function FlippableParkingCard({
     visible = false,
@@ -47,6 +71,8 @@ function FlippableParkingCard({
 
     const pagesScrollRef = useRef(null);
     const pageWidth = CONTENT_WIDTH;
+
+    const detailsPages = spot ? getDetailsPages(spot) : [];
 
     const scrollToPage = (i) => {
         const safe = Math.max(0, Math.min(i, detailsPages.length - 1));
@@ -142,77 +168,23 @@ function FlippableParkingCard({
     const frontOpacity = flipAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 0] });
     const backOpacity = flipAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
 
-    const zoneInfo = parseZoneInfo(spot);
-    const metadata = parseMetadata(spot);
-    const detailsPages = getDetailsPages(spot);
-    const priceDisplay = getCurrentPrice(spot, zoneInfo);
+    // Everything the front shows comes from one shared source of truth.
+    const type = getSpotType(spot);
+    const price = getPriceInfo(spot);
+    const maxStay = getMaxStay(spot);
+    const capacity = getCapacity(spot);
+    const distance = formatDistance(spot.distance);
+    const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
 
-    const getStatusColor = () => {
-        if (spot.no_stopping) return TOKENS.danger;
-        if (spot.permit_zone || zoneInfo.permit_zone) return TOKENS.warning;
-        if (spot.status === 'available') return TOKENS.success;
-        return TOKENS.primaryAlt;
-    };
+    // Restrictions, minus max-stay (it already has its own stat cell).
+    const badges = getRestrictions(spot).filter((b) => b.key !== 'max').slice(0, 3);
 
-    const statusColor = getStatusColor();
-
-    const getBadgeStyle = (type) => {
-        switch (type) {
-            case 'danger': return [styles.badgeLarge, styles.badgeDanger];
-            case 'warning': return [styles.badgeLarge, styles.badgeWarning];
-            case 'info': return [styles.badgeLarge, styles.badgeInfo];
-            default: return [styles.badgeLarge, styles.badgeDefault];
-        }
-    };
-
-    const getBadgeTextStyle = (type) => {
-        switch (type) {
-            case 'danger': return [styles.badgeTextLarge, styles.badgeTextDanger];
-            case 'warning': return [styles.badgeTextLarge, styles.badgeTextWarning];
-            case 'info': return [styles.badgeTextLarge, styles.badgeTextInfo];
-            default: return [styles.badgeTextLarge, styles.badgeTextDefault];
-        }
-    };
-
-    const getCriticalBadges = () => {
-        const badges = [];
-
-        // Priority 1: Blocking conditions
-        if (spot.no_stopping) {
-            badges.push({
-                type: 'danger',
-                icon: 'cancel',
-                text: 'No stopping',
-                color: TOKENS.danger,
-                key: 'no_stop'
-            });
-        }
-
-        // Priority 2: Permit requirements
-        if (spot.permit_zone || zoneInfo.permit_zone) {
-            badges.push({
-                type: 'warning',
-                icon: 'card-account-details',
-                text: 'Permit zone',
-                color: TOKENS.warning,
-                key: 'permit'
-            });
-        }
-
-        // Priority 3: Time limits (only if significant)
-        const maxTime = spot.max_time || metadata.max_time;
-        if (maxTime && !maxTime.toLowerCase().includes('no limit')) {
-            badges.push({
-                type: 'info',
-                icon: 'clock-outline',
-                text: maxTime,
-                color: TOKENS.primaryAlt,
-                key: 'time'
-            });
-        }
-
-        return badges.slice(0, 2);
-    };
+    // The third stat falls back gracefully: max stay -> spaces -> spot type.
+    const thirdStat = maxStay
+        ? { value: maxStay.short, unit: '', label: 'Max stay' }
+        : capacity
+            ? { value: String(capacity), unit: '', label: 'Spaces' }
+            : { value: type.label, unit: '', label: 'Type' };
 
     return (
         <>
@@ -248,20 +220,8 @@ function FlippableParkingCard({
                 >
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
-                            <MaterialCommunityIcons
-                                name={
-                                    spot.spot_type === 'on_street'
-                                        ? 'car'
-                                        : spot.spot_type === 'off_street'
-                                            ? 'parking'
-                                            : spot.spot_type === 'residential'
-                                                ? 'home'
-                                                : 'school'
-                                }
-                                size={16}
-                                color={statusColor}
-                            />
-                            <Text style={styles.spotTypeText}>{getSpotType(spot)}</Text>
+                            <MaterialCommunityIcons name={type.icon} size={14} color={TOKENS.primary} />
+                            <Text style={styles.spotTypeText}>{type.label}</Text>
                         </View>
                         <TouchableOpacity
                             style={styles.closeBtn}
@@ -274,60 +234,79 @@ function FlippableParkingCard({
 
                     <View style={styles.frontContent}>
                         <Text style={styles.address} numberOfLines={2}>
-                            {spot.address || spot.address_desc || 'Parking Spot'}
+                            {spot.address || spot.address_desc || 'Parking spot'}
                         </Text>
 
-                        <View style={styles.quickStatsLarge}>
-                            <View style={styles.statRow}>
-                                <View style={styles.statLeft}>
-                                    <View style={styles.statIcon}>
-                                        <MaterialCommunityIcons name="walk" size={18} color={TOKENS.warning} />
-                                    </View>
-                                    <Text style={styles.statLabelLeft}>Walk time</Text>
-                                </View>
-                                <Text style={styles.statValueRight}>{spot.walkingTime || 0} min</Text>
-                            </View>
-
-                            <View style={styles.statRow}>
-                                <View style={styles.statLeft}>
-                                    <View style={styles.statIcon}>
-                                        <MaterialCommunityIcons name="map-marker-distance" size={18} color={TOKENS.primary} />
-                                    </View>
-                                    <Text style={styles.statLabelLeft}>Distance</Text>
-                                </View>
-                                <Text style={styles.statValueRight}>{spot.distance || 0} m</Text>
-                            </View>
-
-                            <View style={styles.statRow}>
-                                <View style={styles.statLeft}>
-                                    <View style={styles.statIcon}>
-                                        <MaterialCommunityIcons name="currency-usd" size={18} color={TOKENS.primary} />
-                                    </View>
-                                    <Text style={styles.statLabelLeft}>Rate</Text>
-                                </View>
-                                <Text style={[styles.statValueRight, styles.statValuePrimary]}>
-                                    {priceDisplay}
+                        {/* Price hero — the biggest, most-glanced answer. */}
+                        <View style={[styles.priceHero, HERO_STYLE[price.kind]]}>
+                            <View style={styles.priceHeroLeft}>
+                                <Text style={[styles.priceHeroValue, { color: HERO_COLOR[price.kind] }]}>
+                                    {price.value}
                                 </Text>
+                                {price.unit ? (
+                                    <Text style={styles.priceHeroUnit}>{price.unit}</Text>
+                                ) : null}
+                            </View>
+                            {price.note ? (
+                                <Text style={styles.priceHeroNote} numberOfLines={2}>{price.note}</Text>
+                            ) : null}
+                        </View>
+
+                        {/* Three quick facts */}
+                        <View style={styles.statRow}>
+                            <View style={styles.statCell}>
+                                <View style={styles.statValueRow}>
+                                    <Text style={styles.statValue}>{walk ?? '—'}</Text>
+                                    <Text style={styles.statValueUnit}>min</Text>
+                                </View>
+                                <Text style={styles.statLabel}>Walk</Text>
+                            </View>
+
+                            <View style={styles.statCellDivider} />
+
+                            <View style={styles.statCell}>
+                                <View style={styles.statValueRow}>
+                                    <Text style={styles.statValue}>{distance.value}</Text>
+                                    <Text style={styles.statValueUnit}>{distance.unit}</Text>
+                                </View>
+                                <Text style={styles.statLabel}>Away</Text>
+                            </View>
+
+                            <View style={styles.statCellDivider} />
+
+                            <View style={styles.statCell}>
+                                <View style={styles.statValueRow}>
+                                    <Text style={styles.statValue} numberOfLines={1}>{thirdStat.value}</Text>
+                                </View>
+                                <Text style={styles.statLabel}>{thirdStat.label}</Text>
                             </View>
                         </View>
 
-                        <View style={styles.badgesLarge}>
-                            {getCriticalBadges().map((badge) => (
-                                <View key={badge.key} style={getBadgeStyle(badge.type)}>
-                                    <MaterialCommunityIcons name={badge.icon} size={14} color={badge.color} />
-                                    <Text style={getBadgeTextStyle(badge.type)}>{badge.text}</Text>
-                                </View>
-                            ))}
-                        </View>
+                        {badges.length > 0 && (
+                            <View style={styles.badgesRow}>
+                                {badges.map((badge) => (
+                                    <View key={badge.key} style={[styles.badge, BADGE_STYLE[badge.tone]]}>
+                                        <MaterialCommunityIcons
+                                            name={badge.icon}
+                                            size={14}
+                                            color={BADGE_ICON[badge.tone]}
+                                        />
+                                        <Text style={[styles.badgeText, BADGE_TEXT[badge.tone]]} numberOfLines={1}>
+                                            {badge.text}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.actionsLarge}>
-                        <TouchableOpacity style={styles.detailsBtnLarge} onPress={flip}>
-                            <MaterialCommunityIcons name="information-outline" size={18} color={TOKENS.text} />
+                        <TouchableOpacity style={styles.detailsBtnLarge} onPress={flip} activeOpacity={0.7}>
+                            <MaterialCommunityIcons name="information-outline" size={20} color={TOKENS.text} />
                             <Text style={styles.detailsBtnTextLarge}>Details</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.navBtnLarge} onPress={onNavigate}>
-                            <MaterialCommunityIcons name="navigation" size={20} color="#FFFFFF" />
+                        <TouchableOpacity style={styles.navBtnLarge} onPress={onNavigate} activeOpacity={0.85}>
+                            <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
                             <Text style={styles.navBtnTextLarge}>Navigate</Text>
                         </TouchableOpacity>
                     </View>
@@ -417,7 +396,7 @@ function FlippableParkingCard({
                                                             ]}
                                                             numberOfLines={3}
                                                         >
-                                                            {item.value ? `${item.value} (open)` : 'Open link'}
+                                                            {item.value || 'Open link'}
                                                         </Text>
                                                     </TouchableOpacity>
                                                 ) : (
@@ -486,8 +465,8 @@ function FlippableParkingCard({
 
                     {detailsPages.length === 1 && (
                         <View style={styles.backActionsLarge}>
-                            <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate}>
-                                <MaterialCommunityIcons name="navigation-variant" size={20} color="#FFFFFF" />
+                            <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate} activeOpacity={0.85}>
+                                <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
                                 <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
                             </TouchableOpacity>
                         </View>

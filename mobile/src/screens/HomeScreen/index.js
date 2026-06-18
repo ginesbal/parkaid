@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { FlatList, RefreshControl, Animated } from 'react-native';
+import { FlatList, RefreshControl, Animated, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Header from './components/Header';
@@ -160,6 +160,10 @@ export default function HomeScreen({ navigation }) {
     />
   );
 
+  // Inset hairline between rows — begins where the address begins
+  // (padding 20 + walk block 44 + gap 10 = 74), matching the map's bottom sheet.
+  const renderSeparator = () => <View style={listStyles.rowSeparator} />;
+
   return (
     <>
       <StatusBar style="dark" />
@@ -169,6 +173,7 @@ export default function HomeScreen({ navigation }) {
           data={spots}
           renderItem={renderSpot}
           keyExtractor={(item) => String(item.id)}
+          ItemSeparatorComponent={renderSeparator}
           ListHeaderComponent={
             <Header
               location={location}
@@ -209,3 +214,11 @@ export default function HomeScreen({ navigation }) {
     </>
   );
 }
+
+const listStyles = StyleSheet.create({
+  rowSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: TOKENS.divider,
+    marginLeft: 74,
+  },
+});

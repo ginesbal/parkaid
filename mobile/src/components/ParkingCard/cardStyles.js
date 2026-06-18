@@ -1,11 +1,12 @@
 // src/components/ParkingCard/cardStyles.js
 //
-// Spacing rhythm: 12px within groups, 14px between sections.
-// Per Emil Kowalski's design engineering principles:
-//   - Every detail compounds into something that feels right
-//   - Consistent spacing rhythm, no mixed values
-//   - Buttons must feel responsive (scale on press)
-//   - No invisible containers — elements only take the space they need
+// Card design language:
+//   - One thing dominates each card: the price. It gets a tinted slab and the
+//     largest type so a glance answers "what will this cost me".
+//   - Three quick facts (walk / distance / max stay) sit in an open row with
+//     the same vertical-rule signature as the list, tying the two views together.
+//   - Hairline borders, near-invisible shadows, one cerulean accent.
+//   - 16px rhythm within the card; touch targets >= 52px.
 
 import { StyleSheet } from 'react-native';
 import { TOKENS, alpha } from '../../constants/theme';
@@ -35,24 +36,24 @@ export const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     backgroundColor: TOKENS.surface,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TOKENS.hairline,
     backfaceVisibility: 'hidden',
     shadowColor: TOKENS.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 5,
   },
 
   cardFront: {
-    padding: 20,
+    padding: 22,
     zIndex: 2,
   },
 
   cardBack: {
-    padding: 20,
+    padding: 22,
     zIndex: 1,
   },
 
@@ -61,20 +62,25 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   cardHeaderBack: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
     gap: 10,
   },
 
+  // Type chip — small tinted pill so the spot category reads instantly.
   spotTypeTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 11,
+    borderRadius: 9999,
+    backgroundColor: TOKENS.primaryWash,
   },
 
   pageTitleTag: {
@@ -85,7 +91,7 @@ export const styles = StyleSheet.create({
   },
 
   spotTypeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: TOKENS.primary,
     textTransform: 'uppercase',
@@ -93,9 +99,9 @@ export const styles = StyleSheet.create({
   },
 
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'transparent',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TOKENS.hairline,
@@ -104,9 +110,9 @@ export const styles = StyleSheet.create({
   },
 
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: TOKENS.text,
     alignItems: 'center',
     justifyContent: 'center',
@@ -118,134 +124,184 @@ export const styles = StyleSheet.create({
   },
 
   address: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
     color: TOKENS.text,
-    marginBottom: 14,
-    lineHeight: 24,
-    letterSpacing: -0.3,
+    marginBottom: 16,
+    lineHeight: 27,
+    letterSpacing: -0.4,
   },
 
-  // Stat rows — tight rhythm with hairline dividers
-  quickStatsLarge: {
-    marginBottom: 14,
-  },
-
-  statRow: {
+  // Price hero — the single most important answer, so it gets the slab + big type.
+  priceHero: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: TOKENS.divider,
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 16,
   },
-
-  statLeft: {
+  priceHeroPaid: {
+    backgroundColor: TOKENS.primaryWash,
+    borderColor: TOKENS.primaryHairline,
+  },
+  priceHeroFree: {
+    backgroundColor: TOKENS.successSoft,
+    borderColor: alpha(TOKENS.success, 0.22),
+  },
+  priceHeroPermit: {
+    backgroundColor: TOKENS.warningSoft,
+    borderColor: alpha(TOKENS.warning, 0.22),
+  },
+  priceHeroUnknown: {
+    backgroundColor: TOKENS.surfaceMuted,
+    borderColor: TOKENS.hairline,
+  },
+  priceHeroLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-    flex: 1,
+    alignItems: 'baseline',
+    flexShrink: 1,
   },
-
-  // Icon sits inline — no invisible container
-  statIcon: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  statLabelLeft: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: TOKENS.textMuted,
-  },
-
-  statValueRight: {
-    fontSize: 16,
+  priceHeroValue: {
+    fontSize: 30,
+    lineHeight: 34,
     fontWeight: '600',
-    color: TOKENS.text,
-    textAlign: 'right',
-    marginLeft: 12,
-    flexShrink: 0,
+    letterSpacing: -0.8,
     fontVariant: ['tabular-nums'],
   },
-
-  statValuePrimary: {
-    color: TOKENS.primary,
-    fontWeight: '600',
+  priceHeroUnit: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 3,
+  },
+  priceHeroNote: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '500',
+    color: TOKENS.textMuted,
+    textAlign: 'right',
+    flexShrink: 1,
+    maxWidth: '46%',
   },
 
-  // Badges — simple inline text
-  badgesLarge: {
+  // Three quick facts, open row with vertical rules (same signature as the list).
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginBottom: 16,
+  },
+  statCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 6,
+  },
+  statCellDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: TOKENS.divider,
+    alignSelf: 'stretch',
+    marginVertical: 4,
+  },
+  statValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  statValue: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '600',
+    color: TOKENS.text,
+    letterSpacing: -0.3,
+    fontVariant: ['tabular-nums'],
+  },
+  statValueUnit: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: TOKENS.textMuted,
+    marginLeft: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: TOKENS.textMuted,
+    letterSpacing: 0.1,
+  },
+
+  // Restriction badges — only the rules a driver would get ticketed for.
+  badgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 16,
   },
-
-  badgeLarge: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    borderRadius: 9999,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-
-  badgeDefault: {},
-  badgeWarning: {},
-  badgeInfo: {},
-  badgeDanger: {},
-
-  badgeTextLarge: {
-    fontSize: 12,
+  badgeDanger: {
+    backgroundColor: TOKENS.dangerSoft,
+    borderColor: alpha(TOKENS.danger, 0.22),
+  },
+  badgeWarning: {
+    backgroundColor: TOKENS.warningSoft,
+    borderColor: alpha(TOKENS.warning, 0.22),
+  },
+  badgeInfo: {
+    backgroundColor: TOKENS.surfaceMuted,
+    borderColor: TOKENS.hairline,
+  },
+  badgeText: {
+    fontSize: 13,
     fontWeight: '500',
-    letterSpacing: 0,
   },
-
-  badgeTextDefault: { color: TOKENS.primary },
+  badgeTextDanger: { color: TOKENS.danger },
   badgeTextWarning: { color: TOKENS.warning },
   badgeTextInfo: { color: TOKENS.textMuted },
-  badgeTextDanger: { color: TOKENS.danger },
 
-  // Action buttons — min 48px touch target per accessibility
+  // Action buttons — 54px touch targets.
   actionsLarge: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     marginTop: 'auto',
   },
-
   detailsBtnLarge: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 54,
     backgroundColor: 'transparent',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: TOKENS.hairline,
-    borderRadius: 12,
-    gap: 6,
+    borderColor: TOKENS.hairlineStrong,
+    borderRadius: 14,
+    gap: 7,
   },
-
   detailsBtnTextLarge: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: TOKENS.text,
   },
-
   navBtnLarge: {
-    flex: 1.5,
+    flex: 1.6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 54,
     backgroundColor: TOKENS.primary,
-    borderRadius: 12,
-    gap: 7,
+    borderRadius: 14,
+    gap: 8,
   },
-
   navBtnTextLarge: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -271,7 +327,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: TOKENS.divider,
   },
@@ -281,8 +337,8 @@ export const styles = StyleSheet.create({
   },
 
   detailLabelLarge: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 19,
     color: TOKENS.textMuted,
     flex: 1,
     fontWeight: '400',
@@ -294,8 +350,8 @@ export const styles = StyleSheet.create({
   },
 
   detailValueLarge: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 21,
     fontWeight: '500',
     color: TOKENS.text,
     textAlign: 'right',
@@ -305,12 +361,12 @@ export const styles = StyleSheet.create({
   },
 
   detailValueHighlight: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: TOKENS.primary,
   },
 
-  // Pager nav — proper spacing from content
+  // Pager nav
   pagerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -321,9 +377,9 @@ export const styles = StyleSheet.create({
   },
 
   pagerArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'transparent',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TOKENS.hairline,
@@ -348,7 +404,7 @@ export const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: TOKENS.hairline,
+    backgroundColor: TOKENS.hairlineStrong,
   },
 
   pagerDotActive: {
@@ -358,22 +414,13 @@ export const styles = StyleSheet.create({
     backgroundColor: TOKENS.primary,
   },
 
-  pagerMeta: {},
-
-  pagerMetaText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: TOKENS.textMuted,
-    fontVariant: ['tabular-nums'],
-  },
-
   linkText: {
     textDecorationLine: 'underline',
     color: TOKENS.primary,
   },
 
   noDataText: {
-    fontSize: 14,
+    fontSize: 15,
     color: TOKENS.textMuted,
     textAlign: 'center',
     paddingVertical: 32,
@@ -388,9 +435,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 54,
     backgroundColor: TOKENS.primary,
-    borderRadius: 12,
+    borderRadius: 14,
     gap: 8,
   },
 });
