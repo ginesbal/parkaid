@@ -95,7 +95,9 @@ export default function ParkingListItem({
                 {/* Tier 1a — walk time, the hero metric */}
                 <View style={styles.walkBlock}>
                     <Text style={styles.walkValue}>{walk ?? '—'}</Text>
-                    <Text style={styles.walkUnit}>min</Text>
+                    {walk != null && (
+                        <Text style={styles.walkUnit}>{walk === 1 ? 'minute' : 'minutes'}</Text>
+                    )}
                 </View>
 
                 {/* Quiet vertical rule — relates the columns without boxing them in.
@@ -117,13 +119,10 @@ export default function ParkingListItem({
                         />
                         <Text style={styles.metaText}>{type.label}</Text>
 
-                        <Text style={styles.metaDivider}>·</Text>
-                        <Text style={styles.metaTextNum}>{spot.distance}m</Text>
-
                         {maxStay && (
                             <>
                                 <Text style={styles.metaDivider}>·</Text>
-                                <Text style={styles.metaTextNum}>{maxStay.short} max</Text>
+                                <Text style={styles.metaText}>{maxStay.text} max</Text>
                             </>
                         )}
                     </View>
@@ -131,13 +130,13 @@ export default function ParkingListItem({
 
                 <View style={styles.sectionDivider} />
 
-                {/* Tier 1b — price */}
+                {/* Tier 1b — price. Rate stacks over its unit so "per hour" reads in full. */}
                 <View style={styles.priceBlock}>
                     {price.kind === 'paid' ? (
-                        <Text style={styles.priceValue} numberOfLines={1}>
-                            {price.value}
-                            <Text style={styles.priceUnit}>{price.unit}</Text>
-                        </Text>
+                        <>
+                            <Text style={styles.priceValue} numberOfLines={1}>{price.value}</Text>
+                            {price.unit ? <Text style={styles.priceUnit}>{price.unit}</Text> : null}
+                        </>
                     ) : (
                         <Text
                             style={[styles.priceTag, { color: PRICE_TONE[price.tone] || TOKENS.textMuted }]}
@@ -181,12 +180,13 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
     },
 
-    // Hero metric. Width stays 44 so the bottom sheet's row separator inset
-    // (padding 20 + walkBlock 44 + gap 10 = 74) stays aligned to the address.
+    // Hero metric. Width is 56 so the full word "minutes" fits beneath the
+    // number; the row separators inset by 86 (padding 20 + walkBlock 56 + gap 10)
+    // to align with the address.
     walkBlock: {
         alignItems: 'center',
         justifyContent: 'center',
-        width: 44,
+        width: 56,
     },
     walkValue: {
         fontSize: 26,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         color: TOKENS.textMuted,
         marginTop: 1,
-        letterSpacing: 0.2,
+        letterSpacing: 0.1,
     },
 
     content: {
@@ -229,13 +229,6 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         color: TOKENS.textMuted,
     },
-    // Distance + max stay use tabular figures so values don't jitter while scrolling.
-    metaTextNum: {
-        fontSize: 13,
-        fontWeight: '400',
-        color: TOKENS.textMuted,
-        fontVariant: ['tabular-nums'],
-    },
     metaDivider: {
         fontSize: 13,
         color: TOKENS.textFaint,
@@ -254,10 +247,13 @@ const styles = StyleSheet.create({
         letterSpacing: -0.3,
         fontVariant: ['tabular-nums'],
     },
+    // Stacked beneath the rate, right-aligned with it.
     priceUnit: {
-        fontSize: 12,
+        fontSize: 11,
+        lineHeight: 13,
         fontWeight: '400',
         color: TOKENS.textMuted,
+        marginTop: 1,
     },
     // Free / Permit / Check signs — a word, not a number. Sized below the dollar
     // figure so a real price always wins the eye.

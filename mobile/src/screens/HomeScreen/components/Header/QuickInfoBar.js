@@ -10,11 +10,12 @@ const QuickInfoBar = ({ quickInfo }) => {
     let displayValue, displayLabel;
 
     if (showNearest) {
-        displayValue = `${quickInfo.nearest.walkingTime}`;
-        displayLabel = 'min to closest spot';
+        const mins = quickInfo.nearest.walkingTime;
+        displayValue = `${mins}`;
+        displayLabel = `${mins === 1 ? 'minute' : 'minutes'} to closest spot`;
     } else if (quickInfo.total > 0) {
         displayValue = `${quickInfo.total}`;
-        displayLabel = 'parking spots nearby';
+        displayLabel = quickInfo.total === 1 ? 'parking spot nearby' : 'parking spots nearby';
     } else {
         return null;
     }
@@ -27,9 +28,9 @@ const QuickInfoBar = ({ quickInfo }) => {
             </View>
             {showPrice ? (
                 <View style={styles.quickInfoMeta}>
-                    <Text style={styles.quickInfoMetaLabel}>Avg.</Text>
+                    <Text style={styles.quickInfoMetaLabel}>Average</Text>
                     <Text style={styles.quickInfoMetaValue}>
-                        ${Number(quickInfo.averagePrice).toFixed(2)}/hr
+                        ${Number(quickInfo.averagePrice).toFixed(2)} per hour
                     </Text>
                 </View>
             ) : null}

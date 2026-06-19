@@ -46,25 +46,32 @@ export const getSpotType = (spot) => SPOT_TYPES[spot?.spot_type] || SPOT_TYPES.o
 
 // ---- duration formatting ---------------------------------------------------
 
+// Spell numbers with units in full words, pluralized: "1 hour", "2 hours".
+export const plural = (n, word) => `${n} ${n === 1 ? word : `${word}s`}`;
+
 // The backend treats max_time as minutes (it derives max_duration_minutes from
-// it). Format compactly: 30m, 1h, 2h, 1h 30m.
-export const formatDurationShort = (minutes) => {
+// it). Spell durations out fully: "30 minutes", "1 hour", "2 hours",
+// "1 hour 30 minutes".
+export const formatDuration = (minutes) => {
     const m = Math.round(Number(minutes));
     if (!Number.isFinite(m) || m <= 0) return null;
-    if (m < 60) return `${m}m`;
     const h = Math.floor(m / 60);
     const rem = m % 60;
-    return rem === 0 ? `${h}h` : `${h}h ${rem}m`;
+    const parts = [];
+    if (h > 0) parts.push(plural(h, 'hour'));
+    if (rem > 0) parts.push(plural(rem, 'minute'));
+    return parts.join(' ');
 };
 
-export const formatDurationLong = (minutes) => {
+// Compact value + unit for a stat cell: whole hours collapse ("2" / "hours"),
+// otherwise stay in minutes ("90" / "minutes").
+const durationParts = (minutes) => {
     const m = Math.round(Number(minutes));
-    if (!Number.isFinite(m) || m <= 0) return null;
-    if (m < 60) return `${m} min`;
-    const h = Math.floor(m / 60);
-    const rem = m % 60;
-    if (rem === 0) return `${h} hr`;
-    return `${h} hr ${rem} min`;
+    if (m % 60 === 0) {
+        const h = m / 60;
+        return { value: String(h), unit: h === 1 ? 'hour' : 'hours' };
+    }
+    return { value: String(m), unit: m === 1 ? 'minute' : 'minutes' };
 };
 
 // ---- max stay --------------------------------------------------------------
@@ -75,10 +82,12 @@ export const getMaxStay = (spot) => {
         pick(spot, 'max_time');
     const minutes = raw != null ? parseFloat(raw) : NaN;
     if (!Number.isFinite(minutes) || minutes <= 0) return null;
+    const parts = durationParts(minutes);
     return {
         minutes,
-        short: formatDurationShort(minutes),
-        long: formatDurationLong(minutes),
+        text: formatDuration(minutes), // "2 hours" — full phrase
+        value: parts.value,            // "2"      — for a stat cell
+        unit: parts.unit,              // "hours"
     };
 };
 
@@ -115,7 +124,7 @@ const paidWindow = (spot) => {
 /**
  * Resolve what a spot costs, honestly.
  *
- *   kind 'paid'    -> a dollar rate applies (value: "$3.00", unit: "/hr")
+ *   kind 'paid'    -> a dollar rate applies (value: "$3.00", unit: "per hour")
  *   kind 'free'    -> genuinely free (value: "Free")
  *   kind 'permit'  -> permit holders only; not free to the public (value: "Permit")
  *   kind 'unknown' -> data is incomplete; tell the user to check signs
@@ -139,14 +148,15 @@ export const getPriceInfo = (spot) => {
             tone: 'text',
             value: `$${numeric.toFixed(2)}`,
             amount: numeric,
-            unit: '/hr',
+            unit: 'per hour',
+            perHour: true,
             note: paidWindow(spot) || `Zone ${priceZone}`,
         };
     }
 
     // Some blocks only carry the rate inside the HTML blob. Only call it an
     // hourly rate when the text actually says so — a lot's "$12 daily max"
-    // is not "/hr".
+    // is not a per-hour rate.
     const fromHtml = firstDollarFromHtml(html);
     if (fromHtml) {
         const hourly = /hour|\/\s*hr|per\s*hr/i.test(String(html));
@@ -155,13 +165,14 @@ export const getPriceInfo = (spot) => {
             tone: 'text',
             value: fromHtml,
             amount: parseFloat(fromHtml.replace('$', '')) || null,
-            unit: hourly ? '/hr' : null,
+            unit: hourly ? 'per hour' : null,
+            perHour: hourly,
             note: paidWindow(spot),
         };
     }
 
     if (htmlSaysFree(html)) {
-        return { kind: 'free', tone: 'success', value: 'Free', amount: 0, unit: null, note: paidWindow(spot) };
+        return { kind: 'free', tone: 'success', value: 'Free', amount: 0, unit: null, perHour: false, note: paidWindow(spot) };
     }
 
     // No rate, but a permit zone — this is NOT free to the public.
@@ -172,11 +183,12 @@ export const getPriceInfo = (spot) => {
             value: 'Permit',
             amount: null,
             unit: null,
+            perHour: false,
             note: `Zone ${permitZone}`,
         };
     }
 
-    return { kind: 'unknown', tone: 'muted', value: 'Check signs', amount: null, unit: null, note: null };
+    return { kind: 'unknown', tone: 'muted', value: 'Check signs', amount: null, unit: null, perHour: false, note: null };
 };
 
 // ---- restrictions ----------------------------------------------------------
@@ -200,7 +212,7 @@ export const getRestrictions = (spot) => {
 
     const maxStay = getMaxStay(spot);
     if (maxStay) {
-        out.push({ key: 'max', tone: 'info', icon: 'timer-outline', text: `${maxStay.short} max` });
+        out.push({ key: 'max', tone: 'info', icon: 'timer-outline', text: `${maxStay.text} max` });
     }
 
     const timeRestriction = pick(spot, 'time_restriction');

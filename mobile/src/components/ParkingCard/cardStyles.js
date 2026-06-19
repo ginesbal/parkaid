@@ -175,7 +175,8 @@ export const styles = StyleSheet.create({
   priceHeroUnit: {
     fontSize: 16,
     fontWeight: '500',
-    marginLeft: 3,
+    color: TOKENS.textMuted,
+    marginLeft: 4,
   },
   priceHeroNote: {
     fontSize: 13,

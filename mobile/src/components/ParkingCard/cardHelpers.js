@@ -89,7 +89,7 @@ const isMeaningful = (v) =>
  *
  * Everything here reads through a merged view of top-level + zone_info +
  * metadata, because the backend nests most fields. Values are formatted for
- * humans (minutes become "2 hr", price zones become real dollars) rather than
+ * humans (minutes become "2 hours", price zones become real dollars) rather than
  * dumped raw.
  */
 export const getDetailsPages = (spot) => {
@@ -116,7 +116,7 @@ export const getDetailsPages = (spot) => {
     // 1) Pricing -------------------------------------------------------------
     const pricing = [];
     if (price.kind === 'paid') {
-        pricing.push({ label: 'Rate', value: `${price.value}${price.unit || ''}`, highlight: true });
+        pricing.push({ label: 'Rate', value: `${price.value}${price.unit ? ` ${price.unit}` : ''}`, highlight: true });
     } else if (price.kind === 'free') {
         pricing.push({ label: 'Rate', value: 'Free', highlight: true });
     } else if (price.kind === 'permit') {
@@ -144,7 +144,7 @@ export const getDetailsPages = (spot) => {
 
     // 2) Rules & restrictions ------------------------------------------------
     const rules = [];
-    if (maxStay) rules.push({ label: 'Max stay', value: maxStay.long, highlight: true });
+    if (maxStay) rules.push({ label: 'Max stay', value: maxStay.text, highlight: true });
 
     const noStopping = field('no_stopping');
     if (isMeaningful(noStopping)) {

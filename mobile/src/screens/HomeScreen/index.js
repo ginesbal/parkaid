@@ -161,7 +161,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   // Inset hairline between rows — begins where the address begins
-  // (padding 20 + walk block 44 + gap 10 = 74), matching the map's bottom sheet.
+  // (padding 20 + walk block 56 + gap 10 = 86), matching the map's bottom sheet.
   const renderSeparator = () => <View style={listStyles.rowSeparator} />;
 
   return (
@@ -219,6 +219,6 @@ const listStyles = StyleSheet.create({
   rowSeparator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: TOKENS.divider,
-    marginLeft: 74,
+    marginLeft: 86,
   },
 });

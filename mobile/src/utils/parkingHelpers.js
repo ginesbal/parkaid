@@ -20,7 +20,7 @@ export function calculateQuickInfo(spots) {
     // permit-only blocks doesn't drag the figure down to near zero.
     const paidRates = spots
         .map((spot) => getPriceInfo(spot))
-        .filter((p) => p.kind === 'paid' && p.unit === '/hr' && typeof p.amount === 'number' && p.amount > 0)
+        .filter((p) => p.kind === 'paid' && p.perHour && typeof p.amount === 'number' && p.amount > 0)
         .map((p) => p.amount);
 
     const averagePrice = paidRates.length
@@ -52,11 +52,12 @@ export const getFilterIcon = (filter) => {
     return icons[filter] || 'help-circle';
 };
 
-// format distance label
+// format distance label in full words ("250 meters", "1.2 kilometers")
 export const getDistanceLabel = (meters) => {
     if (!meters && meters !== 0) return '—';
-    if (meters < 1000) return `${meters}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
+    if (meters < 1000) return `${meters} ${meters === 1 ? 'meter' : 'meters'}`;
+    const km = (meters / 1000).toFixed(1);
+    return `${km} ${km === '1.0' ? 'kilometer' : 'kilometers'}`;
 };
 
 // calculate walking time from distance

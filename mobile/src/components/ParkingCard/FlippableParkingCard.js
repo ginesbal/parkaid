@@ -47,9 +47,10 @@ const BADGE_ICON = { danger: TOKENS.danger, warning: TOKENS.warning, info: TOKEN
 
 const formatDistance = (meters) => {
     const m = Number(meters);
-    if (!Number.isFinite(m)) return { value: '—', unit: 'm' };
-    if (m < 1000) return { value: String(m), unit: 'm' };
-    return { value: (m / 1000).toFixed(1), unit: 'km' };
+    if (!Number.isFinite(m)) return { value: '—', unit: '' };
+    if (m < 1000) return { value: String(m), unit: m === 1 ? 'meter' : 'meters' };
+    const km = (m / 1000).toFixed(1);
+    return { value: km, unit: km === '1.0' ? 'kilometer' : 'kilometers' };
 };
 
 function FlippableParkingCard({
@@ -179,11 +180,11 @@ function FlippableParkingCard({
     // Restrictions, minus max-stay (it already has its own stat cell).
     const badges = getRestrictions(spot).filter((b) => b.key !== 'max').slice(0, 3);
 
-    // The third stat falls back gracefully: max stay -> spaces -> spot type.
+    // The third stat falls back gracefully: max stay -> capacity -> spot type.
     const thirdStat = maxStay
-        ? { value: maxStay.short, unit: '', label: 'Max stay' }
+        ? { value: maxStay.value, unit: maxStay.unit, label: 'Max stay' }
         : capacity
-            ? { value: String(capacity), unit: '', label: 'Spaces' }
+            ? { value: String(capacity), unit: capacity === 1 ? 'space' : 'spaces', label: 'Capacity' }
             : { value: type.label, unit: '', label: 'Type' };
 
     return (
@@ -257,7 +258,9 @@ function FlippableParkingCard({
                             <View style={styles.statCell}>
                                 <View style={styles.statValueRow}>
                                     <Text style={styles.statValue}>{walk ?? '—'}</Text>
-                                    <Text style={styles.statValueUnit}>min</Text>
+                                    {walk != null ? (
+                                        <Text style={styles.statValueUnit}>{walk === 1 ? 'minute' : 'minutes'}</Text>
+                                    ) : null}
                                 </View>
                                 <Text style={styles.statLabel}>Walk</Text>
                             </View>
@@ -267,7 +270,9 @@ function FlippableParkingCard({
                             <View style={styles.statCell}>
                                 <View style={styles.statValueRow}>
                                     <Text style={styles.statValue}>{distance.value}</Text>
-                                    <Text style={styles.statValueUnit}>{distance.unit}</Text>
+                                    {distance.unit ? (
+                                        <Text style={styles.statValueUnit}>{distance.unit}</Text>
+                                    ) : null}
                                 </View>
                                 <Text style={styles.statLabel}>Away</Text>
                             </View>
@@ -277,6 +282,9 @@ function FlippableParkingCard({
                             <View style={styles.statCell}>
                                 <View style={styles.statValueRow}>
                                     <Text style={styles.statValue} numberOfLines={1}>{thirdStat.value}</Text>
+                                    {thirdStat.unit ? (
+                                        <Text style={styles.statValueUnit}>{thirdStat.unit}</Text>
+                                    ) : null}
                                 </View>
                                 <Text style={styles.statLabel}>{thirdStat.label}</Text>
                             </View>
