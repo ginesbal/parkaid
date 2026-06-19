@@ -22,7 +22,6 @@ import {
 import {
     CARD_HEIGHT,
     CARD_WIDTH,
-    CONTENT_WIDTH,
     SCREEN_HEIGHT,
     SCREEN_WIDTH
 } from './cardConstants';
@@ -63,26 +62,11 @@ function FlippableParkingCard({
     onNavigate = () => { },
 }) {
     const [isFlipped, setIsFlipped] = useState(false);
-    const [currentPage, setCurrentPage] = useState(0);
 
     const flipAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.96)).current;
     const translateYAnim = useRef(new Animated.Value(12)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
-
-    const pagesScrollRef = useRef(null);
-    const pageWidth = CONTENT_WIDTH;
-
-    const detailsPages = spot ? getDetailsPages(spot) : [];
-
-    const scrollToPage = (i) => {
-        const safe = Math.max(0, Math.min(i, detailsPages.length - 1));
-        setCurrentPage(safe);
-        pagesScrollRef.current?.scrollTo({ x: safe * pageWidth, y: 0, animated: true });
-    };
-
-    const goPrev = () => scrollToPage(currentPage - 1);
-    const goNext = () => scrollToPage(currentPage + 1);
 
     useEffect(() => {
         if (visible && spot) {
@@ -127,7 +111,6 @@ function FlippableParkingCard({
             ]).start();
             setTimeout(() => {
                 setIsFlipped(false);
-                setCurrentPage(0);
                 flipAnim.setValue(0);
                 scaleAnim.setValue(0.96);
                 translateYAnim.setValue(12);
@@ -137,11 +120,6 @@ function FlippableParkingCard({
 
     const flip = () => {
         const toValue = isFlipped ? 0 : 1;
-
-        // Reset horizontal pager to first page on any flip
-        pagesScrollRef.current?.scrollTo({ x: 0, y: 0, animated: false });
-        setCurrentPage(0);
-
         Animated.spring(flipAnim, {
             toValue,
             tension: 65,
@@ -187,6 +165,9 @@ function FlippableParkingCard({
             ? { value: String(capacity), unit: capacity === 1 ? 'space' : 'spaces', label: 'Capacity' }
             : { value: type.label, unit: '', label: 'Type' };
 
+    // Back-of-card detail sections, rendered as one vertical spec sheet.
+    const sections = getDetailsPages(spot).filter((s) => s.items.length > 0);
+
     return (
         <>
             {visible && (
@@ -229,7 +210,7 @@ function FlippableParkingCard({
                             onPress={onClose}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
                         </TouchableOpacity>
                     </View>
 
@@ -249,7 +230,7 @@ function FlippableParkingCard({
                                 ) : null}
                             </View>
                             {price.note ? (
-                                <Text style={styles.priceHeroNote} numberOfLines={2}>{price.note}</Text>
+                                <Text style={styles.priceHeroNote} numberOfLines={1}>{price.note}</Text>
                             ) : null}
                         </View>
 
@@ -320,7 +301,7 @@ function FlippableParkingCard({
                     </View>
                 </Animated.View>
 
-                {/* back of card */}
+                {/* back of card — one calm, vertically-scrolling spec sheet */}
                 <Animated.View
                     style={[
                         styles.card,
@@ -339,146 +320,75 @@ function FlippableParkingCard({
                         >
                             <MaterialCommunityIcons name="arrow-left" size={20} color={TOKENS.text} />
                         </TouchableOpacity>
-                        <View style={styles.pageTitleTag}>
-                            <Text style={styles.spotTypeText}>
-                                {detailsPages[currentPage]?.title || 'Details'}
-                            </Text>
-                        </View>
+                        <Text style={styles.backTitle} numberOfLines={1}>
+                            {spot.address || spot.address_desc || 'Details'}
+                        </Text>
                         <TouchableOpacity
                             style={styles.closeBtn}
                             onPress={onClose}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
                         </TouchableOpacity>
                     </View>
 
-                    {/* horizontal pager for detail pages */}
                     <ScrollView
-                        ref={pagesScrollRef}
-                        horizontal
-                        pagingEnabled
-                        decelerationRate="fast"
-                        snapToInterval={pageWidth}
-                        snapToAlignment="start"
-                        disableIntervalMomentum
-                        showsHorizontalScrollIndicator={false}
-                        onMomentumScrollEnd={(e) => {
-                            const page = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-                            setCurrentPage(page);
-                        }}
-                        style={styles.pagesContainer}
+                        style={styles.detailsScroll}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.detailsScrollContent}
                     >
-                        {detailsPages.map((page, pageIndex) => (
-                            <View key={pageIndex} style={[styles.detailPage, { width: CONTENT_WIDTH }]}>
-                                <ScrollView
-                                    style={styles.detailsListLarge}
-                                    showsVerticalScrollIndicator={false}
-                                    contentContainerStyle={styles.detailsContent}
+                        {sections.length > 0 ? (
+                            sections.map((section, si) => (
+                                <View
+                                    key={section.title}
+                                    style={[styles.detailSection, si === 0 && styles.detailSectionFirst]}
                                 >
-                                    {page.items.length > 0 ? (
-                                        page.items.map((item, idx) => (
-                                            <View
-                                                key={idx}
-                                                style={[
-                                                    styles.detailRowLarge,
-                                                    item.highlight && styles.detailRowHighlightLarge
-                                                ]}
-                                            >
+                                    <Text style={styles.detailSectionTitle}>{section.title}</Text>
+                                    {section.items.map((item, idx) => (
+                                        <View
+                                            key={`${item.label}-${idx}`}
+                                            style={[
+                                                styles.detailRow,
+                                                idx < section.items.length - 1 && styles.detailRowDivider,
+                                            ]}
+                                        >
+                                            <Text style={styles.detailLabel} numberOfLines={2}>
+                                                {item.label}
+                                            </Text>
+                                            {item.link ? (
+                                                <Text
+                                                    style={[styles.detailValue, styles.linkText]}
+                                                    numberOfLines={2}
+                                                    onPress={() => Linking.openURL(item.link)}
+                                                >
+                                                    {item.value || 'Open link'}
+                                                </Text>
+                                            ) : (
                                                 <Text
                                                     style={[
-                                                        styles.detailLabelLarge,
-                                                        item.highlight && styles.detailLabelHighlight
+                                                        styles.detailValue,
+                                                        item.highlight && styles.detailValueStrong,
                                                     ]}
-                                                    numberOfLines={2}
+                                                    numberOfLines={3}
                                                 >
-                                                    {item.label}
+                                                    {item.value || 'Not listed'}
                                                 </Text>
-                                                {item.link ? (
-                                                    <TouchableOpacity onPress={() => Linking.openURL(item.link)}>
-                                                        <Text
-                                                            style={[
-                                                                styles.detailValueLarge,
-                                                                item.highlight && styles.detailValueHighlight,
-                                                                styles.linkText,
-                                                            ]}
-                                                            numberOfLines={3}
-                                                        >
-                                                            {item.value || 'Open link'}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <Text
-                                                        style={[
-                                                            styles.detailValueLarge,
-                                                            item.highlight && styles.detailValueHighlight
-                                                        ]}
-                                                        numberOfLines={3}
-                                                    >
-                                                        {item.value || 'Not listed'}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        ))
-                                    ) : (
-                                        <Text style={styles.noDataText}>No additional details available.</Text>
-                                    )}
-                                </ScrollView>
-                            </View>
-                        ))}
+                                            )}
+                                        </View>
+                                    ))}
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.noDataText}>No additional details available.</Text>
+                        )}
                     </ScrollView>
 
-                    {detailsPages.length > 1 && (
-                        <View style={styles.pagerContainer}>
-                            <TouchableOpacity
-                                style={[styles.pagerArrow, currentPage === 0 && styles.pagerArrowDisabled]}
-                                onPress={goPrev}
-                                disabled={currentPage === 0}
-                            >
-                                <MaterialCommunityIcons
-                                    name="chevron-left"
-                                    size={20}
-                                    color={currentPage === 0 ? TOKENS.textMuted : TOKENS.text}
-                                />
-                            </TouchableOpacity>
-
-                            <View style={styles.pagerDots}>
-                                {detailsPages.map((_, idx) => (
-                                    <TouchableOpacity
-                                        key={idx}
-                                        onPress={() => scrollToPage(idx)}
-                                        style={[styles.pagerDot, currentPage === idx && styles.pagerDotActive]}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Go to page ${idx + 1}`}
-                                    />
-                                ))}
-                            </View>
-
-                            <TouchableOpacity
-                                style={[
-                                    styles.pagerArrow,
-                                    currentPage === detailsPages.length - 1 && styles.pagerArrowDisabled,
-                                ]}
-                                onPress={goNext}
-                                disabled={currentPage === detailsPages.length - 1}
-                            >
-                                <MaterialCommunityIcons
-                                    name="chevron-right"
-                                    size={20}
-                                    color={currentPage === detailsPages.length - 1 ? TOKENS.textMuted : TOKENS.text}
-                                />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {detailsPages.length === 1 && (
-                        <View style={styles.backActionsLarge}>
-                            <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate} activeOpacity={0.85}>
-                                <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
-                                <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <View style={styles.backFooter}>
+                        <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate} activeOpacity={0.85}>
+                            <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
+                            <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
+                        </TouchableOpacity>
+                    </View>
                 </Animated.View>
             </Animated.View>
         </>

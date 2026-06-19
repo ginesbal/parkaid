@@ -1,12 +1,13 @@
 // src/components/ParkingCard/cardStyles.js
 //
 // Card design language:
-//   - One thing dominates each card: the price. It gets a tinted slab and the
+//   - One thing dominates the front: the price. It gets a tinted slab and the
 //     largest type so a glance answers "what will this cost me".
-//   - Three quick facts (walk / distance / max stay) sit in an open row with
-//     the same vertical-rule signature as the list, tying the two views together.
+//   - The back is a calm, vertically-scrolling spec sheet: uppercase section
+//     headers (Pricing / Rules / About) over a clean two-column definition
+//     list. No swiping between fragmented pages.
 //   - Hairline borders, near-invisible shadows, one cerulean accent.
-//   - 16px rhythm within the card; touch targets >= 52px.
+//   - 16px rhythm on the front; touch targets >= 54px.
 
 import { StyleSheet } from 'react-native';
 import { TOKENS, alpha } from '../../constants/theme';
@@ -62,14 +63,14 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 18,
   },
 
   cardHeaderBack: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 10,
+    marginBottom: 14,
+    gap: 12,
   },
 
   // Type chip — small tinted pill so the spot category reads instantly.
@@ -83,13 +84,6 @@ export const styles = StyleSheet.create({
     backgroundColor: TOKENS.primaryWash,
   },
 
-  pageTitleTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-  },
-
   spotTypeText: {
     fontSize: 12,
     fontWeight: '600',
@@ -98,11 +92,22 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
+  // Back header title — the address, so you keep your bearings after the flip.
+  backTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: TOKENS.text,
+    letterSpacing: -0.2,
+  },
+
+  // Quiet circular buttons. The close button no longer shouts in solid black;
+  // the price should own the visual weight, not the dismiss control.
   backBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'transparent',
+    backgroundColor: TOKENS.surfaceMuted,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TOKENS.hairline,
     alignItems: 'center',
@@ -113,7 +118,9 @@ export const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: TOKENS.text,
+    backgroundColor: TOKENS.surfaceMuted,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TOKENS.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -132,15 +139,15 @@ export const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
 
-  // Price hero — the single most important answer, so it gets the slab + big type.
+  // Price hero — the focal point. Big rate, with context stacked beneath it
+  // (top-down reads cleaner than a value fighting a note across the row).
   priceHero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 3,
     paddingVertical: 16,
     paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     marginBottom: 16,
   },
@@ -163,7 +170,6 @@ export const styles = StyleSheet.create({
   priceHeroLeft: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    flexShrink: 1,
   },
   priceHeroValue: {
     fontSize: 30,
@@ -183,9 +189,6 @@ export const styles = StyleSheet.create({
     lineHeight: 17,
     fontWeight: '500',
     color: TOKENS.textMuted,
-    textAlign: 'right',
-    flexShrink: 1,
-    maxWidth: '46%',
   },
 
   // Three quick facts, open row with vertical rules (same signature as the list).
@@ -223,7 +226,7 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: TOKENS.textMuted,
-    marginLeft: 2,
+    marginLeft: 3,
   },
   statLabel: {
     fontSize: 12,
@@ -307,131 +310,81 @@ export const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  // --- Back: horizontal pager ---
-  pagesContainer: {
+  // --- Back: vertical spec sheet ---
+  detailsScroll: {
     flex: 1,
   },
-
-  detailPage: {
-    flexShrink: 0,
+  detailsScrollContent: {
+    paddingBottom: 6,
   },
 
-  detailsListLarge: {
-    flex: 1,
+  detailSection: {
+    marginTop: 20,
+  },
+  detailSectionFirst: {
+    marginTop: 2,
+  },
+  detailSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: TOKENS.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
   },
 
-  detailsContent: {
-    paddingBottom: 4,
-  },
-
-  detailRowLarge: {
+  // Two-column definition row. Label left (muted), value right (ink). Rows
+  // top-align so a value that wraps to a second line still reads cleanly.
+  detailRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    gap: 16,
+    paddingVertical: 11,
+  },
+  detailRowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: TOKENS.divider,
   },
-
-  detailRowHighlightLarge: {
-    backgroundColor: 'transparent',
-  },
-
-  detailLabelLarge: {
+  detailLabel: {
     fontSize: 14,
-    lineHeight: 19,
+    lineHeight: 20,
     color: TOKENS.textMuted,
-    flex: 1,
     fontWeight: '400',
+    flexShrink: 0,
+    maxWidth: '44%',
   },
-
-  detailLabelHighlight: {
-    color: TOKENS.text,
-    fontWeight: '600',
-  },
-
-  detailValueLarge: {
+  detailValue: {
+    flex: 1,
     fontSize: 15,
-    lineHeight: 21,
+    lineHeight: 20,
     fontWeight: '500',
     color: TOKENS.text,
     textAlign: 'right',
-    paddingLeft: 16,
-    flexShrink: 0,
-    fontVariant: ['tabular-nums'],
   },
-
-  detailValueHighlight: {
-    fontSize: 15,
-    fontWeight: '600',
+  // The key fact in each section (rate, max stay) gets the accent.
+  detailValueStrong: {
     color: TOKENS.primary,
+    fontWeight: '600',
   },
-
-  // Pager nav
-  pagerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: TOKENS.divider,
-  },
-
-  pagerArrow: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'transparent',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: TOKENS.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  pagerArrowDisabled: {
-    opacity: 0.3,
-  },
-
-  pagerDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-
-  pagerDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: TOKENS.hairlineStrong,
-  },
-
-  pagerDotActive: {
-    width: 18,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: TOKENS.primary,
-  },
-
   linkText: {
     textDecorationLine: 'underline',
     color: TOKENS.primary,
   },
-
   noDataText: {
     fontSize: 15,
     color: TOKENS.textMuted,
     textAlign: 'center',
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
 
-  backActionsLarge: {
-    marginTop: 'auto',
-    paddingTop: 12,
+  // Persistent footer action on the back, divided from the scroll area.
+  backFooter: {
+    paddingTop: 14,
+    marginTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: TOKENS.divider,
   },
-
   navBtnFullLarge: {
     flexDirection: 'row',
     alignItems: 'center',
