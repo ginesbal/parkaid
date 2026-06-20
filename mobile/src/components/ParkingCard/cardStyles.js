@@ -126,89 +126,66 @@ export const styles = StyleSheet.create({
   },
 
   // --- Front content ---
-  frontContent: {
+  // The body fills the space between the header and the actions and centers its
+  // group, so whitespace stays balanced instead of pooling into a void above
+  // the buttons. One consistent gap drives the vertical rhythm.
+  frontBody: {
     flex: 1,
+    justifyContent: 'center',
+    gap: 20,
   },
 
   address: {
     fontSize: 22,
     fontWeight: '600',
     color: TOKENS.text,
-    marginBottom: 16,
     lineHeight: 27,
     letterSpacing: -0.4,
   },
 
-  // Price hero — the focal point. Big rate, with context stacked beneath it
-  // (top-down reads cleaner than a value fighting a note across the row).
-  priceHero: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+  // Price — the focal point, carried by size and color rather than a heavy box.
+  priceBlock: {
     gap: 3,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginBottom: 16,
   },
-  priceHeroPaid: {
-    backgroundColor: TOKENS.primaryWash,
-    borderColor: TOKENS.primaryHairline,
-  },
-  priceHeroFree: {
-    backgroundColor: TOKENS.successSoft,
-    borderColor: alpha(TOKENS.success, 0.22),
-  },
-  priceHeroPermit: {
-    backgroundColor: TOKENS.warningSoft,
-    borderColor: alpha(TOKENS.warning, 0.22),
-  },
-  priceHeroUnknown: {
-    backgroundColor: TOKENS.surfaceMuted,
-    borderColor: TOKENS.hairline,
-  },
-  priceHeroLeft: {
+  priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  priceHeroValue: {
-    fontSize: 30,
-    lineHeight: 34,
+  priceValue: {
+    fontSize: 33,
+    lineHeight: 37,
     fontWeight: '600',
-    letterSpacing: -0.8,
+    letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
-  priceHeroUnit: {
+  priceUnit: {
     fontSize: 16,
     fontWeight: '500',
     color: TOKENS.textMuted,
-    marginLeft: 4,
+    marginLeft: 5,
   },
-  priceHeroNote: {
+  priceNote: {
     fontSize: 13,
     lineHeight: 17,
     fontWeight: '500',
     color: TOKENS.textMuted,
   },
 
-  // Three quick facts, open row with vertical rules (same signature as the list).
+  // Three quick facts in a clean band, framed by hairline rules (echoes the
+  // back's spec-sheet lines). No vertical dividers — even spacing carries it.
   statRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    marginBottom: 16,
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: TOKENS.divider,
   },
   statCell: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 6,
-  },
-  statCellDivider: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: TOKENS.divider,
-    alignSelf: 'stretch',
-    marginVertical: 4,
   },
   statValueRow: {
     flexDirection: 'row',
@@ -239,8 +216,8 @@ export const styles = StyleSheet.create({
   badgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 8,
-    marginBottom: 16,
   },
   badge: {
     flexDirection: 'row',

@@ -28,12 +28,6 @@ import {
 import { getDetailsPages } from './cardHelpers';
 import { styles } from './cardStyles';
 
-const HERO_STYLE = {
-    paid: styles.priceHeroPaid,
-    free: styles.priceHeroFree,
-    permit: styles.priceHeroPermit,
-    unknown: styles.priceHeroUnknown,
-};
 const HERO_COLOR = {
     paid: TOKENS.text,
     free: TOKENS.success,
@@ -214,27 +208,27 @@ function FlippableParkingCard({
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.frontContent}>
+                    <View style={styles.frontBody}>
                         <Text style={styles.address} numberOfLines={2}>
                             {spot.address || spot.address_desc || 'Parking spot'}
                         </Text>
 
-                        {/* Price hero — the biggest, most-glanced answer. */}
-                        <View style={[styles.priceHero, HERO_STYLE[price.kind]]}>
-                            <View style={styles.priceHeroLeft}>
-                                <Text style={[styles.priceHeroValue, { color: HERO_COLOR[price.kind] }]}>
+                        {/* Price — the focal point, carried by size and color. */}
+                        <View style={styles.priceBlock}>
+                            <View style={styles.priceRow}>
+                                <Text style={[styles.priceValue, { color: HERO_COLOR[price.kind] }]}>
                                     {price.value}
                                 </Text>
                                 {price.unit ? (
-                                    <Text style={styles.priceHeroUnit}>{price.unit}</Text>
+                                    <Text style={styles.priceUnit}>{price.unit}</Text>
                                 ) : null}
                             </View>
                             {price.note ? (
-                                <Text style={styles.priceHeroNote} numberOfLines={1}>{price.note}</Text>
+                                <Text style={styles.priceNote} numberOfLines={1}>{price.note}</Text>
                             ) : null}
                         </View>
 
-                        {/* Three quick facts */}
+                        {/* Three quick facts, framed by hairline rules */}
                         <View style={styles.statRow}>
                             <View style={styles.statCell}>
                                 <View style={styles.statValueRow}>
@@ -246,8 +240,6 @@ function FlippableParkingCard({
                                 <Text style={styles.statLabel}>Walk</Text>
                             </View>
 
-                            <View style={styles.statCellDivider} />
-
                             <View style={styles.statCell}>
                                 <View style={styles.statValueRow}>
                                     <Text style={styles.statValue}>{distance.value}</Text>
@@ -257,8 +249,6 @@ function FlippableParkingCard({
                                 </View>
                                 <Text style={styles.statLabel}>Away</Text>
                             </View>
-
-                            <View style={styles.statCellDivider} />
 
                             <View style={styles.statCell}>
                                 <View style={styles.statValueRow}>
