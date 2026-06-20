@@ -16,7 +16,9 @@ import {
     getAccess,
     getHours,
     getPriceInfo,
+    getRushRestriction,
     getSpotType,
+    parseAddress,
 } from '../../utils/spotInfo';
 import {
     CARD_HEIGHT,
@@ -141,6 +143,8 @@ function FlippableParkingCard({
     const access = getAccess(spot);
     const price = getPriceInfo(spot);
     const hours = getHours(spot);
+    const rush = getRushRestriction(spot);
+    const addr = parseAddress(spot);
     const distance = formatDistance(spot.distance);
     const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
     const isPublic = access.kind === 'public';
@@ -149,12 +153,22 @@ function FlippableParkingCard({
     const away = distance.unit ? `${distance.value} ${distance.unit} away` : `${distance.value} away`;
     const walkText = walk != null ? `${walk} ${walk === 1 ? 'minute' : 'minutes'} walk` : null;
 
+    // Front shows the 3 most decision-relevant facts; the full breakdown lives
+    // on the flipped details view.
     const facts = [];
-    if (isPublic && price.kind !== 'free' && hours.schedule) {
-        facts.push({ key: 'hours', icon: 'clock-outline', label: 'Paid hours', value: hours.schedule });
-    }
-    if (hours.maxStay) {
-        facts.push({ key: 'max', icon: 'timer-sand', label: 'Max stay', value: hours.maxStay.text });
+    if (isPublic) {
+        if (price.kind !== 'free' && hours.schedule) {
+            facts.push({ key: 'hours', icon: 'clock-outline', label: 'Paid hours', value: hours.schedule });
+        }
+        // A tow-away window outranks the max stay — you'd get towed, not ticketed.
+        if (rush) {
+            facts.push({ key: 'rush', icon: 'tow-truck', tone: 'danger', label: rush.label, value: rush.value });
+        } else if (hours.maxStay) {
+            facts.push({ key: 'max', icon: 'timer-sand', label: 'Max stay', value: hours.maxStay.text });
+        }
+    } else if (hours.schedule) {
+        // Residents / no-parking: when the permit is in effect.
+        facts.push({ key: 'permit', icon: 'clock-outline', label: 'In effect', value: hours.schedule });
     }
     facts.push({
         key: 'walk',
@@ -200,7 +214,7 @@ function FlippableParkingCard({
                 >
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
-                            <MaterialCommunityIcons name={type.icon} size={14} color={TOKENS.primary} />
+                            <MaterialCommunityIcons name={type.icon} size={14} color="#FFFFFF" />
                             <Text style={styles.spotTypeText}>{type.label}</Text>
                         </View>
                         <TouchableOpacity
@@ -213,9 +227,16 @@ function FlippableParkingCard({
                     </View>
 
                     <View style={styles.frontBody}>
-                        <Text style={styles.address} numberOfLines={2}>
-                            {spot.address || spot.address_desc || 'Parking spot'}
-                        </Text>
+                        <View style={styles.addressBlock}>
+                            <Text style={styles.addressPrimary} numberOfLines={2}>
+                                {addr.primary}
+                            </Text>
+                            {addr.secondary ? (
+                                <Text style={styles.addressSecondary} numberOfLines={1}>
+                                    {addr.secondary}
+                                </Text>
+                            ) : null}
+                        </View>
 
                         {isPublic ? (
                             // Headline: what it costs + whether it's free right now.
@@ -295,8 +316,12 @@ function FlippableParkingCard({
                                     key={f.key}
                                     style={[styles.factRow, i < facts.length - 1 && styles.factRowDivider]}
                                 >
-                                    <View style={styles.factIcon}>
-                                        <MaterialCommunityIcons name={f.icon} size={18} color={TOKENS.primary} />
+                                    <View style={[styles.factIcon, f.tone === 'danger' && styles.factIconDanger]}>
+                                        <MaterialCommunityIcons
+                                            name={f.icon}
+                                            size={19}
+                                            color={f.tone === 'danger' ? TOKENS.danger : TOKENS.primary}
+                                        />
                                     </View>
                                     <View style={styles.factText}>
                                         <Text style={styles.factLabel}>{f.label}</Text>

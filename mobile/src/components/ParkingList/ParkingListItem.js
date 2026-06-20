@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { TOKENS, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
-import { getAccess, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
+import { getAccess, getMaxStay, getPriceInfo, getSpotType, parseAddress } from '../../utils/spotInfo';
 
 const PRICE_TONE = {
     text: TOKENS.text,
@@ -45,6 +45,7 @@ export default function ParkingListItem({
     const isPublic = access.kind === 'public';
     const price = getPriceInfo(spot);
     const maxStay = getMaxStay(spot);
+    const addr = parseAddress(spot);
     const walk = Number.isFinite(spot?.walkingTime) ? spot.walkingTime : null;
 
     const handlePressIn = () => {
@@ -95,7 +96,7 @@ export default function ParkingListItem({
                 android_ripple={{ color: alpha(TOKENS.text, 0.04), borderless: false }}
                 style={[styles.row, isSelected && styles.rowSelected]}
                 accessibilityRole="button"
-                accessibilityLabel={`Parking at ${spot.address}, ${walk ?? '—'} minute walk, ${spot.distance} meters away, ${a11yPrice}`}
+                accessibilityLabel={`Parking at ${addr.primary}, ${walk ?? '—'} minute walk, ${spot.distance} meters away, ${a11yPrice}`}
                 hitSlop={4}
             >
                 {/* Tier 1a — walk time, the hero metric */}
@@ -113,7 +114,7 @@ export default function ParkingListItem({
                 {/* Tier 2 + 3 — address, then supporting meta */}
                 <View style={styles.content}>
                     <Text style={styles.address} numberOfLines={1}>
-                        {spot.address}
+                        {addr.primary}
                     </Text>
 
                     <View style={styles.metaRow}>

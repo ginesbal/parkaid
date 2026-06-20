@@ -73,23 +73,24 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
 
-  // Type chip — small tinted pill so the spot category reads instantly.
+  // Type chip — solid accent pill so the spot category reads instantly and adds
+  // a confident shot of brand color at the top of the card.
   spotTypeTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 11,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
     borderRadius: 9999,
-    backgroundColor: TOKENS.primaryWash,
+    backgroundColor: TOKENS.primary,
   },
 
   spotTypeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: TOKENS.primary,
+    fontWeight: '700',
+    color: '#FFFFFF',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
 
   // Back header title — the address, so you keep your bearings after the flip.
@@ -134,34 +135,45 @@ export const styles = StyleSheet.create({
     gap: 16,
   },
 
-  address: {
-    fontSize: 21,
-    fontWeight: '600',
+  // Address — the actual street in bold, the block/cross-street location in
+  // accent color beneath it.
+  addressBlock: {
+    gap: 3,
+  },
+  addressPrimary: {
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: '700',
     color: TOKENS.text,
-    lineHeight: 26,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
+  },
+  addressSecondary: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '500',
+    color: TOKENS.primaryAlt,
   },
 
   // Headline — price carried by size + color, with a live paid/free status dot.
   headline: {
-    gap: 7,
+    gap: 8,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   priceValue: {
-    fontSize: 34,
-    lineHeight: 38,
-    fontWeight: '600',
-    letterSpacing: -1,
+    fontSize: 36,
+    lineHeight: 40,
+    fontWeight: '700',
+    letterSpacing: -1.1,
     fontVariant: ['tabular-nums'],
   },
   priceUnit: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '500',
     color: TOKENS.textMuted,
-    marginLeft: 5,
+    marginLeft: 6,
   },
   statusRow: {
     flexDirection: 'row',
@@ -177,13 +189,13 @@ export const styles = StyleSheet.create({
   dotFree: { backgroundColor: TOKENS.success },
   dotPaid: { backgroundColor: TOKENS.warning },
   statusLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   statusLabelFree: { color: TOKENS.success },
   statusLabelPaid: { color: TOKENS.warning },
   statusDetail: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '400',
     color: TOKENS.textMuted,
   },
@@ -193,9 +205,9 @@ export const styles = StyleSheet.create({
   accessBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
   },
   bannerWarning: {
@@ -208,15 +220,15 @@ export const styles = StyleSheet.create({
   },
   accessTextWrap: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   accessLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   accessDetail: {
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 18,
     color: TOKENS.textMuted,
   },
 
@@ -236,12 +248,15 @@ export const styles = StyleSheet.create({
     borderBottomColor: TOKENS.divider,
   },
   factIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: TOKENS.primaryWash,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  factIconDanger: {
+    backgroundColor: TOKENS.dangerSoft,
   },
   factText: {
     flex: 1,
@@ -249,14 +264,14 @@ export const styles = StyleSheet.create({
   },
   factLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: TOKENS.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   factValue: {
-    fontSize: 15,
-    lineHeight: 19,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '500',
     color: TOKENS.text,
   },

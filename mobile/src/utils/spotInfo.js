@@ -44,6 +44,57 @@ export const SPOT_TYPES = {
 
 export const getSpotType = (spot) => SPOT_TYPES[spot?.spot_type] || SPOT_TYPES.on_street;
 
+// ---- address ---------------------------------------------------------------
+
+const QUADRANT = /\b(NW|NE|SW|SE)\b/gi;
+
+// Tidy a street string: collapse spaces, title-case SHOUTING text, expand the
+// city's "Av" abbreviation, keep quadrants upper-cased.
+const tidyStreet = (s) => {
+    let t = (s || '').replace(/\s+/g, ' ').trim();
+    if (!t) return t;
+    if (t === t.toUpperCase()) t = t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+    return t.replace(/\bAv\b/g, 'Ave').replace(QUADRANT, (m) => m.toUpperCase());
+};
+
+/**
+ * The city packs two things into address_desc, in three shapes:
+ *   on-street    "Eau Claire Av SW ,  Fr 4 St SW To 5 St SW"
+ *   residential  "00 Block COLLINGWOOD PL NW"
+ *   off-street   "Zoo West Lot: 1300 Zoo Road NE"
+ * Split into a bold primary line (the address) and the street location beneath.
+ */
+export const parseAddress = (spot) => {
+    const raw = String(spot?.address || spot?.address_desc || '').replace(/\s+/g, ' ').trim();
+    if (!raw) return { primary: 'Parking spot', secondary: null };
+
+    // off-street lot: "Lot name: address"
+    if (raw.includes(':')) {
+        const idx = raw.indexOf(':');
+        const name = raw.slice(0, idx).trim();
+        const addr = raw.slice(idx + 1).trim();
+        return { primary: tidyStreet(name), secondary: addr ? tidyStreet(addr) : null };
+    }
+
+    // on-street: "STREET , Fr CROSS To CROSS"
+    if (raw.includes(',')) {
+        const idx = raw.indexOf(',');
+        const street = raw.slice(0, idx).trim();
+        const block = raw.slice(idx + 1).trim()
+            .replace(/^Fr\s+/i, 'From ')
+            .replace(/\s+To\s+/i, ' to ');
+        return { primary: tidyStreet(street), secondary: block || null };
+    }
+
+    // residential: "00 Block STREET NW"
+    const block = raw.match(/^(\d+)\s+block\s+(.+)$/i);
+    if (block) {
+        return { primary: tidyStreet(block[2]), secondary: `${block[1]} block` };
+    }
+
+    return { primary: tidyStreet(raw), secondary: null };
+};
+
 // ---- duration formatting ---------------------------------------------------
 
 // Spell numbers with units in full words, pluralized: "1 hour", "2 hours".
@@ -122,7 +173,14 @@ export const getAccess = (spot) => {
             detail: 'Stopping is not allowed along here',
         };
     }
-    if (pick(spot, 'permit_zone')) {
+    // A public paid rate means anyone may park (by paying) — never residents-only.
+    // NB: `permit_zone` is just a zone id the city stamps on every paid block, so
+    // it is NOT a residents-only signal. The real signals are the residential
+    // dataset and an explicit "Permit Required" restriction.
+    const restriction = pick(spot, 'parking_restriction');
+    const permitRequired = typeof restriction === 'string' && /permit/i.test(restriction);
+    const isResidential = spot?.spot_type === 'residential';
+    if (!pick(spot, 'price_zone') && (isResidential || permitRequired)) {
         return {
             kind: 'residents',
             tone: 'warning',
@@ -166,27 +224,42 @@ const fmtDays = (set) => {
     return arr.map((d) => DAY_ABBR[d]).join(', ');
 };
 
-// Parse the city's enforceable-time string into a paid window we can reason
-// about. Conservative: returns null unless it finds a clear time range, so we
-// never invent hours we aren't sure about.
+// Parse the city's enforceable-time string into a paid window. The real format
+// is "0910-1750 MON-SAT" (HHMM-HHMM, 24h, no colon, days after). Conservative:
+// returns null unless it finds a clear time range, so we never invent hours.
 const parsePaidWindow = (str) => {
     if (typeof str !== 'string' || !str.trim()) return null;
     const s = str.toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
 
-    const tm = s.match(
-        /(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:-|to)\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/
-    );
-    if (!tm) return null;
-    const start = to24h(tm[1], tm[2], tm[3]);
-    let end = to24h(tm[4], tm[5], tm[6]);
-    if (!tm[3] && !tm[6] && end <= start) end += 12; // "9 - 6" -> 9 AM – 6 PM
+    let start;
+    let end;
+
+    // Primary: "0910-1750" (HHMM-HHMM).
+    const hhmm = s.match(/\b(\d{3,4})\s*-\s*(\d{3,4})\b/);
+    if (hhmm) {
+        const toH = (n) => {
+            const p = n.padStart(4, '0');
+            return parseInt(p.slice(0, 2), 10) + parseInt(p.slice(2), 10) / 60;
+        };
+        start = toH(hhmm[1]);
+        end = toH(hhmm[2]);
+    } else {
+        // Fallback: "9:00 am - 6:00 pm" / "9 - 6".
+        const tm = s.match(
+            /(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:-|to)\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/
+        );
+        if (!tm) return null;
+        start = to24h(tm[1], tm[2], tm[3]);
+        end = to24h(tm[4], tm[5], tm[6]);
+        if (!tm[3] && !tm[6] && end <= start) end += 12; // "9 - 6" -> 9 AM – 6 PM
+    }
     if (!(end > start)) return null;
 
     let days;
-    if (/daily|every ?day|7 days|all week/.test(s)) {
+    if (/daily|every ?day|7 days|all week|mon-sun/.test(s)) {
         days = new Set([0, 1, 2, 3, 4, 5, 6]);
     } else {
-        const range = s.match(/(sun|mon|tue|wed|thu|fri|sat)[a-z]*\s*-\s*(sun|mon|tue|wed|thu|fri|sat)/);
+        const range = s.match(/(sun|mon|tue|wed|thu|fri|sat)\s*-\s*(sun|mon|tue|wed|thu|fri|sat)/);
         if (range) {
             const a = DAY_INDEX[range[1]];
             const b = DAY_INDEX[range[2]];
@@ -197,12 +270,15 @@ const parsePaidWindow = (str) => {
             days = found.length ? new Set(found) : new Set([1, 2, 3, 4, 5, 6]);
         }
     }
-    return { days, start, end };
+
+    // Open-to-close (e.g. residential "0001-2359") reads as "all day".
+    const allDay = start <= 0.5 && end >= 23.5;
+    return { days, start, end, allDay };
 };
 
 /**
- * The "when" story: the paid schedule, the max stay, and — when the schedule
- * parses cleanly — whether parking is paid or free at this exact moment.
+ * The "when" story: the schedule, the max stay, and — when the schedule parses
+ * to a real metered window — whether it's paid or free at this exact moment.
  * For public metered parking, outside the enforced window means free.
  */
 export const getHours = (spot) => {
@@ -214,18 +290,33 @@ export const getHours = (spot) => {
     let status = null;
 
     if (win) {
-        schedule = `${fmtDays(win.days)}, ${fmtHour(win.start)} – ${fmtHour(win.end)}`;
-        const now = new Date();
-        const hour = now.getHours() + now.getMinutes() / 60;
-        const paidNow = win.days.has(now.getDay()) && hour >= win.start && hour < win.end;
-        status = paidNow
-            ? { state: 'paid', label: 'Paid right now', detail: `until ${fmtHour(win.end)}` }
-            : { state: 'free', label: 'Free right now', detail: `paid ${fmtHour(win.start)}–${fmtHour(win.end)}` };
+        schedule = win.allDay
+            ? `${fmtDays(win.days)}, all day`
+            : `${fmtDays(win.days)}, ${fmtHour(win.start)} – ${fmtHour(win.end)}`;
+
+        if (!win.allDay) {
+            const now = new Date();
+            const hour = now.getHours() + now.getMinutes() / 60;
+            const paidNow = win.days.has(now.getDay()) && hour >= win.start && hour < win.end;
+            status = paidNow
+                ? { state: 'paid', label: 'Paid right now', detail: `until ${fmtHour(win.end)}` }
+                : { state: 'free', label: 'Free right now', detail: `paid ${fmtHour(win.start)}–${fmtHour(win.end)}` };
+        }
     } else if (typeof enforceable === 'string' && enforceable.trim()) {
         schedule = enforceable.trim();
     }
 
     return { schedule, status, maxStay };
+};
+
+// Rush-hour tow-away windows ("AM&PM" + "07:00 - 08:30 , 15:30 - 18:00"). These
+// are a hard "no parking", separate from the metered window.
+export const getRushRestriction = (spot) => {
+    const type = pick(spot, 'parking_restrict_type');
+    const time = pick(spot, 'parking_restrict_time');
+    if (!hasFlag(type) || !hasFlag(time)) return null;
+    const value = String(time).replace(/\s*,\s*/g, ', ').replace(/\s*-\s*/g, '–').trim();
+    return { label: 'No parking', value };
 };
 
 // ---- price -----------------------------------------------------------------
