@@ -20,14 +20,18 @@ import {
 } from 'react-native';
 import { TOKENS, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
-import { getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
+import { getAccess, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
 
 const PRICE_TONE = {
     text: TOKENS.text,
     success: TOKENS.success,
     warning: TOKENS.warning,
+    danger: TOKENS.danger,
     muted: TOKENS.textMuted,
 };
+
+// Short, plain-language labels for spots that aren't public parking.
+const ACCESS_LABEL = { residents: 'Residents', no_parking: 'No stopping' };
 
 export default function ParkingListItem({
     spot,
@@ -37,6 +41,8 @@ export default function ParkingListItem({
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const type = getSpotType(spot);
+    const access = getAccess(spot);
+    const isPublic = access.kind === 'public';
     const price = getPriceInfo(spot);
     const maxStay = getMaxStay(spot);
     const walk = Number.isFinite(spot?.walkingTime) ? spot.walkingTime : null;
@@ -72,9 +78,9 @@ export default function ParkingListItem({
     };
 
     const a11yPrice =
-        price.kind === 'paid' ? `${price.value} per hour`
+        !isPublic ? access.detail || access.label
+        : price.kind === 'paid' ? `${price.value} per hour`
         : price.kind === 'free' ? 'free'
-        : price.kind === 'permit' ? 'permit required'
         : 'rate not listed';
 
     return (
@@ -130,9 +136,16 @@ export default function ParkingListItem({
 
                 <View style={styles.sectionDivider} />
 
-                {/* Tier 1b — price. Rate stacks over its unit so "per hour" reads in full. */}
+                {/* Tier 1b — price, or plain-language access when it isn't public. */}
                 <View style={styles.priceBlock}>
-                    {price.kind === 'paid' ? (
+                    {!isPublic ? (
+                        <Text
+                            style={[styles.priceTag, { color: PRICE_TONE[access.tone] || TOKENS.textMuted }]}
+                            numberOfLines={1}
+                        >
+                            {ACCESS_LABEL[access.kind] || access.label}
+                        </Text>
+                    ) : price.kind === 'paid' ? (
                         <>
                             <Text style={styles.priceValue} numberOfLines={1}>{price.value}</Text>
                             {price.unit ? <Text style={styles.priceUnit}>{price.unit}</Text> : null}

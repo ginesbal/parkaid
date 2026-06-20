@@ -126,34 +126,33 @@ export const styles = StyleSheet.create({
   },
 
   // --- Front content ---
-  // The body fills the space between the header and the actions and centers its
-  // group, so whitespace stays balanced instead of pooling into a void above
-  // the buttons. One consistent gap drives the vertical rhythm.
+  // Reads top-to-bottom the way a driver decides: what it costs and whether
+  // it's free right now, then when it's paid / how long / how far. Filled with
+  // real content, so there's no empty void to pad around.
   frontBody: {
     flex: 1,
-    justifyContent: 'center',
-    gap: 20,
+    gap: 16,
   },
 
   address: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '600',
     color: TOKENS.text,
-    lineHeight: 27,
+    lineHeight: 26,
     letterSpacing: -0.4,
   },
 
-  // Price — the focal point, carried by size and color rather than a heavy box.
-  priceBlock: {
-    gap: 3,
+  // Headline — price carried by size + color, with a live paid/free status dot.
+  headline: {
+    gap: 7,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   priceValue: {
-    fontSize: 33,
-    lineHeight: 37,
+    fontSize: 34,
+    lineHeight: 38,
     fontWeight: '600',
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
@@ -164,89 +163,103 @@ export const styles = StyleSheet.create({
     color: TOKENS.textMuted,
     marginLeft: 5,
   },
-  priceNote: {
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: '500',
-    color: TOKENS.textMuted,
-  },
-
-  // Three quick facts in a clean band, framed by hairline rules (echoes the
-  // back's spec-sheet lines). No vertical dividers — even spacing carries it.
-  statRow: {
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: TOKENS.divider,
+    flexWrap: 'wrap',
+    gap: 7,
   },
-  statCell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
+  statusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
   },
-  statValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  statValue: {
-    fontSize: 20,
-    lineHeight: 24,
+  dotFree: { backgroundColor: TOKENS.success },
+  dotPaid: { backgroundColor: TOKENS.warning },
+  statusLabel: {
+    fontSize: 14,
     fontWeight: '600',
-    color: TOKENS.text,
-    letterSpacing: -0.3,
-    fontVariant: ['tabular-nums'],
   },
-  statValueUnit: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: TOKENS.textMuted,
-    marginLeft: 3,
-  },
-  statLabel: {
-    fontSize: 12,
+  statusLabelFree: { color: TOKENS.success },
+  statusLabelPaid: { color: TOKENS.warning },
+  statusDetail: {
+    fontSize: 14,
     fontWeight: '400',
     color: TOKENS.textMuted,
-    letterSpacing: 0.1,
   },
 
-  // Restriction badges — only the rules a driver would get ticketed for.
-  badgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  badge: {
+  // Access banner — plain-language "Residents only" / "No stopping" for the
+  // spots a visiting driver can't actually use. Replaces permit jargon.
+  accessBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 11,
-    borderRadius: 9999,
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  badgeDanger: {
-    backgroundColor: TOKENS.dangerSoft,
-    borderColor: alpha(TOKENS.danger, 0.22),
-  },
-  badgeWarning: {
+  bannerWarning: {
     backgroundColor: TOKENS.warningSoft,
     borderColor: alpha(TOKENS.warning, 0.22),
   },
-  badgeInfo: {
-    backgroundColor: TOKENS.surfaceMuted,
-    borderColor: TOKENS.hairline,
+  bannerDanger: {
+    backgroundColor: TOKENS.dangerSoft,
+    borderColor: alpha(TOKENS.danger, 0.22),
   },
-  badgeText: {
+  accessTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  accessLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  accessDetail: {
     fontSize: 13,
-    fontWeight: '500',
+    lineHeight: 17,
+    color: TOKENS.textMuted,
   },
-  badgeTextDanger: { color: TOKENS.danger },
-  badgeTextWarning: { color: TOKENS.warning },
-  badgeTextInfo: { color: TOKENS.textMuted },
+
+  // Facts — icon-anchored rows answering pricing / hours / convenience. The
+  // icon flags the category, the label names it, the value answers it.
+  facts: {
+    marginTop: 2,
+  },
+  factRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+  },
+  factRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: TOKENS.divider,
+  },
+  factIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: TOKENS.primaryWash,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  factText: {
+    flex: 1,
+    gap: 2,
+  },
+  factLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: TOKENS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  factValue: {
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '500',
+    color: TOKENS.text,
+  },
 
   // Action buttons — 54px touch targets.
   actionsLarge: {

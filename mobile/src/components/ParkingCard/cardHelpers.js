@@ -1,6 +1,6 @@
 // src/components/ParkingCard/cardHelpers.js
 
-import { getCapacity, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
+import { getAccess, getCapacity, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
 import { logger } from '../../utils/loggers';
 
 // json parsing helpers
@@ -104,6 +104,7 @@ export const getDetailsPages = (spot) => {
         return null;
     };
 
+    const access = getAccess(spot || {});
     const price = getPriceInfo(spot || {});
     const maxStay = getMaxStay(spot || {});
     const capacity = getCapacity(spot || {});
@@ -115,12 +116,15 @@ export const getDetailsPages = (spot) => {
 
     // 1) Pricing -------------------------------------------------------------
     const pricing = [];
-    if (price.kind === 'paid') {
+    if (access.kind !== 'public') {
+        // Plain language instead of "permit zone R-12".
+        pricing.push({ label: 'Access', value: access.label, highlight: true });
+    } else if (price.kind === 'paid') {
         pricing.push({ label: 'Rate', value: `${price.value}${price.unit ? ` ${price.unit}` : ''}`, highlight: true });
     } else if (price.kind === 'free') {
         pricing.push({ label: 'Rate', value: 'Free', highlight: true });
-    } else if (price.kind === 'permit') {
-        pricing.push({ label: 'Access', value: 'Permit holders only', highlight: true });
+    } else {
+        pricing.push({ label: 'Rate', value: 'Posted on signs' });
     }
 
     const enforceable = field('enforceable_time');

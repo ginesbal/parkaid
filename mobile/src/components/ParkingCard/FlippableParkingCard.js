@@ -13,10 +13,9 @@ import {
 import { TOKENS } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
 import {
-    getCapacity,
-    getMaxStay,
+    getAccess,
+    getHours,
     getPriceInfo,
-    getRestrictions,
     getSpotType,
 } from '../../utils/spotInfo';
 import {
@@ -31,12 +30,8 @@ import { styles } from './cardStyles';
 const HERO_COLOR = {
     paid: TOKENS.text,
     free: TOKENS.success,
-    permit: TOKENS.warning,
     unknown: TOKENS.textMuted,
 };
-const BADGE_STYLE = { danger: styles.badgeDanger, warning: styles.badgeWarning, info: styles.badgeInfo };
-const BADGE_TEXT = { danger: styles.badgeTextDanger, warning: styles.badgeTextWarning, info: styles.badgeTextInfo };
-const BADGE_ICON = { danger: TOKENS.danger, warning: TOKENS.warning, info: TOKENS.textMuted };
 
 const formatDistance = (meters) => {
     const m = Number(meters);
@@ -143,21 +138,30 @@ function FlippableParkingCard({
 
     // Everything the front shows comes from one shared source of truth.
     const type = getSpotType(spot);
+    const access = getAccess(spot);
     const price = getPriceInfo(spot);
-    const maxStay = getMaxStay(spot);
-    const capacity = getCapacity(spot);
+    const hours = getHours(spot);
     const distance = formatDistance(spot.distance);
     const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
+    const isPublic = access.kind === 'public';
 
-    // Restrictions, minus max-stay (it already has its own stat cell).
-    const badges = getRestrictions(spot).filter((b) => b.key !== 'max').slice(0, 3);
+    // Pricing / hours / convenience as skimmable, icon-anchored rows.
+    const away = distance.unit ? `${distance.value} ${distance.unit} away` : `${distance.value} away`;
+    const walkText = walk != null ? `${walk} ${walk === 1 ? 'minute' : 'minutes'} walk` : null;
 
-    // The third stat falls back gracefully: max stay -> capacity -> spot type.
-    const thirdStat = maxStay
-        ? { value: maxStay.value, unit: maxStay.unit, label: 'Max stay' }
-        : capacity
-            ? { value: String(capacity), unit: capacity === 1 ? 'space' : 'spaces', label: 'Capacity' }
-            : { value: type.label, unit: '', label: 'Type' };
+    const facts = [];
+    if (isPublic && price.kind !== 'free' && hours.schedule) {
+        facts.push({ key: 'hours', icon: 'clock-outline', label: 'Paid hours', value: hours.schedule });
+    }
+    if (hours.maxStay) {
+        facts.push({ key: 'max', icon: 'timer-sand', label: 'Max stay', value: hours.maxStay.text });
+    }
+    facts.push({
+        key: 'walk',
+        icon: 'walk',
+        label: 'Getting there',
+        value: walkText ? `${walkText} · ${away}` : away,
+    });
 
     // Back-of-card detail sections, rendered as one vertical spec sheet.
     const sections = getDetailsPages(spot).filter((s) => s.items.length > 0);
@@ -213,70 +217,94 @@ function FlippableParkingCard({
                             {spot.address || spot.address_desc || 'Parking spot'}
                         </Text>
 
-                        {/* Price — the focal point, carried by size and color. */}
-                        <View style={styles.priceBlock}>
-                            <View style={styles.priceRow}>
-                                <Text style={[styles.priceValue, { color: HERO_COLOR[price.kind] }]}>
-                                    {price.value}
-                                </Text>
-                                {price.unit ? (
-                                    <Text style={styles.priceUnit}>{price.unit}</Text>
+                        {isPublic ? (
+                            // Headline: what it costs + whether it's free right now.
+                            <View style={styles.headline}>
+                                <View style={styles.priceRow}>
+                                    <Text
+                                        style={[styles.priceValue, { color: HERO_COLOR[price.kind] }]}
+                                        numberOfLines={1}
+                                    >
+                                        {price.value}
+                                    </Text>
+                                    {price.unit ? (
+                                        <Text style={styles.priceUnit}>{price.unit}</Text>
+                                    ) : null}
+                                </View>
+
+                                {hours.status ? (
+                                    <View style={styles.statusRow}>
+                                        <View
+                                            style={[
+                                                styles.statusDot,
+                                                hours.status.state === 'free' ? styles.dotFree : styles.dotPaid,
+                                            ]}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.statusLabel,
+                                                hours.status.state === 'free' ? styles.statusLabelFree : styles.statusLabelPaid,
+                                            ]}
+                                        >
+                                            {hours.status.label}
+                                        </Text>
+                                        <Text style={styles.statusDetail}>· {hours.status.detail}</Text>
+                                    </View>
+                                ) : price.kind === 'free' ? (
+                                    <View style={styles.statusRow}>
+                                        <View style={[styles.statusDot, styles.dotFree]} />
+                                        <Text style={[styles.statusLabel, styles.statusLabelFree]}>Free to park</Text>
+                                    </View>
+                                ) : price.note ? (
+                                    <Text style={styles.statusDetail}>{price.note}</Text>
                                 ) : null}
                             </View>
-                            {price.note ? (
-                                <Text style={styles.priceNote} numberOfLines={1}>{price.note}</Text>
-                            ) : null}
-                        </View>
-
-                        {/* Three quick facts, framed by hairline rules */}
-                        <View style={styles.statRow}>
-                            <View style={styles.statCell}>
-                                <View style={styles.statValueRow}>
-                                    <Text style={styles.statValue}>{walk ?? '—'}</Text>
-                                    {walk != null ? (
-                                        <Text style={styles.statValueUnit}>{walk === 1 ? 'minute' : 'minutes'}</Text>
+                        ) : (
+                            // Not public — say so in plain language, not permit jargon.
+                            <View
+                                style={[
+                                    styles.accessBanner,
+                                    access.tone === 'danger' ? styles.bannerDanger : styles.bannerWarning,
+                                ]}
+                            >
+                                <MaterialCommunityIcons
+                                    name={access.icon}
+                                    size={24}
+                                    color={access.tone === 'danger' ? TOKENS.danger : TOKENS.warning}
+                                />
+                                <View style={styles.accessTextWrap}>
+                                    <Text
+                                        style={[
+                                            styles.accessLabel,
+                                            { color: access.tone === 'danger' ? TOKENS.danger : TOKENS.warning },
+                                        ]}
+                                    >
+                                        {access.label}
+                                    </Text>
+                                    {access.detail ? (
+                                        <Text style={styles.accessDetail}>{access.detail}</Text>
                                     ) : null}
                                 </View>
-                                <Text style={styles.statLabel}>Walk</Text>
-                            </View>
-
-                            <View style={styles.statCell}>
-                                <View style={styles.statValueRow}>
-                                    <Text style={styles.statValue}>{distance.value}</Text>
-                                    {distance.unit ? (
-                                        <Text style={styles.statValueUnit}>{distance.unit}</Text>
-                                    ) : null}
-                                </View>
-                                <Text style={styles.statLabel}>Away</Text>
-                            </View>
-
-                            <View style={styles.statCell}>
-                                <View style={styles.statValueRow}>
-                                    <Text style={styles.statValue} numberOfLines={1}>{thirdStat.value}</Text>
-                                    {thirdStat.unit ? (
-                                        <Text style={styles.statValueUnit}>{thirdStat.unit}</Text>
-                                    ) : null}
-                                </View>
-                                <Text style={styles.statLabel}>{thirdStat.label}</Text>
-                            </View>
-                        </View>
-
-                        {badges.length > 0 && (
-                            <View style={styles.badgesRow}>
-                                {badges.map((badge) => (
-                                    <View key={badge.key} style={[styles.badge, BADGE_STYLE[badge.tone]]}>
-                                        <MaterialCommunityIcons
-                                            name={badge.icon}
-                                            size={14}
-                                            color={BADGE_ICON[badge.tone]}
-                                        />
-                                        <Text style={[styles.badgeText, BADGE_TEXT[badge.tone]]} numberOfLines={1}>
-                                            {badge.text}
-                                        </Text>
-                                    </View>
-                                ))}
                             </View>
                         )}
+
+                        {/* Pricing / hours / convenience — skimmable icon rows */}
+                        <View style={styles.facts}>
+                            {facts.map((f, i) => (
+                                <View
+                                    key={f.key}
+                                    style={[styles.factRow, i < facts.length - 1 && styles.factRowDivider]}
+                                >
+                                    <View style={styles.factIcon}>
+                                        <MaterialCommunityIcons name={f.icon} size={18} color={TOKENS.primary} />
+                                    </View>
+                                    <View style={styles.factText}>
+                                        <Text style={styles.factLabel}>{f.label}</Text>
+                                        <Text style={styles.factValue} numberOfLines={2}>{f.value}</Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
                     </View>
 
                     <View style={styles.actionsLarge}>

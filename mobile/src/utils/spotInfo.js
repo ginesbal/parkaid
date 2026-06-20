@@ -103,6 +103,131 @@ export const getCapacity = (spot) => {
     return Number.isFinite(n) && n > 0 ? n : null;
 };
 
+// ---- access: "can I park here?" --------------------------------------------
+
+/**
+ * Plain-language answer to whether a regular driver may park here. Avoids
+ * jargon like "permit zone R-12" that a visiting driver wouldn't understand.
+ *   public     -> anyone can park (no banner needed)
+ *   residents  -> permit holders only
+ *   no_parking -> stopping not allowed
+ */
+export const getAccess = (spot) => {
+    if (hasFlag(pick(spot, 'no_stopping'))) {
+        return {
+            kind: 'no_parking',
+            tone: 'danger',
+            icon: 'sign-direction-remove',
+            label: 'No stopping',
+            detail: 'Stopping is not allowed along here',
+        };
+    }
+    if (pick(spot, 'permit_zone')) {
+        return {
+            kind: 'residents',
+            tone: 'warning',
+            icon: 'account-key-outline',
+            label: 'Residents only',
+            detail: 'Permit parking — not open to the public',
+        };
+    }
+    return { kind: 'public', tone: 'success', icon: 'check-circle-outline', label: 'Open to the public', detail: null };
+};
+
+// ---- hours: "when is it paid, and is it paid right now?" --------------------
+
+const DAY_INDEX = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const to24h = (h, m, ap) => {
+    let hr = parseInt(h, 10);
+    if (ap) {
+        const p = ap[0].toLowerCase();
+        if (p === 'p' && hr !== 12) hr += 12;
+        if (p === 'a' && hr === 12) hr = 0;
+    }
+    return hr + (m ? parseInt(m, 10) / 60 : 0);
+};
+
+const fmtHour = (h) => {
+    const hr = Math.floor(h) % 24;
+    const min = Math.round((h - Math.floor(h)) * 60);
+    const ap = hr >= 12 ? 'PM' : 'AM';
+    let hh = hr % 12;
+    if (hh === 0) hh = 12;
+    return min ? `${hh}:${String(min).padStart(2, '0')} ${ap}` : `${hh} ${ap}`;
+};
+
+const fmtDays = (set) => {
+    const arr = [...set].sort((a, b) => a - b);
+    if (arr.length === 7) return 'Every day';
+    const contiguous = arr.every((d, i) => i === 0 || d === arr[i - 1] + 1);
+    if (contiguous && arr.length > 1) return `${DAY_ABBR[arr[0]]}–${DAY_ABBR[arr[arr.length - 1]]}`;
+    return arr.map((d) => DAY_ABBR[d]).join(', ');
+};
+
+// Parse the city's enforceable-time string into a paid window we can reason
+// about. Conservative: returns null unless it finds a clear time range, so we
+// never invent hours we aren't sure about.
+const parsePaidWindow = (str) => {
+    if (typeof str !== 'string' || !str.trim()) return null;
+    const s = str.toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
+
+    const tm = s.match(
+        /(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:-|to)\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/
+    );
+    if (!tm) return null;
+    const start = to24h(tm[1], tm[2], tm[3]);
+    let end = to24h(tm[4], tm[5], tm[6]);
+    if (!tm[3] && !tm[6] && end <= start) end += 12; // "9 - 6" -> 9 AM – 6 PM
+    if (!(end > start)) return null;
+
+    let days;
+    if (/daily|every ?day|7 days|all week/.test(s)) {
+        days = new Set([0, 1, 2, 3, 4, 5, 6]);
+    } else {
+        const range = s.match(/(sun|mon|tue|wed|thu|fri|sat)[a-z]*\s*-\s*(sun|mon|tue|wed|thu|fri|sat)/);
+        if (range) {
+            const a = DAY_INDEX[range[1]];
+            const b = DAY_INDEX[range[2]];
+            days = new Set();
+            for (let i = a; ; i = (i + 1) % 7) { days.add(i); if (i === b) break; }
+        } else {
+            const found = [...s.matchAll(/(sun|mon|tue|wed|thu|fri|sat)/g)].map((m) => DAY_INDEX[m[1]]);
+            days = found.length ? new Set(found) : new Set([1, 2, 3, 4, 5, 6]);
+        }
+    }
+    return { days, start, end };
+};
+
+/**
+ * The "when" story: the paid schedule, the max stay, and — when the schedule
+ * parses cleanly — whether parking is paid or free at this exact moment.
+ * For public metered parking, outside the enforced window means free.
+ */
+export const getHours = (spot) => {
+    const enforceable = pick(spot, 'enforceable_time');
+    const maxStay = getMaxStay(spot);
+    const win = parsePaidWindow(enforceable);
+
+    let schedule = null;
+    let status = null;
+
+    if (win) {
+        schedule = `${fmtDays(win.days)}, ${fmtHour(win.start)} – ${fmtHour(win.end)}`;
+        const now = new Date();
+        const hour = now.getHours() + now.getMinutes() / 60;
+        const paidNow = win.days.has(now.getDay()) && hour >= win.start && hour < win.end;
+        status = paidNow
+            ? { state: 'paid', label: 'Paid right now', detail: `until ${fmtHour(win.end)}` }
+            : { state: 'free', label: 'Free right now', detail: `paid ${fmtHour(win.start)}–${fmtHour(win.end)}` };
+    } else if (typeof enforceable === 'string' && enforceable.trim()) {
+        schedule = enforceable.trim();
+    }
+
+    return { schedule, status, maxStay };
+};
+
 // ---- price -----------------------------------------------------------------
 
 // Pull the first dollar figure out of the city's HTML rate blob.
@@ -133,7 +258,6 @@ const paidWindow = (spot) => {
  */
 export const getPriceInfo = (spot) => {
     const priceZone = pick(spot, 'price_zone');
-    const permitZone = pick(spot, 'permit_zone');
     const html = pick(spot, 'html_zone_rate');
 
     // Prefer the dollar amount the backend already computed from the price zone.
@@ -175,20 +299,7 @@ export const getPriceInfo = (spot) => {
         return { kind: 'free', tone: 'success', value: 'Free', amount: 0, unit: null, perHour: false, note: paidWindow(spot) };
     }
 
-    // No rate, but a permit zone — this is NOT free to the public.
-    if (permitZone) {
-        return {
-            kind: 'permit',
-            tone: 'warning',
-            value: 'Permit',
-            amount: null,
-            unit: null,
-            perHour: false,
-            note: `Zone ${permitZone}`,
-        };
-    }
-
-    return { kind: 'unknown', tone: 'muted', value: 'Check signs', amount: null, unit: null, perHour: false, note: null };
+    return { kind: 'unknown', tone: 'muted', value: 'Rate on signs', amount: null, unit: null, perHour: false, note: null };
 };
 
 // ---- restrictions ----------------------------------------------------------
