@@ -49,12 +49,12 @@ export const styles = StyleSheet.create({
   },
 
   cardFront: {
-    padding: 22,
+    padding: 20,
     zIndex: 2,
   },
 
   cardBack: {
-    padding: 22,
+    padding: 20,
     zIndex: 1,
   },
 
@@ -63,7 +63,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 20,
   },
 
   cardHeaderBack: {
@@ -127,18 +127,20 @@ export const styles = StyleSheet.create({
   },
 
   // --- Front content ---
-  // Reads top-to-bottom the way a driver decides: what it costs and whether
-  // it's free right now, then when it's paid / how long / how far. Filled with
-  // real content, so there's no empty void to pad around.
+  // One spacing rhythm runs the whole face: 20 between sections (address,
+  // headline, facts), 16 between fact rows, 8 within the headline, 4 inside a
+  // label/value pair. No mixed values, no padding that stacks with the gaps.
+  // The group is centered so whitespace stays balanced on shorter cards.
   frontBody: {
     flex: 1,
-    gap: 16,
+    justifyContent: 'center',
+    gap: 20,
   },
 
   // Address — the actual street in bold, the block/cross-street location in
   // accent color beneath it.
   addressBlock: {
-    gap: 3,
+    gap: 4,
   },
   addressPrimary: {
     fontSize: 24,
@@ -179,7 +181,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 7,
+    gap: 6,
   },
   statusDot: {
     width: 9,
@@ -205,7 +207,7 @@ export const styles = StyleSheet.create({
   accessBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     padding: 16,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
@@ -220,7 +222,7 @@ export const styles = StyleSheet.create({
   },
   accessTextWrap: {
     flex: 1,
-    gap: 3,
+    gap: 4,
   },
   accessLabel: {
     fontSize: 18,
@@ -233,19 +235,16 @@ export const styles = StyleSheet.create({
   },
 
   // Facts — icon-anchored rows answering pricing / hours / convenience. The
-  // icon flags the category, the label names it, the value answers it.
+  // icon flags the category, the label names it, the value answers it. Rows are
+  // separated by one even gap (no padding/dividers stacking against it), so the
+  // icons land on a clean vertical rhythm.
   facts: {
-    marginTop: 2,
+    gap: 16,
   },
   factRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12,
-  },
-  factRowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: TOKENS.divider,
+    gap: 12,
   },
   factIcon: {
     width: 40,
@@ -260,7 +259,7 @@ export const styles = StyleSheet.create({
   },
   factText: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   factLabel: {
     fontSize: 11,

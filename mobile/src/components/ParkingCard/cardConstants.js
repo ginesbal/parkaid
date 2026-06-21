@@ -3,7 +3,7 @@ import { Dimensions } from 'react-native';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const CARD_WIDTH = Math.min(SCREEN_WIDTH - 20, 430);
-export const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.58, 540);
+export const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.57, 500);
 
 // for horizontal page sizing
 export const CONTENT_PAD = 20;

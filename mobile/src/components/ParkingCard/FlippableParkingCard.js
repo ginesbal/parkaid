@@ -311,11 +311,8 @@ function FlippableParkingCard({
 
                         {/* Pricing / hours / convenience — skimmable icon rows */}
                         <View style={styles.facts}>
-                            {facts.map((f, i) => (
-                                <View
-                                    key={f.key}
-                                    style={[styles.factRow, i < facts.length - 1 && styles.factRowDivider]}
-                                >
+                            {facts.map((f) => (
+                                <View key={f.key} style={styles.factRow}>
                                     <View style={[styles.factIcon, f.tone === 'danger' && styles.factIconDanger]}>
                                         <MaterialCommunityIcons
                                             name={f.icon}
