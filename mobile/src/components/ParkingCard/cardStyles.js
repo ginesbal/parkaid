@@ -276,17 +276,19 @@ export const styles = StyleSheet.create({
   },
 
   // Action buttons — 54px touch targets.
+  // Actions sit in their own zone with a guaranteed 24px breathing gap above
+  // them, so the last fact never crowds the buttons.
   actionsLarge: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 'auto',
+    marginTop: 24,
   },
   detailsBtnLarge: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 58,
     backgroundColor: 'transparent',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TOKENS.hairlineStrong,
@@ -303,15 +305,26 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 58,
     backgroundColor: TOKENS.primary,
     borderRadius: 14,
-    gap: 8,
+    gap: 10,
+  },
+  // Navigate stacks its label over the walk ETA, like a maps directions button.
+  navBtnTextWrap: {
+    alignItems: 'flex-start',
   },
   navBtnTextLarge: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    lineHeight: 20,
     color: '#ffffff',
+  },
+  navBtnEta: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 15,
+    color: 'rgba(255, 255, 255, 0.82)',
   },
 
   // --- Back: vertical spec sheet ---
@@ -393,7 +406,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 58,
     backgroundColor: TOKENS.primary,
     borderRadius: 14,
     gap: 8,

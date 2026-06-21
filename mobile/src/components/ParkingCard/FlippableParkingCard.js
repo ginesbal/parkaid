@@ -35,12 +35,11 @@ const HERO_COLOR = {
     unknown: TOKENS.textMuted,
 };
 
-const formatDistance = (meters) => {
+// Compact distance for the Navigate button's ETA line.
+const shortDistance = (meters) => {
     const m = Number(meters);
-    if (!Number.isFinite(m)) return { value: '—', unit: '' };
-    if (m < 1000) return { value: String(m), unit: m === 1 ? 'meter' : 'meters' };
-    const km = (m / 1000).toFixed(1);
-    return { value: km, unit: km === '1.0' ? 'kilometer' : 'kilometers' };
+    if (!Number.isFinite(m)) return null;
+    return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`;
 };
 
 function FlippableParkingCard({
@@ -145,16 +144,16 @@ function FlippableParkingCard({
     const hours = getHours(spot);
     const rush = getRushRestriction(spot);
     const addr = parseAddress(spot);
-    const distance = formatDistance(spot.distance);
     const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
     const isPublic = access.kind === 'public';
 
-    // Pricing / hours / convenience as skimmable, icon-anchored rows.
-    const away = distance.unit ? `${distance.value} ${distance.unit} away` : `${distance.value} away`;
-    const walkText = walk != null ? `${walk} ${walk === 1 ? 'minute' : 'minutes'} walk` : null;
+    // The "getting there" ETA now rides on the Navigate button.
+    const distShort = shortDistance(spot.distance);
+    const eta = walk != null
+        ? (distShort ? `${walk} min walk · ${distShort}` : `${walk} min walk`)
+        : distShort;
 
-    // Front shows the 3 most decision-relevant facts; the full breakdown lives
-    // on the flipped details view.
+    // Front shows the decision facts (pricing / hours); convenience is on the button.
     const facts = [];
     if (isPublic) {
         if (price.kind !== 'free' && hours.schedule) {
@@ -170,12 +169,6 @@ function FlippableParkingCard({
         // Residents / no-parking: when the permit is in effect.
         facts.push({ key: 'permit', icon: 'clock-outline', label: 'In effect', value: hours.schedule });
     }
-    facts.push({
-        key: 'walk',
-        icon: 'walk',
-        label: 'Getting there',
-        value: walkText ? `${walkText} · ${away}` : away,
-    });
 
     // Back-of-card detail sections, rendered as one vertical spec sheet.
     const sections = getDetailsPages(spot).filter((s) => s.items.length > 0);
@@ -309,24 +302,26 @@ function FlippableParkingCard({
                             </View>
                         )}
 
-                        {/* Pricing / hours / convenience — skimmable icon rows */}
-                        <View style={styles.facts}>
-                            {facts.map((f) => (
-                                <View key={f.key} style={styles.factRow}>
-                                    <View style={[styles.factIcon, f.tone === 'danger' && styles.factIconDanger]}>
-                                        <MaterialCommunityIcons
-                                            name={f.icon}
-                                            size={19}
-                                            color={f.tone === 'danger' ? TOKENS.danger : TOKENS.primary}
-                                        />
+                        {/* Pricing / hours — skimmable icon rows */}
+                        {facts.length > 0 && (
+                            <View style={styles.facts}>
+                                {facts.map((f) => (
+                                    <View key={f.key} style={styles.factRow}>
+                                        <View style={[styles.factIcon, f.tone === 'danger' && styles.factIconDanger]}>
+                                            <MaterialCommunityIcons
+                                                name={f.icon}
+                                                size={19}
+                                                color={f.tone === 'danger' ? TOKENS.danger : TOKENS.primary}
+                                            />
+                                        </View>
+                                        <View style={styles.factText}>
+                                            <Text style={styles.factLabel}>{f.label}</Text>
+                                            <Text style={styles.factValue} numberOfLines={2}>{f.value}</Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.factText}>
-                                        <Text style={styles.factLabel}>{f.label}</Text>
-                                        <Text style={styles.factValue} numberOfLines={2}>{f.value}</Text>
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
+                                ))}
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.actionsLarge}>
@@ -336,7 +331,10 @@ function FlippableParkingCard({
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.navBtnLarge} onPress={onNavigate} activeOpacity={0.85}>
                             <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
-                            <Text style={styles.navBtnTextLarge}>Navigate</Text>
+                            <View style={styles.navBtnTextWrap}>
+                                <Text style={styles.navBtnTextLarge}>Navigate</Text>
+                                {eta ? <Text style={styles.navBtnEta}>{eta}</Text> : null}
+                            </View>
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
