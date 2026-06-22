@@ -1,6 +1,26 @@
 
-export const DEFAULT_SEARCH_RADIUS = 250; // meters
+export const DEFAULT_SEARCH_RADIUS = 400; // meters (~5 min walk)
 export const LOCATION_STORAGE_KEY = 'userLocation';
+
+// ===== Search radius — single source of truth =====
+// Previously four different scales lived across the app (map presets,
+// DISTANCE_OPTIONS, SEARCH_RADIUS_OPTIONS, FilterBar). The map now uses one
+// continuous range, framed in walk time. Calgary's backend computes walking
+// time as distance / 80 m/min, so we mirror that here.
+export const RADIUS_MIN = 120;        // meters (~1.5 min walk)
+export const RADIUS_MAX = 1500;       // meters (~19 min walk) — also the fetch radius
+export const RADIUS_DEFAULT = DEFAULT_SEARCH_RADIUS;
+export const WALK_SPEED_M_PER_MIN = 80;
+
+// Meters -> whole minutes of walking (min 1). Matches backend walkingTime.
+export const metersToWalkMinutes = (m) =>
+    Math.max(1, Math.round((Number(m) || 0) / WALK_SPEED_M_PER_MIN));
+
+// Friendly distance label: "400 m" / "1.2 km".
+export const formatMeters = (m) => {
+    const meters = Math.round(Number(m) || 0);
+    return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`;
+};
 
 export const DEFAULT_LOCATION = {
     latitude: 51.0447,

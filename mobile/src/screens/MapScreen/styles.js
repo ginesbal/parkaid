@@ -288,6 +288,97 @@ export const styles = StyleSheet.create({
         opacity: 0.6,
     },
 
+    // ===== Radius dock — always-visible walk-time slider above the sheet =====
+    radiusDock: {
+        position: 'absolute',
+        left: 14,
+        right: 14,
+        backgroundColor: TOKENS.surfaceOverlay,
+        borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+        paddingHorizontal: 14,
+        paddingTop: 10,
+        paddingBottom: 8,
+        zIndex: 400,
+        shadowColor: TOKENS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+
+    // ===== Placement panel — shown while setting the search pin =====
+    placementPanel: {
+        position: 'absolute',
+        left: 14,
+        right: 14,
+        backgroundColor: TOKENS.surfaceOverlay,
+        borderRadius: 18,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 14,
+        gap: 14,
+        zIndex: 700,
+        shadowColor: TOKENS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 6,
+    },
+
+    placementHint: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: TOKENS.textMuted,
+        textAlign: 'center',
+        lineHeight: 18,
+    },
+
+    placementActions: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+
+    placementBtn: {
+        flex: 1,
+        height: 46,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
+
+    placementBtnGhost: {
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+    },
+
+    placementBtnPrimary: {
+        backgroundColor: TOKENS.primary,
+    },
+
+    placementBtnPressed: {
+        opacity: 0.85,
+        transform: [{ scale: 0.98 }],
+    },
+
+    placementBtnGhostText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: TOKENS.text,
+    },
+
+    placementBtnPrimaryText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#fff',
+    },
+
     // ===== Bottom sheet =====
     bottomSheet: {
         position: 'absolute',

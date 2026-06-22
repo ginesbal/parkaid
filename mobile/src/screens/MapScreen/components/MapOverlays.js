@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Animated, View } from 'react-native';
+import { View } from 'react-native';
 import { Circle, Marker } from 'react-native-maps';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
@@ -9,50 +9,41 @@ function MapOverlays({
     searchRadius,
     searchMode,
     pinnedLocation,
-    pinDropAnim,
+    placingPin,
     spots,
     selectedSpot,
-    selScale,
-    selTranslateY,
     onSelectSpot,
 }) {
     return (
         <>
-            {searchCenter && (
+            {/* Radius ring — hidden while placing, when the center is moving and
+                the reticle alone communicates the target. Shown for a settled
+                current/pinned search so the area reads clearly. */}
+            {!placingPin && searchCenter && (
                 <Circle
                     center={searchCenter}
                     radius={searchRadius}
-                    fillColor={alpha(
-                        searchMode === 'pinned' ? TOKENS.textMuted : TOKENS.primary,
-                        0.06
-                    )}
-                    strokeColor={alpha(
-                        searchMode === 'pinned' ? TOKENS.textMuted : TOKENS.primary,
-                        0.22
-                    )}
+                    fillColor={alpha(TOKENS.primary, 0.06)}
+                    strokeColor={alpha(TOKENS.primary, 0.22)}
                     strokeWidth={2}
-                    lineDashPattern={searchMode === 'pinned' ? [8, 4] : null}
                 />
             )}
 
-            {pinnedLocation && (
-                <Marker coordinate={pinnedLocation} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
-                    <Animated.View
-                        style={[
-                            styles.pinMarker,
-                            {
-                                transform: [
-                                    { scale: pinDropAnim },
-                                    { translateY: pinDropAnim.interpolate({ inputRange: [0, 1], outputRange: [-30, 0] }) },
-                                ],
-                            },
-                        ]}
-                    >
+            {/* Confirmed pin — a static marker (no entrance spring, so it is
+                safe with tracksViewChanges=false). The animated drop now lives
+                on the screen-fixed reticle, not here. */}
+            {!placingPin && pinnedLocation && searchMode === 'pinned' && (
+                <Marker
+                    coordinate={pinnedLocation}
+                    anchor={{ x: 0.5, y: 1 }}
+                    tracksViewChanges={false}
+                >
+                    <View style={styles.pinMarker}>
                         <View style={styles.pinHead}>
                             <View style={styles.pinInner} />
                         </View>
                         <View style={styles.pinStem} />
-                    </Animated.View>
+                    </View>
                 </Marker>
             )}
 

@@ -20,6 +20,7 @@ import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingC
 
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
+import { RADIUS_DEFAULT, RADIUS_MAX } from '../../constants/parking';
 
 // logs
 import { logger } from '../../utils/loggers';
@@ -28,7 +29,9 @@ import { logger } from '../../utils/loggers';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import MapHeader from './components/MapHeader';
 import MapOverlays from './components/MapOverlays';
+import MapReticle from './components/MapReticle';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
+import WalkRadiusSlider from './components/WalkRadiusSlider';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './constants';
 import { styles } from './styles';
 import { centerCamera, getMarkerScreenPosition } from './utils/camera';
@@ -39,6 +42,7 @@ function MapScreen() {
     // Compact header: ~70px content + safe area inset (collapsed filters)
     const [navigationHeight, setNavigationHeight] = useState(70 + insets.top);
     const [sheetPeekHeight, setSheetPeekHeight] = useState(108);
+    const [radiusDockHeight, setRadiusDockHeight] = useState(84);
 
     // Get ACTUAL tab bar height from React Navigation (includes padding + safe areas)
     const tabBarHeight = useBottomTabBarHeight();
@@ -58,39 +62,63 @@ function MapScreen() {
     // fires on iOS when the user taps the search bar (the native recognizer
     // fires in parallel with RN's touch delivery to the TextInput).
     const searchFocusAtRef = useRef(0);
+    // Mirror of placingPin for the region-change handlers, which are created
+    // once and would otherwise close over a stale value.
+    const placingPinRef = useRef(false);
+    const reticleLiftedRef = useRef(false);
 
     // animations
     const controlsOpacity = useRef(new Animated.Value(1)).current;
     const controlsTranslateY = useRef(new Animated.Value(0)).current;
-    const selectedAnim = useRef(new Animated.Value(0)).current;
-    const pinDropAnim = useRef(new Animated.Value(0)).current;
+    // Drives the screen-fixed reticle: 0 dropped (settled), 1 lifted (moving).
+    const reticleLift = useRef(new Animated.Value(0)).current;
 
     // data state
     const [region, setRegion] = useState(DEFAULT_LOCATION);
     const [userLocation, setUserLocation] = useState(null);
     const [filterType, setFilterType] = useState('all');
-    const [searchRadius, setSearchRadius] = useState(150);
+    const [searchRadius, setSearchRadius] = useState(RADIUS_DEFAULT);
     const [selectedSpot, setSelectedSpot] = useState(null);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     // pin state
     const [pinnedLocation, setPinnedLocation] = useState(null);
     const [searchMode, setSearchMode] = useState('current'); // 'current' | 'pinned'
-    const [showPinInstructions, setShowPinInstructions] = useState(false);
+    const [placingPin, setPlacingPin] = useState(false);
 
     // flippable card state
     const [flippableCardVisible, setFlippableCardVisible] = useState(false);
     const [flippableCardPosition, setFlippableCardPosition] = useState({ x: 0, y: 0 });
     const [flippableCardSpot, setFlippableCardSpot] = useState(null);
 
-    // calculate search spots
-    const searchLocation = (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
+    useEffect(() => {
+        placingPinRef.current = placingPin;
+    }, [placingPin]);
 
-    const { spots } = useParkingSpots(
-        searchLocation,
-        searchRadius,
-        filterType
-    );
+    // Where the API search is centered. While placing the pin we follow the
+    // map center (updated on settle); otherwise the pinned or current location.
+    const searchLocation = useMemo(() => {
+        if (placingPin) {
+            return { latitude: region.latitude, longitude: region.longitude };
+        }
+        return (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
+    }, [placingPin, region.latitude, region.longitude, searchMode, pinnedLocation, userLocation]);
+
+    // The radius ring is only drawn for a settled search, so it tracks the
+    // pinned/current center (never the live map center).
+    const circleCenter = useMemo(() => (
+        (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation
+    ), [searchMode, pinnedLocation, userLocation]);
+
+    // Fetch once at the MAX radius, then narrow client-side as the slider
+    // moves. Dialing the radius down is instant and never touches the network.
+    const { spots: allSpots } = useParkingSpots(searchLocation, RADIUS_MAX, filterType);
+    const spots = useMemo(() => (
+        Array.isArray(allSpots)
+            ? allSpots.filter(s => (typeof s.distance === 'number' ? s.distance : Infinity) <= searchRadius)
+            : []
+    ), [allSpots, searchRadius]);
+
     // get initial location and record permission outcome
     useEffect(() => {
         (async () => {
@@ -176,30 +204,86 @@ function MapScreen() {
         }, 3000);
     }, [hideControls, showControls]);
 
-    // long press to drop pin and switch mode
-    const handleMapLongPress = (event) => {
-        const { coordinate } = event.nativeEvent;
-        setPinnedLocation({
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-        });
+    // ===== Reticle placement flow =====
 
-        pinDropAnim.setValue(0);
-        Animated.spring(pinDropAnim, {
+    // Enter placement, centering the map on the most relevant existing point.
+    const startPlacing = useCallback(() => {
+        const target =
+            (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : (userLocation || region);
+
+        setSelectedSpot(null);
+        setFlippableCardVisible(false);
+        bottomSheetRef.current?.dismiss();
+        setPlacingPin(true);
+        logger.log('pin_placement_started', { from: searchMode }, 'UI_EVENT');
+
+        if (target) {
+            mapRef.current?.animateCamera(
+                { center: { latitude: target.latitude, longitude: target.longitude } },
+                { duration: 220 }
+            );
+        }
+    }, [pinnedLocation, searchMode, userLocation, region]);
+
+    // Lock the current map center as the pinned search location.
+    const confirmPlacement = useCallback(() => {
+        const center = {
+            latitude: region.latitude,
+            longitude: region.longitude,
+            latitudeDelta: region.latitudeDelta ?? 0.01,
+            longitudeDelta: region.longitudeDelta ?? 0.01,
+        };
+        setPinnedLocation(center);
+        setSearchMode('pinned');
+        setPlacingPin(false);
+        // important: record the confirmed pin + mode shift
+        logger.log('pin_placed', { lat: center.latitude, lng: center.longitude }, 'UI_EVENT');
+        logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
+    }, [region]);
+
+    // Abandon placement, returning to whatever search was active before.
+    const cancelPlacement = useCallback(() => {
+        setPlacingPin(false);
+        if (!pinnedLocation) setSearchMode('current');
+        logger.log('pin_placement_cancelled', {}, 'UI_EVENT');
+    }, [pinnedLocation]);
+
+    // Long-press is a power-user shortcut straight into placement at a point.
+    const handleMapLongPress = useCallback((event) => {
+        const { coordinate } = event.nativeEvent;
+        setSelectedSpot(null);
+        setFlippableCardVisible(false);
+        bottomSheetRef.current?.dismiss();
+        setPlacingPin(true);
+        mapRef.current?.animateCamera({ center: coordinate }, { duration: 200 });
+        logger.log('pin_placement_started', { from: 'long_press' }, 'UI_EVENT');
+    }, []);
+
+    // While placing, lift the reticle as the map starts moving...
+    const handleRegionChange = useCallback(() => {
+        if (!placingPinRef.current || reticleLiftedRef.current) return;
+        reticleLiftedRef.current = true;
+        Animated.spring(reticleLift, {
             toValue: 1,
-            tension: 40,
-            friction: 6,
+            tension: 120,
+            friction: 12,
             useNativeDriver: true,
         }).start();
+    }, [reticleLift]);
 
-        setSearchMode('pinned');
-        setShowPinInstructions(false);
-        // important: record pin placement and mode shift
-        logger.log('Pin dropped', coordinate, 'UI_EVENT');
-        logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
-    };
+    // ...and drop it (plus refresh the search center) when it settles.
+    const handleRegionChangeComplete = useCallback((nextRegion) => {
+        setRegion(nextRegion);
+        if (placingPinRef.current) {
+            reticleLiftedRef.current = false;
+            Animated.spring(reticleLift, {
+                toValue: 0,
+                tension: 120,
+                friction: 10,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [reticleLift]);
 
     const selectSpot = async (spot, fromList = false) => {
         // important: deep snapshot of the chosen spot for diagnostics
@@ -243,14 +327,6 @@ function MapScreen() {
                 }, delay);
             }, 0);
         }
-
-        selectedAnim.setValue(0);
-        Animated.spring(selectedAnim, {
-            toValue: 1,
-            tension: 88,
-            friction: 8,
-            useNativeDriver: true,
-        }).start();
     };
 
     const onNavigate = (spot) => {
@@ -264,27 +340,20 @@ function MapScreen() {
         }
     };
 
-    const searchCenter = useMemo(() => (
-        (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation
-    ), [pinnedLocation, searchMode, userLocation]);
-
-    const selScale = selectedAnim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [0.92, 1.12, 1]
-    });
-    const selTranslateY = selectedAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [6, 0]
-    });
-
     const dynamicStyles = useMemo(() => ({
         topNavigation: { ...styles.topNavigation, paddingTop: insets.top + 4 },
-        tooltip: { ...styles.tooltip, top: navigationHeight + 8 }
-    }), [insets.top, navigationHeight]);
+    }), [insets.top]);
 
     const handleNavigationLayout = useCallback((event) => {
         const measuredHeight = Math.ceil(event.nativeEvent.layout.height);
         setNavigationHeight((currentHeight) => (
+            Math.abs(currentHeight - measuredHeight) > 1 ? measuredHeight : currentHeight
+        ));
+    }, []);
+
+    const handleRadiusDockLayout = useCallback((event) => {
+        const measuredHeight = Math.ceil(event.nativeEvent.layout.height);
+        setRadiusDockHeight((currentHeight) => (
             Math.abs(currentHeight - measuredHeight) > 1 ? measuredHeight : currentHeight
         ));
     }, []);
@@ -315,13 +384,8 @@ function MapScreen() {
         setFlippableCardVisible(false);
     }, [handleMapInteraction]);
 
-    // Stable setSearchMode wrapper for MapHeader — keeps memo(MapHeader) intact.
-    const handleSearchModeChange = useCallback((mode) => {
-        logger.log('search_mode_changed', { to: mode }, 'INFO');
-        setSearchMode(mode);
-    }, []);
-
-    // Stable place-selected handler for MapHeader.
+    // Selecting a place from search is an explicit, precise choice — pin it
+    // directly without entering the reticle flow.
     const handlePlaceSelected = useCallback((place) => {
         if (place?.lat && place?.lng) {
             const newRegion = {
@@ -334,9 +398,16 @@ function MapScreen() {
             mapRef.current?.animateToRegion(newRegion, 300);
             setPinnedLocation(newRegion);
             setSearchMode('pinned');
+            setPlacingPin(false);
             logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
         }
     }, []);
+
+    // The reticle points at the center of the visible band (between the header
+    // and the bottom UI). mapPadding makes the reported region center align
+    // with this same point, so map center == reticle target.
+    const reticleX = SCREEN_WIDTH / 2;
+    const reticleY = navigationHeight + (SCREEN_HEIGHT - navigationHeight - BOTTOM_UI_OFFSET) / 2;
 
     return (
         <View style={styles.container}>
@@ -350,7 +421,8 @@ function MapScreen() {
                 style={styles.map}
                 provider={PROVIDER_GOOGLE}
                 initialRegion={region}
-                onRegionChangeComplete={setRegion}
+                onRegionChange={handleRegionChange}
+                onRegionChangeComplete={handleRegionChangeComplete}
                 onPanDrag={handleMapPanDrag}
                 onPress={handleMapPress}
                 onLongPress={handleMapLongPress}
@@ -366,88 +438,134 @@ function MapScreen() {
                 }}
             >
                 <MapOverlays
-                    searchCenter={searchCenter}
+                    searchCenter={circleCenter}
                     searchRadius={searchRadius}
                     searchMode={searchMode}
                     pinnedLocation={pinnedLocation}
-                    pinDropAnim={pinDropAnim}
+                    placingPin={placingPin}
                     spots={spots}
                     selectedSpot={selectedSpot}
-                    selScale={selScale}
-                    selTranslateY={selTranslateY}
                     onSelectSpot={selectSpot}
                 />
             </MapView>
+
+            {/* screen-fixed reticle — only while placing */}
+            {placingPin && (
+                <MapReticle lift={reticleLift} x={reticleX} y={reticleY} />
+            )}
 
             {/* header — rendered AFTER the map so it sits on top for both
                 painting and iOS touch routing. */}
             <View style={dynamicStyles.topNavigation} onLayout={handleNavigationLayout}>
                 <MapHeader
-                    isSearchFocused={isSearchFocused}
                     isDetailActive={flippableCardVisible}
-                    setIsSearchFocused={handleSearchFocusChange}
+                    placingPin={placingPin}
                     pinnedLocation={pinnedLocation}
-                    setPinnedLocation={setPinnedLocation}
-                    showPinInstructions={showPinInstructions}
-                    setShowPinInstructions={setShowPinInstructions}
                     searchMode={searchMode}
-                    // important: track mode changes from the header controls
-                    setSearchMode={handleSearchModeChange}
+                    onStartPlacing={startPlacing}
                     filterType={filterType}
                     setFilterType={setFilterType}
-                    searchRadius={searchRadius}
-                    setSearchRadius={setSearchRadius}
                     onPlaceSelected={handlePlaceSelected}
                 />
             </View>
 
-            {/* pin instruction tooltip */}
-            {showPinInstructions && !pinnedLocation && (
-                <Animated.View style={dynamicStyles.tooltip}>
-                    <View style={styles.tooltipArrow} />
-                    <Text style={styles.tooltipText}>
-                        Press and hold anywhere on the map to search that location
-                    </Text>
+            {/* floating recenter button — hidden while placing the pin */}
+            {!placingPin && (
+                <Animated.View
+                    style={[
+                        styles.fabContainer,
+                        {
+                            opacity: controlsOpacity,
+                            transform: [{ translateY: Animated.multiply(controlsTranslateY, -1) }],
+                            bottom: BOTTOM_UI_OFFSET + radiusDockHeight + 16,
+                        }
+                    ]}
+                    pointerEvents="auto"
+                >
+                    <Pressable
+                        style={({ pressed }) => [styles.fab, styles.fabPrimary, pressed && styles.fabPressed]}
+                        onPress={() => {
+                            logger.log('ui_recenter_pressed', { mode: searchMode }, 'UI_EVENT');
+
+                            const targetLocation =
+                                (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
+
+                            if (targetLocation) {
+                                mapRef.current?.animateCamera(
+                                    { center: { latitude: targetLocation.latitude, longitude: targetLocation.longitude } },
+                                    { duration: 180 }
+                                );
+                                setSelectedSpot(null);
+                                setFlippableCardVisible(false);
+                            }
+                        }}
+                    >
+                        <MaterialCommunityIcons
+                            name={searchMode === 'pinned' ? 'map-marker' : 'crosshairs-gps'}
+                            size={22}
+                            color="#fff"
+                        />
+                    </Pressable>
                 </Animated.View>
             )}
 
-            {/* floating recenter button */}
-            <Animated.View
-                style={[
-                    styles.fabContainer,
-                    {
-                        opacity: controlsOpacity,
-                        transform: [{ translateY: Animated.multiply(controlsTranslateY, -1) }],
-                        bottom: BOTTOM_UI_OFFSET - 4,
-                    }
-                ]}
-                pointerEvents="auto"
-            >
-                <Pressable
-                    style={({ pressed }) => [styles.fab, styles.fabPrimary, pressed && styles.fabPressed]}
-                    onPress={() => {
-                        logger.log('ui_recenter_pressed', { mode: searchMode }, 'UI_EVENT');
-
-                        const targetLocation =
-                            (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
-
-                        if (targetLocation) {
-                            mapRef.current?.animateCamera(
-                                { center: { latitude: targetLocation.latitude, longitude: targetLocation.longitude } },
-                                { duration: 180 }
-                            );
-                            setSelectedSpot(null);
-                            setFlippableCardVisible(false);
-                        }
-                    }}
+            {/* radius dock — always-visible walk-time slider (hidden while placing) */}
+            {!placingPin && (
+                <View
+                    style={[styles.radiusDock, { bottom: BOTTOM_UI_OFFSET + 8 }]}
+                    onLayout={handleRadiusDockLayout}
                 >
-                    <MaterialCommunityIcons
-                        name={searchMode === 'pinned' ? 'map-marker' : 'crosshairs-gps'}
-                        size={22}
-                        color="#fff"
+                    <WalkRadiusSlider
+                        radius={searchRadius}
+                        onRadiusChange={setSearchRadius}
+                        count={spots.length}
                     />
-                </Pressable>
-            </Animated.View>
+                </View>
+            )}
+
+            {/* placement panel — shown while setting the search pin */}
+            {placingPin && (
+                <View style={[styles.placementPanel, { bottom: BOTTOM_UI_OFFSET + 8 }]}>
+                    <Text style={styles.placementHint}>
+                        Move the map to set your search area
+                    </Text>
+
+                    <WalkRadiusSlider
+                        radius={searchRadius}
+                        onRadiusChange={setSearchRadius}
+                        count={spots.length}
+                    />
+
+                    <View style={styles.placementActions}>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.placementBtn,
+                                styles.placementBtnGhost,
+                                pressed && styles.placementBtnPressed,
+                            ]}
+                            onPress={cancelPlacement}
+                            accessibilityRole="button"
+                            accessibilityLabel="Cancel setting search location"
+                        >
+                            <Text style={styles.placementBtnGhostText}>Cancel</Text>
+                        </Pressable>
+
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.placementBtn,
+                                styles.placementBtnPrimary,
+                                pressed && styles.placementBtnPressed,
+                            ]}
+                            onPress={confirmPlacement}
+                            accessibilityRole="button"
+                            accessibilityLabel="Search this area"
+                        >
+                            <MaterialCommunityIcons name="map-marker-check" size={18} color="#fff" />
+                            <Text style={styles.placementBtnPrimaryText}>Search here</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            )}
 
             {/* parking bottom sheet */}
             <ParkingBottomSheet
