@@ -1,5 +1,6 @@
 // src/components/ParkingCard/cardHelpers.js
 
+import { getAccess, getCapacity, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
 import { logger } from '../../utils/loggers';
 
 // json parsing helpers
@@ -9,14 +10,6 @@ export const parseZoneInfo = (spot) => {
     if (typeof original === 'string') {
         try {
             parsed = JSON.parse(original);
-            logger.log(
-                'parsed zone_info from string',
-                {
-                    original_preview: original.slice(0, 100),
-                    keys: Object.keys(parsed || {}),
-                },
-                'data_parse'
-            );
         } catch (e) {
             logger.log(
                 'failed to parse zone_info',
@@ -37,14 +30,6 @@ export const parseMetadata = (spot) => {
     if (typeof original === 'string') {
         try {
             parsed = JSON.parse(original);
-            logger.log(
-                'parsed metadata from string',
-                {
-                    original_preview: original.slice(0, 100),
-                    keys: Object.keys(parsed || {}),
-                },
-                'data_parse'
-            );
         } catch (e) {
             logger.log(
                 'failed to parse metadata',
@@ -59,21 +44,7 @@ export const parseMetadata = (spot) => {
     return parsed;
 };
 
-// value helpers
-export const getCurrentPrice = (spot, zoneInfo) => {
-    if (spot?.price_zone) return `Zone ${spot.price_zone}`;
-    if (zoneInfo?.price_zone) return `Zone ${zoneInfo.price_zone}`;
-    const html = spot?.html_zone_rate || zoneInfo?.html_zone_rate;
-    if (typeof html === 'string' && html.includes('$')) {
-        const match = html.match(/\$\s*\d+(?:\.\d{1,2})?/);
-        if (match) return `${match[0].replace(/\s+/g, '')}/hr`;
-    }
-    return 'Check signs';
-};
-
-export const getSpotType = (spot) =>
-    spot?.spot_type?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Street Parking';
-
+// Turn the city's HTML rate blob into ordered { period, rate } rows.
 export const parseHtmlZoneRate = (html) => {
     if (!html) return [];
     const decoded = String(html)
@@ -108,127 +79,139 @@ export const getPricingData = (spot, zoneInfo) => {
     return parseHtmlZoneRate(html);
 };
 
-// build pages for ui
+// Values that read as "no, there's nothing here".
+const NEGATIVE = new Set(['', 'n', 'no', 'none', '0', 'false', 'null', 'na', 'n/a']);
+const isMeaningful = (v) =>
+    v != null && !NEGATIVE.has(String(v).trim().toLowerCase());
+
+/**
+ * Build the back-of-card detail pages.
+ *
+ * Everything here reads through a merged view of top-level + zone_info +
+ * metadata, because the backend nests most fields. Values are formatted for
+ * humans (minutes become "2 hours", price zones become real dollars) rather than
+ * dumped raw.
+ */
 export const getDetailsPages = (spot) => {
-    const zoneInfo = parseZoneInfo(spot || {});
-    const metadata = parseMetadata(spot || {});
+    const zone = parseZoneInfo(spot || {});
+    const meta = parseMetadata(spot || {});
+
+    // top-level wins, then zone_info, then metadata.
+    const field = (key) => {
+        if (isMeaningful(spot?.[key])) return spot[key];
+        if (isMeaningful(zone?.[key])) return zone[key];
+        if (isMeaningful(meta?.[key])) return meta[key];
+        return null;
+    };
+
+    const access = getAccess(spot || {});
+    const price = getPriceInfo(spot || {});
+    const maxStay = getMaxStay(spot || {});
+    const capacity = getCapacity(spot || {});
+    const type = getSpotType(spot || {});
+
     const pages = [];
+    const seen = (items) =>
+        Array.from(new Map(items.map((it) => [`${it.label}:${it.value}`, it])).values());
 
-    logger.log(
-        'details compile start',
-        {
-            spot_id: spot?.id ?? null,
-            field_count: Object.keys(spot || {}).length,
-            has_zone_info: !!zoneInfo && Object.keys(zoneInfo).length > 0,
-            has_metadata: !!metadata && Object.keys(metadata).length > 0,
-        },
-        'data_compilation'
-    );
-
-    // 1) details & restrictions
-    const basicInfo = [];
-    if (spot?.status) basicInfo.push({ label: 'Status', value: spot.status });
-    if (spot?.zone_type) basicInfo.push({ label: 'Zone Type', value: spot.zone_type });
-    if (spot?.permit_zone) basicInfo.push({ label: 'Permit Zone', value: spot.permit_zone });
-    if (spot?.max_time) basicInfo.push({ label: 'Max Time', value: spot.max_time });
-    if (spot?.block_side) basicInfo.push({ label: 'Block Side', value: spot.block_side });
-    if (spot?.enforceable_time) basicInfo.push({ label: 'Enforceable Time', value: spot.enforceable_time });
-    if (spot?.parking_restrict_type)
-        basicInfo.push({ label: 'Restriction Type', value: spot.parking_restrict_type });
-    if (spot?.parking_restrict_time)
-        basicInfo.push({ label: 'Restriction Time', value: spot.parking_restrict_time });
-    if (spot?.parking_restriction)
-        basicInfo.push({ label: 'Parking Restriction', value: spot.parking_restriction });
-    if (spot?.time_restriction) basicInfo.push({ label: 'Time Restriction', value: spot.time_restriction });
-    if (spot?.no_stopping) basicInfo.push({ label: 'No Stopping', value: spot.no_stopping });
-
-    if (zoneInfo?.zone_type) basicInfo.push({ label: 'Zone Type', value: zoneInfo.zone_type });
-    if (zoneInfo?.permit_zone) basicInfo.push({ label: 'Permit Zone', value: zoneInfo.permit_zone });
-    if (zoneInfo?.enforceable_time) basicInfo.push({ label: 'Enforceable Time', value: zoneInfo.enforceable_time });
-
-    if (metadata?.max_time) basicInfo.push({ label: 'Max Time', value: metadata.max_time });
-    if (metadata?.stall_type) basicInfo.push({ label: 'Stall Type', value: metadata.stall_type });
-    if (metadata?.lot_name) basicInfo.push({ label: 'Lot Name', value: metadata.lot_name });
-    if (metadata?.block_side) basicInfo.push({ label: 'Block Side', value: metadata.block_side });
-    if (metadata?.parking_restriction) basicInfo.push({ label: 'Restriction', value: metadata.parking_restriction });
-    if (metadata?.time_restriction) basicInfo.push({ label: 'Time Restriction', value: metadata.time_restriction });
-
-    const uniqueBasicInfo = Array.from(
-        new Map(basicInfo.map((item) => [`${item.label}:${item.value}`, item])).values()
-    );
-    if (uniqueBasicInfo.length > 0) {
-        pages.push({ title: 'Details & Restrictions', items: uniqueBasicInfo });
+    // 1) Pricing -------------------------------------------------------------
+    const pricing = [];
+    if (access.kind !== 'public') {
+        // Plain language instead of "permit zone R-12".
+        pricing.push({ label: 'Access', value: access.label, highlight: true });
+    } else if (price.kind === 'paid') {
+        pricing.push({ label: 'Rate', value: `${price.value}${price.unit ? ` ${price.unit}` : ''}`, highlight: true });
+    } else if (price.kind === 'free') {
+        pricing.push({ label: 'Rate', value: 'Free', highlight: true });
+    } else {
+        pricing.push({ label: 'Rate', value: 'Posted on signs' });
     }
 
-    // 2) pricing & zones
-    const pricingInfo = [];
-    const pricing = getPricingData(spot || {}, zoneInfo || {});
-    if (pricing.length > 0) {
-        pricing.forEach((p) => {
-            pricingInfo.push({ label: p.period || 'Rate', value: p.rate, highlight: true });
+    const enforceable = field('enforceable_time');
+    if (enforceable) pricing.push({ label: 'Paid hours', value: enforceable });
+
+    const priceZone = field('price_zone');
+    if (priceZone) pricing.push({ label: 'Price zone', value: `Zone ${priceZone}` });
+
+    const permitZone = field('permit_zone');
+    if (permitZone) pricing.push({ label: 'Permit zone', value: permitZone });
+
+    const parkingZone = field('parking_zone');
+    if (parkingZone) pricing.push({ label: 'Parking zone', value: parkingZone });
+
+    // Detailed rate breakdown from the HTML blob, if the city provided one.
+    getPricingData(spot || {}, zone).forEach((row) => {
+        if (row.rate) pricing.push({ label: row.period || 'Rate', value: row.rate });
+    });
+
+    if (pricing.length > 0) pages.push({ title: 'Pricing', items: seen(pricing) });
+
+    // 2) Rules & restrictions ------------------------------------------------
+    const rules = [];
+    if (maxStay) rules.push({ label: 'Max stay', value: maxStay.text, highlight: true });
+
+    const noStopping = field('no_stopping');
+    if (isMeaningful(noStopping)) {
+        rules.push({
+            label: 'No stopping',
+            value: typeof noStopping === 'string' && noStopping.length > 1 ? noStopping : 'Yes',
         });
     }
-    if (spot?.price_zone)
-        pricingInfo.push({ label: 'Price Zone', value: `Zone ${spot.price_zone}`, highlight: true });
-    if (zoneInfo?.price_zone)
-        pricingInfo.push({ label: 'Price Zone', value: `Zone ${zoneInfo.price_zone}`, highlight: true });
-    if (spot?.parking_zone)
-        pricingInfo.push({ label: 'Parking Zone', value: spot.parking_zone, highlight: true });
 
-    const uniquePricingInfo = Array.from(
-        new Map(pricingInfo.map((item) => [`${item.label}:${item.value}`, item])).values()
-    );
-    if (uniquePricingInfo.length > 0) {
-        pages.push({ title: 'Pricing & Zones', items: uniquePricingInfo });
-    }
+    const timeRestriction = field('time_restriction');
+    if (timeRestriction) rules.push({ label: 'Time restriction', value: timeRestriction });
 
-    // 3) capacity & technical
-    const capacityInfo = [];
-    if (spot?.capacity) capacityInfo.push({ label: 'Capacity', value: `${spot.capacity} spaces` });
-    if (spot?.zone_cap) capacityInfo.push({ label: 'Zone Capacity', value: `${spot.zone_cap} spaces` });
-    if (spot?.seg_cap) capacityInfo.push({ label: 'Segment Capacity', value: `${spot.seg_cap} spaces` });
-    if (spot?.zone_length) capacityInfo.push({ label: 'Zone Length', value: `${spot.zone_length}m` });
-    if (spot?.seg_length) capacityInfo.push({ label: 'Segment Length', value: `${spot.seg_length}m` });
-    if (spot?.stall_type) capacityInfo.push({ label: 'Stall Type', value: spot.stall_type });
-    if (spot?.parking_type) capacityInfo.push({ label: 'Parking Type', value: spot.parking_type });
-    if (spot?.ctp_class) capacityInfo.push({ label: 'CTP Class', value: spot.ctp_class });
-    if (spot?.dot) capacityInfo.push({ label: 'DOT', value: spot.dot });
-    if (spot?.octant) capacityInfo.push({ label: 'Octant', value: spot.octant });
+    const parkingRestriction = field('parking_restriction');
+    if (parkingRestriction) rules.push({ label: 'Restriction', value: parkingRestriction });
 
-    if (capacityInfo.length > 0) {
-        pages.push({ title: 'Capacity & Technical', items: capacityInfo });
-    }
+    const restrictType = field('parking_restrict_type');
+    if (restrictType) rules.push({ label: 'Restriction type', value: restrictType });
 
-    // 4) additional information
-    const additionalInfo = [];
-    if (spot?.lot_name) additionalInfo.push({ label: 'Lot Name', value: spot.lot_name });
-    if (spot?.lot_num) additionalInfo.push({ label: 'Lot Number', value: spot.lot_num });
-    if (spot?.description) additionalInfo.push({ label: 'Description', value: spot.description });
-    if (spot?.global_id || spot?.globalid_guid)
-        additionalInfo.push({ label: 'ID', value: spot.global_id || spot.globalid_guid });
-    if (spot?.camera !== undefined) additionalInfo.push({ label: 'Camera', value: spot.camera ? 'Yes' : 'No' });
-    if (metadata?.camera !== undefined)
-        additionalInfo.push({ label: 'Camera', value: metadata.camera ? 'Yes' : 'No' });
-    if (spot?.home_page) additionalInfo.push({ label: 'More Info', value: 'Website Available', link: spot.home_page });
-    if (spot?.address || spot?.address_desc)
-        additionalInfo.push({ label: 'Address', value: spot.address || spot.address_desc });
+    const restrictTime = field('parking_restrict_time');
+    if (restrictTime) rules.push({ label: 'Restriction time', value: restrictTime });
 
-    const uniqueAdditionalInfo = Array.from(
-        new Map(additionalInfo.map((item) => [item.label, item])).values()
-    );
-    if (uniqueAdditionalInfo.length > 0) {
-        pages.push({ title: 'Additional Information', items: uniqueAdditionalInfo });
-    }
+    const blockSide = field('block_side');
+    if (blockSide) rules.push({ label: 'Block side', value: blockSide });
+
+    if (rules.length > 0) pages.push({ title: 'Rules', items: seen(rules) });
+
+    // 3) About this spot -----------------------------------------------------
+    const about = [];
+    about.push({ label: 'Type', value: type.label });
+
+    const lotName = field('lot_name');
+    if (lotName) about.push({ label: 'Lot name', value: lotName });
+
+    const lotNum = field('lot_num');
+    if (lotNum) about.push({ label: 'Lot number', value: lotNum });
+
+    if (capacity) about.push({ label: 'Capacity', value: `${capacity} spaces` });
+
+    const stallType = field('stall_type');
+    if (stallType) about.push({ label: 'Stall type', value: stallType });
+
+    const zoneType = field('zone_type');
+    if (zoneType) about.push({ label: 'Zone type', value: zoneType });
+
+    const parkingType = field('parking_type');
+    if (parkingType) about.push({ label: 'Parking type', value: parkingType });
+
+    const description = field('description');
+    if (description) about.push({ label: 'Description', value: description });
+
+    const camera = field('camera');
+    if (isMeaningful(camera)) about.push({ label: 'Camera enforced', value: 'Yes' });
+
+    const homePage = field('home_page');
+    if (homePage) about.push({ label: 'More info', value: 'Open website', link: homePage });
+
+    if (about.length > 0) pages.push({ title: 'About this spot', items: seen(about) });
 
     logger.log(
         'details compile done',
-        {
-            page_count: pages.length,
-            titles: pages.map((p) => p.title),
-            total_items: pages.reduce((sum, p) => sum + p.items.length, 0),
-        },
+        { page_count: pages.length, titles: pages.map((p) => p.title) },
         'data_compilation'
     );
 
-    return pages.length > 0 ? pages : [{ title: 'No additional details available', items: [] }];
+    return pages.length > 0 ? pages : [{ title: 'No additional details', items: [] }];
 };

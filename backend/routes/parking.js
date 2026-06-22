@@ -124,6 +124,8 @@ router.get('/nearby', async (req, res) => {
           home_page: spot.home_page,
           time_restriction: spot.time_restriction,
           parking_restriction: spot.parking_restriction,
+          parking_restrict_type: spot.parking_restrict_type,
+          parking_restrict_time: spot.parking_restrict_time,
           no_stopping: spot.no_stopping,
           description: spot.description,
           ctp_class: spot.ctp_class,

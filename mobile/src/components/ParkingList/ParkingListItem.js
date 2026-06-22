@@ -1,5 +1,15 @@
 // src/components/ParkingList/ParkingListItem.js
+//
+// The list row. Hierarchy is deliberate and reads in three tiers:
+//   1. Walk time (the hero) + price        — the two numbers a driver decides on
+//   2. Address                             — where it is
+//   3. type · distance · max stay          — quiet supporting detail
+//
+// Leading every row with "minutes to walk" is the app's signature. Map apps
+// lead with a pin and a name; parking is really a question of "how far will I
+// walk and what will it cost", so those two numbers anchor the row instead.
 
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRef } from 'react';
 import {
     Animated,
@@ -8,47 +18,39 @@ import {
     Text,
     View,
 } from 'react-native';
-import { TOKENS, TYPOGRAPHY, alpha } from '../../constants/theme';
+import { TOKENS, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
+import { getAccess, getMaxStay, getPriceInfo, getSpotType, parseAddress } from '../../utils/spotInfo';
 
-const TYPE_LABELS = {
-    on_street: 'Street',
-    off_street: 'Lot',
-    residential: 'Resident',
-    school: 'Campus',
+const PRICE_TONE = {
+    text: TOKENS.text,
+    success: TOKENS.success,
+    warning: TOKENS.warning,
+    danger: TOKENS.danger,
+    muted: TOKENS.textMuted,
 };
 
-function formatPrice(val) {
-    if (!val || val === '0' || val === 0 || val === 'FREE') return 'FREE';
-    if (typeof val === 'string') {
-        const match = val.match(/[\d.]+/);
-        if (match) {
-            const num = parseFloat(match[0]);
-            return Number.isNaN(num) ? val : `$${num.toFixed(2)}`;
-        }
-        return val;
-    }
-    const num = parseFloat(val);
-    return Number.isNaN(num) ? 'FREE' : `$${num.toFixed(2)}`;
-}
+// Short, plain-language labels for spots that aren't public parking.
+const ACCESS_LABEL = { residents: 'Residents', no_parking: 'No stopping' };
 
 export default function ParkingListItem({
     spot,
-    price,
     onPress,
     isSelected = false,
 }) {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    const typeLabel = TYPE_LABELS[spot.spot_type] || 'Street';
-    const displayPrice = formatPrice(price);
-    const isFree = displayPrice === 'FREE';
-    const isCheckSigns = displayPrice === 'Check signs';
-    const lowCapacity = spot.capacity > 0 && spot.capacity <= 5;
+    const type = getSpotType(spot);
+    const access = getAccess(spot);
+    const isPublic = access.kind === 'public';
+    const price = getPriceInfo(spot);
+    const maxStay = getMaxStay(spot);
+    const addr = parseAddress(spot);
+    const walk = Number.isFinite(spot?.walkingTime) ? spot.walkingTime : null;
 
     const handlePressIn = () => {
         Animated.timing(scaleAnim, {
-            toValue: 0.98,
+            toValue: 0.985,
             duration: 120,
             useNativeDriver: true,
         }).start();
@@ -69,18 +71,23 @@ export default function ParkingListItem({
                 address: spot?.address,
                 distance: spot?.distance,
                 walkingTime: spot?.walkingTime,
-                price: displayPrice,
+                price: price.value,
             },
             'UI_EVENT'
         );
         onPress?.(spot, { stayInList: true });
     };
 
+    const a11yPrice =
+        !isPublic ? access.detail || access.label
+        : price.kind === 'paid' ? `${price.value} per hour`
+        : price.kind === 'free' ? 'free'
+        : 'rate not listed';
+
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            {/* Selected stripe — a 3px primary ink rail on the leading edge.
-                Emil: "Color is a signal. Make it earn its place." Selection needs
-                to register at a glance without tinting the whole row. */}
+            {/* Selected: a 3px primary rail on the leading edge. Selection should
+                register at a glance without tinting the whole row. */}
             {isSelected && <View style={styles.selectedStripe} pointerEvents="none" />}
             <Pressable
                 onPress={handleRowPress}
@@ -89,39 +96,40 @@ export default function ParkingListItem({
                 android_ripple={{ color: alpha(TOKENS.text, 0.04), borderless: false }}
                 style={[styles.row, isSelected && styles.rowSelected]}
                 accessibilityRole="button"
-                accessibilityLabel={`Parking at ${spot.address}, ${spot.distance} meters away, ${isFree ? 'free' : `price ${displayPrice} per hour`}`}
+                accessibilityLabel={`Parking at ${addr.primary}, ${walk ?? '—'} minute walk, ${spot.distance} meters away, ${a11yPrice}`}
                 hitSlop={4}
             >
-                {/* Walking time */}
+                {/* Tier 1a — walk time, the hero metric */}
                 <View style={styles.walkBlock}>
-                    <Text style={styles.walkValue}>{spot.walkingTime}</Text>
-                    <Text style={styles.walkUnit}>min</Text>
+                    <Text style={styles.walkValue}>{walk ?? '—'}</Text>
+                    {walk != null && (
+                        <Text style={styles.walkUnit}>{walk === 1 ? 'minute' : 'minutes'}</Text>
+                    )}
                 </View>
 
-                {/* Quiet vertical rule — just enough to say "these are related but distinct".
-                    Emil: "Elements should only take the space they need." 28px tall, not full row. */}
+                {/* Quiet vertical rule — relates the columns without boxing them in.
+                    28px tall, never touches the row separators above/below. */}
                 <View style={styles.sectionDivider} />
 
-                {/* Primary content */}
+                {/* Tier 2 + 3 — address, then supporting meta */}
                 <View style={styles.content}>
                     <Text style={styles.address} numberOfLines={1}>
-                        {spot.address}
+                        {addr.primary}
                     </Text>
 
                     <View style={styles.metaRow}>
-                        <Text style={styles.metaText}>{typeLabel}</Text>
-                        <Text style={styles.metaDivider}>·</Text>
-                        <Text style={styles.metaTextNum}>{spot.distance}m</Text>
+                        <MaterialCommunityIcons
+                            name={type.icon}
+                            size={13}
+                            color={TOKENS.textMuted}
+                            style={styles.metaIcon}
+                        />
+                        <Text style={styles.metaText}>{type.label}</Text>
 
-                        {lowCapacity && (
+                        {maxStay && (
                             <>
                                 <Text style={styles.metaDivider}>·</Text>
-                                <View style={styles.typeGroup}>
-                                    <View style={[styles.typeDot, styles.typeDotWarning]} />
-                                    <Text style={styles.metaTextWarning}>
-                                        {spot.capacity} left
-                                    </Text>
-                                </View>
+                                <Text style={styles.metaText}>{maxStay.text} max</Text>
                             </>
                         )}
                     </View>
@@ -129,18 +137,26 @@ export default function ParkingListItem({
 
                 <View style={styles.sectionDivider} />
 
-                {/* Price */}
+                {/* Tier 1b — price, or plain-language access when it isn't public. */}
                 <View style={styles.priceBlock}>
-                    {isFree ? (
-                        <Text style={styles.freeLabel}>FREE</Text>
-                    ) : isCheckSigns ? (
-                        <Text style={styles.priceNote} numberOfLines={1}>
-                            Check signs
+                    {!isPublic ? (
+                        <Text
+                            style={[styles.priceTag, { color: PRICE_TONE[access.tone] || TOKENS.textMuted }]}
+                            numberOfLines={1}
+                        >
+                            {ACCESS_LABEL[access.kind] || access.label}
                         </Text>
+                    ) : price.kind === 'paid' ? (
+                        <>
+                            <Text style={styles.priceValue} numberOfLines={1}>{price.value}</Text>
+                            {price.unit ? <Text style={styles.priceUnit}>{price.unit}</Text> : null}
+                        </>
                     ) : (
-                        <Text style={styles.priceValue} numberOfLines={1}>
-                            {displayPrice}
-                            <Text style={styles.priceUnit}> /hr</Text>
+                        <Text
+                            style={[styles.priceTag, { color: PRICE_TONE[price.tone] || TOKENS.textMuted }]}
+                            numberOfLines={1}
+                        >
+                            {price.value}
                         </Text>
                     )}
                 </View>
@@ -153,18 +169,15 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        minHeight: 64,
+        minHeight: 76,
         paddingHorizontal: 20,
-        paddingVertical: 12,
-        // Tighter gap since the vertical rules now carry some of the separation.
+        paddingVertical: 14,
         gap: 10,
         backgroundColor: TOKENS.surface,
     },
-    // Selection bg tint bumped 0.05 → 0.08 so it reads at a glance without shouting.
     rowSelected: {
         backgroundColor: alpha(TOKENS.primary, 0.08),
     },
-    // 3px primary rail on the leading edge — the real selection signal.
     selectedStripe: {
         position: 'absolute',
         left: 0,
@@ -174,43 +187,47 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.primary,
         zIndex: 1,
     },
-    // Vertical hairline between info regions. Not full row height —
-    // never touches the horizontal separators above/below.
     sectionDivider: {
         width: StyleSheet.hairlineWidth,
-        height: 28,
+        height: 30,
         backgroundColor: TOKENS.divider,
         alignSelf: 'center',
     },
 
+    // Hero metric. Width is 56 so the full word "minutes" fits beneath the
+    // number; the row separators inset by 86 (padding 20 + walkBlock 56 + gap 10)
+    // to align with the address.
     walkBlock: {
         alignItems: 'center',
         justifyContent: 'center',
-        width: 44,
+        width: 56,
     },
-    // Equalized with priceValue at 18px so neither side dominates.
     walkValue: {
-        ...TYPOGRAPHY.numMedium,
-        fontSize: 18,
-        lineHeight: 20,
+        fontSize: 26,
+        lineHeight: 28,
+        fontWeight: '600',
+        letterSpacing: -0.8,
         color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
     },
     walkUnit: {
         fontSize: 11,
         fontWeight: '500',
         color: TOKENS.textMuted,
         marginTop: 1,
+        letterSpacing: 0.1,
     },
 
     content: {
         flex: 1,
-        gap: 4,
+        gap: 5,
     },
     address: {
-        fontSize: 15,
+        fontSize: 16,
+        lineHeight: 20,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: -0.1,
+        letterSpacing: -0.2,
     },
     metaRow: {
         flexDirection: 'row',
@@ -218,69 +235,45 @@ const styles = StyleSheet.create({
         gap: 6,
         flexWrap: 'wrap',
     },
+    metaIcon: {
+        marginRight: -2,
+    },
     metaText: {
         fontSize: 13,
         fontWeight: '400',
         color: TOKENS.textMuted,
-    },
-    // Distance needs tabular alignment so values don't jitter as users scroll.
-    metaTextNum: {
-        fontSize: 13,
-        fontWeight: '400',
-        color: TOKENS.textMuted,
-        fontVariant: ['tabular-nums'],
-    },
-    metaTextWarning: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: TOKENS.warning,
     },
     metaDivider: {
         fontSize: 13,
         color: TOKENS.textFaint,
     },
 
-    // Kept for the warning dot only — decorative type dots were removed.
-    typeGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    typeDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    typeDotWarning: {
-        backgroundColor: TOKENS.warning,
-    },
-
     priceBlock: {
         alignItems: 'flex-end',
         justifyContent: 'center',
-        minWidth: 60,
+        minWidth: 64,
     },
     priceValue: {
-        fontSize: 18,
+        fontSize: 20,
+        lineHeight: 24,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: -0.2,
+        letterSpacing: -0.3,
         fontVariant: ['tabular-nums'],
     },
+    // Stacked beneath the rate, right-aligned with it.
     priceUnit: {
-        fontSize: 12,
+        fontSize: 11,
+        lineHeight: 13,
         fontWeight: '400',
         color: TOKENS.textMuted,
+        marginTop: 1,
     },
-    freeLabel: {
-        fontSize: 13,
+    // Free / Permit / Check signs — a word, not a number. Sized below the dollar
+    // figure so a real price always wins the eye.
+    priceTag: {
+        fontSize: 14,
         fontWeight: '600',
-        color: TOKENS.success,
-        letterSpacing: 0.2,
-    },
-    priceNote: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.textMuted,
+        letterSpacing: 0.1,
     },
 });

@@ -13,20 +13,27 @@ import {
 import { TOKENS } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
 import {
+    getAccess,
+    getHours,
+    getPriceInfo,
+    getRushRestriction,
+    getSpotType,
+    parseAddress,
+} from '../../utils/spotInfo';
+import {
     CARD_HEIGHT,
     CARD_WIDTH,
-    CONTENT_WIDTH,
     SCREEN_HEIGHT,
     SCREEN_WIDTH
 } from './cardConstants';
-import {
-    getCurrentPrice,
-    getDetailsPages,
-    getSpotType,
-    parseMetadata,
-    parseZoneInfo,
-} from './cardHelpers';
+import { getDetailsPages } from './cardHelpers';
 import { styles } from './cardStyles';
+
+const HERO_COLOR = {
+    paid: TOKENS.text,
+    free: TOKENS.success,
+    unknown: TOKENS.textMuted,
+};
 
 function FlippableParkingCard({
     visible = false,
@@ -38,24 +45,11 @@ function FlippableParkingCard({
     onNavigate = () => { },
 }) {
     const [isFlipped, setIsFlipped] = useState(false);
-    const [currentPage, setCurrentPage] = useState(0);
 
     const flipAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.96)).current;
     const translateYAnim = useRef(new Animated.Value(12)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
-
-    const pagesScrollRef = useRef(null);
-    const pageWidth = CONTENT_WIDTH;
-
-    const scrollToPage = (i) => {
-        const safe = Math.max(0, Math.min(i, detailsPages.length - 1));
-        setCurrentPage(safe);
-        pagesScrollRef.current?.scrollTo({ x: safe * pageWidth, y: 0, animated: true });
-    };
-
-    const goPrev = () => scrollToPage(currentPage - 1);
-    const goNext = () => scrollToPage(currentPage + 1);
 
     useEffect(() => {
         if (visible && spot) {
@@ -100,7 +94,6 @@ function FlippableParkingCard({
             ]).start();
             setTimeout(() => {
                 setIsFlipped(false);
-                setCurrentPage(0);
                 flipAnim.setValue(0);
                 scaleAnim.setValue(0.96);
                 translateYAnim.setValue(12);
@@ -110,11 +103,6 @@ function FlippableParkingCard({
 
     const flip = () => {
         const toValue = isFlipped ? 0 : 1;
-
-        // Reset horizontal pager to first page on any flip
-        pagesScrollRef.current?.scrollTo({ x: 0, y: 0, animated: false });
-        setCurrentPage(0);
-
         Animated.spring(flipAnim, {
             toValue,
             tension: 65,
@@ -142,77 +130,42 @@ function FlippableParkingCard({
     const frontOpacity = flipAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 0] });
     const backOpacity = flipAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
 
-    const zoneInfo = parseZoneInfo(spot);
-    const metadata = parseMetadata(spot);
-    const detailsPages = getDetailsPages(spot);
-    const priceDisplay = getCurrentPrice(spot, zoneInfo);
+    // Everything the front shows comes from one shared source of truth.
+    const type = getSpotType(spot);
+    const access = getAccess(spot);
+    const price = getPriceInfo(spot);
+    const hours = getHours(spot);
+    const rush = getRushRestriction(spot);
+    const addr = parseAddress(spot);
+    const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
+    const isPublic = access.kind === 'public';
 
-    const getStatusColor = () => {
-        if (spot.no_stopping) return TOKENS.danger;
-        if (spot.permit_zone || zoneInfo.permit_zone) return TOKENS.warning;
-        if (spot.status === 'available') return TOKENS.success;
-        return TOKENS.primaryAlt;
-    };
+    // The walk-time ETA rides on the Navigate button. Minutes is the metric a
+    // driver actually decides on; exact distance would just restate the same
+    // fact, so it's left off the button.
+    const eta = walk != null
+        ? `${walk} ${walk === 1 ? 'minute' : 'minutes'} walk`
+        : null;
 
-    const statusColor = getStatusColor();
-
-    const getBadgeStyle = (type) => {
-        switch (type) {
-            case 'danger': return [styles.badgeLarge, styles.badgeDanger];
-            case 'warning': return [styles.badgeLarge, styles.badgeWarning];
-            case 'info': return [styles.badgeLarge, styles.badgeInfo];
-            default: return [styles.badgeLarge, styles.badgeDefault];
+    // Front shows the decision facts (pricing / hours); convenience is on the button.
+    const facts = [];
+    if (isPublic) {
+        if (price.kind !== 'free' && hours.schedule) {
+            facts.push({ key: 'hours', icon: 'clock-outline', label: 'Paid hours', value: hours.schedule });
         }
-    };
-
-    const getBadgeTextStyle = (type) => {
-        switch (type) {
-            case 'danger': return [styles.badgeTextLarge, styles.badgeTextDanger];
-            case 'warning': return [styles.badgeTextLarge, styles.badgeTextWarning];
-            case 'info': return [styles.badgeTextLarge, styles.badgeTextInfo];
-            default: return [styles.badgeTextLarge, styles.badgeTextDefault];
+        // A tow-away window outranks the max stay — you'd get towed, not ticketed.
+        if (rush) {
+            facts.push({ key: 'rush', icon: 'tow-truck', tone: 'danger', label: rush.label, value: rush.value });
+        } else if (hours.maxStay) {
+            facts.push({ key: 'max', icon: 'timer-sand', label: 'Max stay', value: hours.maxStay.text });
         }
-    };
+    } else if (hours.schedule) {
+        // Residents / no-parking: when the permit is in effect.
+        facts.push({ key: 'permit', icon: 'clock-outline', label: 'In effect', value: hours.schedule });
+    }
 
-    const getCriticalBadges = () => {
-        const badges = [];
-
-        // Priority 1: Blocking conditions
-        if (spot.no_stopping) {
-            badges.push({
-                type: 'danger',
-                icon: 'cancel',
-                text: 'No stopping',
-                color: TOKENS.danger,
-                key: 'no_stop'
-            });
-        }
-
-        // Priority 2: Permit requirements
-        if (spot.permit_zone || zoneInfo.permit_zone) {
-            badges.push({
-                type: 'warning',
-                icon: 'card-account-details',
-                text: 'Permit zone',
-                color: TOKENS.warning,
-                key: 'permit'
-            });
-        }
-
-        // Priority 3: Time limits (only if significant)
-        const maxTime = spot.max_time || metadata.max_time;
-        if (maxTime && !maxTime.toLowerCase().includes('no limit')) {
-            badges.push({
-                type: 'info',
-                icon: 'clock-outline',
-                text: maxTime,
-                color: TOKENS.primaryAlt,
-                key: 'time'
-            });
-        }
-
-        return badges.slice(0, 2);
-    };
+    // Back-of-card detail sections, rendered as one vertical spec sheet.
+    const sections = getDetailsPages(spot).filter((s) => s.items.length > 0);
 
     return (
         <>
@@ -248,92 +201,139 @@ function FlippableParkingCard({
                 >
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
-                            <MaterialCommunityIcons
-                                name={
-                                    spot.spot_type === 'on_street'
-                                        ? 'car'
-                                        : spot.spot_type === 'off_street'
-                                            ? 'parking'
-                                            : spot.spot_type === 'residential'
-                                                ? 'home'
-                                                : 'school'
-                                }
-                                size={16}
-                                color={statusColor}
-                            />
-                            <Text style={styles.spotTypeText}>{getSpotType(spot)}</Text>
+                            <MaterialCommunityIcons name={type.icon} size={14} color="#FFFFFF" />
+                            <Text style={styles.spotTypeText}>{type.label}</Text>
                         </View>
                         <TouchableOpacity
                             style={styles.closeBtn}
                             onPress={onClose}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.frontContent}>
-                        <Text style={styles.address} numberOfLines={2}>
-                            {spot.address || spot.address_desc || 'Parking Spot'}
-                        </Text>
-
-                        <View style={styles.quickStatsLarge}>
-                            <View style={styles.statRow}>
-                                <View style={styles.statLeft}>
-                                    <View style={styles.statIcon}>
-                                        <MaterialCommunityIcons name="walk" size={18} color={TOKENS.warning} />
-                                    </View>
-                                    <Text style={styles.statLabelLeft}>Walk time</Text>
-                                </View>
-                                <Text style={styles.statValueRight}>{spot.walkingTime || 0} min</Text>
-                            </View>
-
-                            <View style={styles.statRow}>
-                                <View style={styles.statLeft}>
-                                    <View style={styles.statIcon}>
-                                        <MaterialCommunityIcons name="map-marker-distance" size={18} color={TOKENS.primary} />
-                                    </View>
-                                    <Text style={styles.statLabelLeft}>Distance</Text>
-                                </View>
-                                <Text style={styles.statValueRight}>{spot.distance || 0} m</Text>
-                            </View>
-
-                            <View style={styles.statRow}>
-                                <View style={styles.statLeft}>
-                                    <View style={styles.statIcon}>
-                                        <MaterialCommunityIcons name="currency-usd" size={18} color={TOKENS.primary} />
-                                    </View>
-                                    <Text style={styles.statLabelLeft}>Rate</Text>
-                                </View>
-                                <Text style={[styles.statValueRight, styles.statValuePrimary]}>
-                                    {priceDisplay}
+                    <View style={styles.frontBody}>
+                        <View style={styles.addressBlock}>
+                            <Text style={styles.addressPrimary} numberOfLines={2}>
+                                {addr.primary}
+                            </Text>
+                            {addr.secondary ? (
+                                <Text style={styles.addressSecondary} numberOfLines={1}>
+                                    {addr.secondary}
                                 </Text>
-                            </View>
+                            ) : null}
                         </View>
 
-                        <View style={styles.badgesLarge}>
-                            {getCriticalBadges().map((badge) => (
-                                <View key={badge.key} style={getBadgeStyle(badge.type)}>
-                                    <MaterialCommunityIcons name={badge.icon} size={14} color={badge.color} />
-                                    <Text style={getBadgeTextStyle(badge.type)}>{badge.text}</Text>
+                        {isPublic ? (
+                            // Headline: what it costs + whether it's free right now.
+                            <View style={styles.headline}>
+                                <View style={styles.priceRow}>
+                                    <Text
+                                        style={[styles.priceValue, { color: HERO_COLOR[price.kind] }]}
+                                        numberOfLines={1}
+                                    >
+                                        {price.value}
+                                    </Text>
+                                    {price.unit ? (
+                                        <Text style={styles.priceUnit}>{price.unit}</Text>
+                                    ) : null}
                                 </View>
-                            ))}
-                        </View>
+
+                                {hours.status ? (
+                                    <View style={styles.statusRow}>
+                                        <View
+                                            style={[
+                                                styles.statusDot,
+                                                hours.status.state === 'free' ? styles.dotFree : styles.dotPaid,
+                                            ]}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.statusLabel,
+                                                hours.status.state === 'free' ? styles.statusLabelFree : styles.statusLabelPaid,
+                                            ]}
+                                        >
+                                            {hours.status.label}
+                                        </Text>
+                                        <Text style={styles.statusDetail}>· {hours.status.detail}</Text>
+                                    </View>
+                                ) : price.kind === 'free' ? (
+                                    <View style={styles.statusRow}>
+                                        <View style={[styles.statusDot, styles.dotFree]} />
+                                        <Text style={[styles.statusLabel, styles.statusLabelFree]}>Free to park</Text>
+                                    </View>
+                                ) : price.note ? (
+                                    <Text style={styles.statusDetail}>{price.note}</Text>
+                                ) : null}
+                            </View>
+                        ) : (
+                            // Not public — say so in plain language, not permit jargon.
+                            <View
+                                style={[
+                                    styles.accessBanner,
+                                    access.tone === 'danger' ? styles.bannerDanger : styles.bannerWarning,
+                                ]}
+                            >
+                                <MaterialCommunityIcons
+                                    name={access.icon}
+                                    size={24}
+                                    color={access.tone === 'danger' ? TOKENS.danger : TOKENS.warning}
+                                />
+                                <View style={styles.accessTextWrap}>
+                                    <Text
+                                        style={[
+                                            styles.accessLabel,
+                                            { color: access.tone === 'danger' ? TOKENS.danger : TOKENS.warning },
+                                        ]}
+                                    >
+                                        {access.label}
+                                    </Text>
+                                    {access.detail ? (
+                                        <Text style={styles.accessDetail}>{access.detail}</Text>
+                                    ) : null}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Pricing / hours — skimmable icon rows */}
+                        {facts.length > 0 && (
+                            <View style={styles.facts}>
+                                {facts.map((f) => (
+                                    <View key={f.key} style={styles.factRow}>
+                                        <View style={[styles.factIcon, f.tone === 'danger' && styles.factIconDanger]}>
+                                            <MaterialCommunityIcons
+                                                name={f.icon}
+                                                size={19}
+                                                color={f.tone === 'danger' ? TOKENS.danger : TOKENS.primary}
+                                            />
+                                        </View>
+                                        <View style={styles.factText}>
+                                            <Text style={styles.factLabel}>{f.label}</Text>
+                                            <Text style={styles.factValue} numberOfLines={2}>{f.value}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.actionsLarge}>
-                        <TouchableOpacity style={styles.detailsBtnLarge} onPress={flip}>
-                            <MaterialCommunityIcons name="information-outline" size={18} color={TOKENS.text} />
+                        <TouchableOpacity style={styles.detailsBtnLarge} onPress={flip} activeOpacity={0.7}>
+                            <MaterialCommunityIcons name="information-outline" size={20} color={TOKENS.text} />
                             <Text style={styles.detailsBtnTextLarge}>Details</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.navBtnLarge} onPress={onNavigate}>
-                            <MaterialCommunityIcons name="navigation" size={20} color="#FFFFFF" />
-                            <Text style={styles.navBtnTextLarge}>Navigate</Text>
+                        <TouchableOpacity style={styles.navBtnLarge} onPress={onNavigate} activeOpacity={0.85}>
+                            <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
+                            <View style={styles.navBtnTextWrap}>
+                                <Text style={styles.navBtnTextLarge}>Navigate</Text>
+                                {eta ? <Text style={styles.navBtnEta}>{eta}</Text> : null}
+                            </View>
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
 
-                {/* back of card */}
+                {/* back of card — one calm, vertically-scrolling spec sheet */}
                 <Animated.View
                     style={[
                         styles.card,
@@ -352,146 +352,75 @@ function FlippableParkingCard({
                         >
                             <MaterialCommunityIcons name="arrow-left" size={20} color={TOKENS.text} />
                         </TouchableOpacity>
-                        <View style={styles.pageTitleTag}>
-                            <Text style={styles.spotTypeText}>
-                                {detailsPages[currentPage]?.title || 'Details'}
-                            </Text>
-                        </View>
+                        <Text style={styles.backTitle} numberOfLines={1}>
+                            {spot.address || spot.address_desc || 'Details'}
+                        </Text>
                         <TouchableOpacity
                             style={styles.closeBtn}
                             onPress={onClose}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="close" size={20} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
                         </TouchableOpacity>
                     </View>
 
-                    {/* horizontal pager for detail pages */}
                     <ScrollView
-                        ref={pagesScrollRef}
-                        horizontal
-                        pagingEnabled
-                        decelerationRate="fast"
-                        snapToInterval={pageWidth}
-                        snapToAlignment="start"
-                        disableIntervalMomentum
-                        showsHorizontalScrollIndicator={false}
-                        onMomentumScrollEnd={(e) => {
-                            const page = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-                            setCurrentPage(page);
-                        }}
-                        style={styles.pagesContainer}
+                        style={styles.detailsScroll}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.detailsScrollContent}
                     >
-                        {detailsPages.map((page, pageIndex) => (
-                            <View key={pageIndex} style={[styles.detailPage, { width: CONTENT_WIDTH }]}>
-                                <ScrollView
-                                    style={styles.detailsListLarge}
-                                    showsVerticalScrollIndicator={false}
-                                    contentContainerStyle={styles.detailsContent}
+                        {sections.length > 0 ? (
+                            sections.map((section, si) => (
+                                <View
+                                    key={section.title}
+                                    style={[styles.detailSection, si === 0 && styles.detailSectionFirst]}
                                 >
-                                    {page.items.length > 0 ? (
-                                        page.items.map((item, idx) => (
-                                            <View
-                                                key={idx}
-                                                style={[
-                                                    styles.detailRowLarge,
-                                                    item.highlight && styles.detailRowHighlightLarge
-                                                ]}
-                                            >
+                                    <Text style={styles.detailSectionTitle}>{section.title}</Text>
+                                    {section.items.map((item, idx) => (
+                                        <View
+                                            key={`${item.label}-${idx}`}
+                                            style={[
+                                                styles.detailRow,
+                                                idx < section.items.length - 1 && styles.detailRowDivider,
+                                            ]}
+                                        >
+                                            <Text style={styles.detailLabel} numberOfLines={2}>
+                                                {item.label}
+                                            </Text>
+                                            {item.link ? (
+                                                <Text
+                                                    style={[styles.detailValue, styles.linkText]}
+                                                    numberOfLines={2}
+                                                    onPress={() => Linking.openURL(item.link)}
+                                                >
+                                                    {item.value || 'Open link'}
+                                                </Text>
+                                            ) : (
                                                 <Text
                                                     style={[
-                                                        styles.detailLabelLarge,
-                                                        item.highlight && styles.detailLabelHighlight
+                                                        styles.detailValue,
+                                                        item.highlight && styles.detailValueStrong,
                                                     ]}
-                                                    numberOfLines={2}
+                                                    numberOfLines={3}
                                                 >
-                                                    {item.label}
+                                                    {item.value || 'Not listed'}
                                                 </Text>
-                                                {item.link ? (
-                                                    <TouchableOpacity onPress={() => Linking.openURL(item.link)}>
-                                                        <Text
-                                                            style={[
-                                                                styles.detailValueLarge,
-                                                                item.highlight && styles.detailValueHighlight,
-                                                                styles.linkText,
-                                                            ]}
-                                                            numberOfLines={3}
-                                                        >
-                                                            {item.value ? `${item.value} (open)` : 'Open link'}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <Text
-                                                        style={[
-                                                            styles.detailValueLarge,
-                                                            item.highlight && styles.detailValueHighlight
-                                                        ]}
-                                                        numberOfLines={3}
-                                                    >
-                                                        {item.value || 'Not listed'}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        ))
-                                    ) : (
-                                        <Text style={styles.noDataText}>No additional details available.</Text>
-                                    )}
-                                </ScrollView>
-                            </View>
-                        ))}
+                                            )}
+                                        </View>
+                                    ))}
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.noDataText}>No additional details available.</Text>
+                        )}
                     </ScrollView>
 
-                    {detailsPages.length > 1 && (
-                        <View style={styles.pagerContainer}>
-                            <TouchableOpacity
-                                style={[styles.pagerArrow, currentPage === 0 && styles.pagerArrowDisabled]}
-                                onPress={goPrev}
-                                disabled={currentPage === 0}
-                            >
-                                <MaterialCommunityIcons
-                                    name="chevron-left"
-                                    size={20}
-                                    color={currentPage === 0 ? TOKENS.textMuted : TOKENS.text}
-                                />
-                            </TouchableOpacity>
-
-                            <View style={styles.pagerDots}>
-                                {detailsPages.map((_, idx) => (
-                                    <TouchableOpacity
-                                        key={idx}
-                                        onPress={() => scrollToPage(idx)}
-                                        style={[styles.pagerDot, currentPage === idx && styles.pagerDotActive]}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Go to page ${idx + 1}`}
-                                    />
-                                ))}
-                            </View>
-
-                            <TouchableOpacity
-                                style={[
-                                    styles.pagerArrow,
-                                    currentPage === detailsPages.length - 1 && styles.pagerArrowDisabled,
-                                ]}
-                                onPress={goNext}
-                                disabled={currentPage === detailsPages.length - 1}
-                            >
-                                <MaterialCommunityIcons
-                                    name="chevron-right"
-                                    size={20}
-                                    color={currentPage === detailsPages.length - 1 ? TOKENS.textMuted : TOKENS.text}
-                                />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {detailsPages.length === 1 && (
-                        <View style={styles.backActionsLarge}>
-                            <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate}>
-                                <MaterialCommunityIcons name="navigation-variant" size={20} color="#FFFFFF" />
-                                <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <View style={styles.backFooter}>
+                        <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate} activeOpacity={0.85}>
+                            <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
+                            <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
+                        </TouchableOpacity>
+                    </View>
                 </Animated.View>
             </Animated.View>
         </>

@@ -1,22 +1,36 @@
-// calculate quick stats from parking spots
+import { getPriceInfo } from './spotInfo';
+
+// Summary stats for the home header: how close is the nearest spot, what does
+// paid parking around here run, and how many spots did we find. Shape matches
+// what QuickInfoBar reads (nearest / averagePrice / total).
 export function calculateQuickInfo(spots) {
     if (!Array.isArray(spots) || spots.length === 0) {
-        return { closest: null, cheapest: null, available: 0 };
+        return { nearest: null, averagePrice: null, total: 0 };
     }
 
-    const closest = spots.reduce(
-        (min, spot) => (spot.distance < min.distance ? spot : min),
-        spots[0]
-    );
+    // Nearest by walk time, falling back to distance when walk time is missing.
+    const nearest = spots.reduce((best, spot) => {
+        const a = spot?.walkingTime ?? Infinity;
+        const b = best?.walkingTime ?? Infinity;
+        if (a !== b) return a < b ? spot : best;
+        return (spot?.distance ?? Infinity) < (best?.distance ?? Infinity) ? spot : best;
+    }, spots[0]);
 
-    const cheapest = [...spots].sort((a, b) =>
-        (a.price_per_hour || 0) - (b.price_per_hour || 0)
-    )[0];
+    // Average only across spots that actually charge, so a street full of
+    // permit-only blocks doesn't drag the figure down to near zero.
+    const paidRates = spots
+        .map((spot) => getPriceInfo(spot))
+        .filter((p) => p.kind === 'paid' && p.perHour && typeof p.amount === 'number' && p.amount > 0)
+        .map((p) => p.amount);
+
+    const averagePrice = paidRates.length
+        ? paidRates.reduce((sum, n) => sum + n, 0) / paidRates.length
+        : null;
 
     return {
-        closest,
-        cheapest,
-        available: spots.length
+        nearest,
+        averagePrice,
+        total: spots.length,
     };
 }
 
@@ -38,11 +52,12 @@ export const getFilterIcon = (filter) => {
     return icons[filter] || 'help-circle';
 };
 
-// format distance label
+// format distance label in full words ("250 meters", "1.2 kilometers")
 export const getDistanceLabel = (meters) => {
     if (!meters && meters !== 0) return '—';
-    if (meters < 1000) return `${meters}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
+    if (meters < 1000) return `${meters} ${meters === 1 ? 'meter' : 'meters'}`;
+    const km = (meters / 1000).toFixed(1);
+    return `${km} ${km === '1.0' ? 'kilometer' : 'kilometers'}`;
 };
 
 // calculate walking time from distance
