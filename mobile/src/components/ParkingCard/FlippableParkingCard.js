@@ -35,13 +35,6 @@ const HERO_COLOR = {
     unknown: TOKENS.textMuted,
 };
 
-// Compact distance for the Navigate button's ETA line.
-const shortDistance = (meters) => {
-    const m = Number(meters);
-    if (!Number.isFinite(m)) return null;
-    return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`;
-};
-
 function FlippableParkingCard({
     visible = false,
     spot = null,
@@ -147,11 +140,12 @@ function FlippableParkingCard({
     const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
     const isPublic = access.kind === 'public';
 
-    // The "getting there" ETA now rides on the Navigate button.
-    const distShort = shortDistance(spot.distance);
+    // The walk-time ETA rides on the Navigate button. Minutes is the metric a
+    // driver actually decides on; exact distance would just restate the same
+    // fact, so it's left off the button.
     const eta = walk != null
-        ? (distShort ? `${walk} min walk · ${distShort}` : `${walk} min walk`)
-        : distShort;
+        ? `${walk} ${walk === 1 ? 'minute' : 'minutes'} walk`
+        : null;
 
     // Front shows the decision facts (pricing / hours); convenience is on the button.
     const facts = [];
