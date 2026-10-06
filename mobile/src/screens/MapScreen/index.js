@@ -32,7 +32,7 @@ import MapHeader from './components/MapHeader';
 import MapOverlays from './components/MapOverlays';
 import MapReticle from './components/MapReticle';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from './constants';
+import { SCREEN_HEIGHT, SCREEN_WIDTH, SHEET_BOTTOM_OFFSET } from './constants';
 import { styles } from './styles';
 import { centerCamera, getMarkerScreenPosition } from './utils/camera';
 import { getCurrentPrice } from './utils/pricing';
@@ -43,13 +43,21 @@ function MapScreen({ route, navigation }) {
     const [navigationHeight, setNavigationHeight] = useState(70 + insets.top);
     const [sheetPeekHeight, setSheetPeekHeight] = useState(108);
 
-    // Get ACTUAL tab bar height from React Navigation (includes padding + safe areas)
+    // All layout below is in this screen's own coordinates. React Navigation
+    // lays tab screens out *above* the tab bar, so the screen is shorter than
+    // the window by the tab bar's height. We measure it on layout; the tab
+    // bar height only seeds the first estimate.
     const tabBarHeight = useBottomTabBarHeight();
+    const [containerHeight, setContainerHeight] = useState(SCREEN_HEIGHT - tabBarHeight);
+
     const CARD_ESTIMATED_HEIGHT = 220;
     const SURFACE_STACK_GAP = 12;
-    const BOTTOM_UI_OFFSET = tabBarHeight + sheetPeekHeight + 16;
+    // Distances up from the screen's bottom edge.
+    const sheetTop = SHEET_BOTTOM_OFFSET + sheetPeekHeight;   // collapsed sheet's top edge
+    const FLOATING_CONTROLS_BOTTOM = sheetTop + 12;             // recenter + pin controls rest here
+    const BOTTOM_UI_OFFSET = sheetTop + 16;                     // map padding keeps content clear of the sheet
     const detailCardTopBoundary = navigationHeight + SURFACE_STACK_GAP;
-    const detailCardBottomBoundary = SCREEN_HEIGHT - BOTTOM_UI_OFFSET - SURFACE_STACK_GAP;
+    const detailCardBottomBoundary = containerHeight - BOTTOM_UI_OFFSET - SURFACE_STACK_GAP;
 
     // refs
     const mapRef = useRef(null);
@@ -342,7 +350,7 @@ function MapScreen({ route, navigation }) {
                     } else {
                         setFlippableCardPosition({
                             x: SCREEN_WIDTH / 2,
-                            y: Math.min(SCREEN_HEIGHT / 3, yCap),
+                            y: Math.min(containerHeight / 3, yCap),
                         });
                         setFlippableCardSpot(spot);
                         setFlippableCardVisible(true);
@@ -390,6 +398,14 @@ function MapScreen({ route, navigation }) {
     const dynamicStyles = useMemo(() => ({
         topNavigation: { ...styles.topNavigation, paddingTop: insets.top + 4 },
     }), [insets.top]);
+
+    const handleContainerLayout = useCallback((event) => {
+        const measuredHeight = Math.round(event.nativeEvent.layout.height);
+        if (measuredHeight <= 0) return;
+        setContainerHeight((currentHeight) => (
+            Math.abs(currentHeight - measuredHeight) > 1 ? measuredHeight : currentHeight
+        ));
+    }, []);
 
     const handleNavigationLayout = useCallback((event) => {
         const measuredHeight = Math.ceil(event.nativeEvent.layout.height);
@@ -470,10 +486,10 @@ function MapScreen({ route, navigation }) {
     // and the bottom UI). mapPadding makes the reported region center align
     // with this same point, so map center == reticle target.
     const reticleX = SCREEN_WIDTH / 2;
-    const reticleY = navigationHeight + (SCREEN_HEIGHT - navigationHeight - BOTTOM_UI_OFFSET) / 2;
+    const reticleY = navigationHeight + (containerHeight - navigationHeight - BOTTOM_UI_OFFSET) / 2;
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} onLayout={handleContainerLayout}>
             <StatusBar barStyle="dark-content" backgroundColor={TOKENS.surface} />
 
             {/* map — rendered FIRST so iOS hitTest routes taps on later siblings
@@ -541,7 +557,7 @@ function MapScreen({ route, navigation }) {
                         {
                             opacity: controlsOpacity,
                             transform: [{ translateY: Animated.multiply(controlsTranslateY, -1) }],
-                            bottom: BOTTOM_UI_OFFSET - 4,
+                            bottom: FLOATING_CONTROLS_BOTTOM,
                         }
                     ]}
                     pointerEvents="auto"
@@ -582,7 +598,7 @@ function MapScreen({ route, navigation }) {
             {/* placement controls — shown while setting the search pin */}
             {placingPin && (
                 <View
-                    style={[styles.placementDock, { bottom: BOTTOM_UI_OFFSET + 8 }]}
+                    style={[styles.placementDock, { bottom: FLOATING_CONTROLS_BOTTOM }]}
                     pointerEvents="box-none"
                 >
                     <View style={styles.placementHintPill}>
@@ -635,7 +651,7 @@ function MapScreen({ route, navigation }) {
                 onRetry={handleRetry}
                 getCurrentPrice={getCurrentPrice}
                 onPeekHeightChange={setSheetPeekHeight}
-                tabBarHeight={tabBarHeight}
+                containerHeight={containerHeight}
                 topInset={navigationHeight}
                 onItemPress={handleListItemPress}
                 onClearPin={handleClearPin}

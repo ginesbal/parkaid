@@ -11,15 +11,13 @@ import {
     Text,
     View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
-import { SCREEN_HEIGHT } from '../constants';
+import { SCREEN_HEIGHT, SHEET_BOTTOM_OFFSET } from '../constants';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-const SHEET_BOTTOM_OFFSET = 10;
 const SHEET_EXPANDED_TOP_GAP = 18;
 
 // Inset row separator — aligns under the address text, not the walk-time anchor.
@@ -63,10 +61,12 @@ const ParkingBottomSheet = memo(forwardRef(({
     onItemPress,
     onClearPin,
     onPeekHeightChange,
-    tabBarHeight = 80,
+    // The map screen's measured height. It ends at the tab bar, so it is
+    // shorter than the window — capping by the window let the expanded sheet
+    // slide up under the floating header on smaller phones.
+    containerHeight = SCREEN_HEIGHT,
     topInset = 0,
 }, ref) => {
-    const insets = useSafeAreaInsets();
     const listRef = useRef(null);
     // Mirrors the snap state for screen readers: the list below the peek is
     // only exposed to them when it's actually on screen.
@@ -83,10 +83,10 @@ const ParkingBottomSheet = memo(forwardRef(({
     const maxHeight = useMemo(() => {
         const availableHeight = Math.max(
             peekHeight,
-            SCREEN_HEIGHT - topInset - SHEET_EXPANDED_TOP_GAP - SHEET_BOTTOM_OFFSET
+            containerHeight - topInset - SHEET_EXPANDED_TOP_GAP - SHEET_BOTTOM_OFFSET
         );
         return Math.min(Math.round(peekHeight + 420), availableHeight);
-    }, [peekHeight, topInset]);
+    }, [containerHeight, peekHeight, topInset]);
 
     const PEEK_Y = Math.max(0, maxHeight - peekHeight);
     const HIDDEN_Y = maxHeight + 48;
@@ -484,7 +484,10 @@ const ParkingBottomSheet = memo(forwardRef(({
                     ItemSeparatorComponent={RowSeparator}
                     contentContainerStyle={[
                         styles.listContent,
-                        { paddingBottom: insets.bottom + tabBarHeight + 16 },
+                        // The sheet already sits above the tab bar (which
+                        // handles the home-indicator inset), so the list only
+                        // needs its own breathing room at the end.
+                        { paddingBottom: 16 },
                     ]}
                     showsVerticalScrollIndicator={false}
                     onScrollToIndexFailed={({ index }) => {

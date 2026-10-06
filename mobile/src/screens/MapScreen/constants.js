@@ -10,4 +10,9 @@ const SHEET_MIN_HEIGHT = 80;
 // Search bar + padding: ~70px (filters add ~40px when expanded)
 const HEADER_CONTENT_HEIGHT = 70;
 
-export { SCREEN_HEIGHT, SCREEN_WIDTH, SHEET_MIN_HEIGHT, HEADER_CONTENT_HEIGHT };
+// Gap between the bottom sheet and the bottom of the map screen. The map
+// screen already ends at the tab bar (React Navigation lays tab screens out
+// above it), so nothing here should add the tab bar's height again.
+const SHEET_BOTTOM_OFFSET = 10;
+
+export { SCREEN_HEIGHT, SCREEN_WIDTH, SHEET_MIN_HEIGHT, HEADER_CONTENT_HEIGHT, SHEET_BOTTOM_OFFSET };
