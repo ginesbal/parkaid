@@ -22,6 +22,6 @@ export const styles = StyleSheet.create({
     mapFabLabel: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
     },
 });

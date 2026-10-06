@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: TOKENS.surface,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 16,
     height: 44,

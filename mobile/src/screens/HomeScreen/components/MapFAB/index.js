@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { TOKENS } from '../../../../constants/theme';
 import { styles } from './styles';
 
 /**
@@ -20,7 +21,7 @@ const MapFAB = ({ onPress }) => {
             <MaterialCommunityIcons
                 name="map"
                 size={20}
-                color="#fff"
+                color={TOKENS.onPrimary}
             />
             <Text style={styles.mapFabLabel}>Map</Text>
         </Pressable>

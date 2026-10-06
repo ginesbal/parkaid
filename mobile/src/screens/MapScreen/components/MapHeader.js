@@ -79,7 +79,7 @@ function MapHeader({
                     <MaterialCommunityIcons
                         name="tune-vertical"
                         size={20}
-                        color={filtersExpanded ? '#fff' : TOKENS.primaryAlt}
+                        color={filtersExpanded ? TOKENS.onPrimary : TOKENS.primaryAlt}
                     />
                     {activeFilterCount > 0 && !filtersExpanded && (
                         <View style={styles.filterBadge}>
@@ -102,7 +102,7 @@ function MapHeader({
                     <MaterialCommunityIcons
                         name={hasPin ? 'map-marker' : 'map-marker-plus'}
                         size={20}
-                        color={hasPin && searchMode === 'pinned' ? '#fff' : TOKENS.primaryAlt}
+                        color={hasPin && searchMode === 'pinned' ? TOKENS.onPrimary : TOKENS.primaryAlt}
                     />
                 </Pressable>
             </View>

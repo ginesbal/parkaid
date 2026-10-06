@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
         borderRadius: HEAD / 2,
         backgroundColor: TOKENS.primary,
         borderWidth: 3,
-        borderColor: '#fff',
+        borderColor: TOKENS.surface,
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: TOKENS.shadow,
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#fff',
+        backgroundColor: TOKENS.surface,
     },
     stem: {
         width: 3,

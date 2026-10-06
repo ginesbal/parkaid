@@ -233,7 +233,7 @@ function FlippableParkingCard({
                 >
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
-                            <MaterialCommunityIcons name={type.icon} size={14} color="#FFFFFF" />
+                            <MaterialCommunityIcons name={type.icon} size={14} color={TOKENS.onPrimary} />
                             <Text style={styles.spotTypeText}>{type.label}</Text>
                         </View>
                         <TouchableOpacity
@@ -372,7 +372,7 @@ function FlippableParkingCard({
                             accessibilityLabel={eta ? `Navigate, ${eta}` : 'Navigate'}
                             accessibilityHint="Opens walking directions in Google Maps"
                         >
-                            <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="navigation-variant" size={22} color={TOKENS.onPrimary} />
                             <View style={styles.navBtnTextWrap}>
                                 <Text style={styles.navBtnTextLarge}>Navigate</Text>
                                 {eta ? <Text style={styles.navBtnEta}>{eta}</Text> : null}
@@ -483,7 +483,7 @@ function FlippableParkingCard({
                             accessibilityRole="button"
                             accessibilityHint="Opens walking directions in Google Maps"
                         >
-                            <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="navigation-variant" size={22} color={TOKENS.onPrimary} />
                             <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
                         </TouchableOpacity>
                     </View>

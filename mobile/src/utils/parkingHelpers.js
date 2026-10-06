@@ -41,17 +41,6 @@ export const formatPrice = (price) => {
     return price;
 };
 
-// get icon name for filter
-export const getFilterIcon = (filter) => {
-    const icons = {
-        'all': 'view-grid-outline',
-        'on_street': 'car',
-        'off_street': 'parking',
-        'residential': 'home-city-outline'
-    };
-    return icons[filter] || 'help-circle';
-};
-
 // format distance label in full words ("250 meters", "1.2 kilometers")
 export const getDistanceLabel = (meters) => {
     if (!meters && meters !== 0) return '—';

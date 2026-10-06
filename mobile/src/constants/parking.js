@@ -26,16 +26,6 @@ export const DEFAULT_LOCATION = {
     name: 'Downtown Calgary'
 };
 
-export const FILTER_OPTIONS = [
-    { key: 'all', label: 'All Types' },
-    { key: 'on_street', label: 'Street' },
-    { key: 'off_street', label: 'Parking Lot' },
-    { key: 'residential', label: 'Residential' }
-];
-
-// Legacy alias — older components import this name; same list either way.
-export const DISTANCE_OPTIONS = RADIUS_OPTIONS;
-
 export const REFRESH_INTERVAL = 60000; // 1 minute
 
 export const PARKING_TYPES = {

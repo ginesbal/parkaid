@@ -41,7 +41,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage }) => {
                     <MaterialCommunityIcons
                         name={isError ? 'refresh' : 'radar'}
                         size={16}
-                        color="#fff"
+                        color={TOKENS.onPrimary}
                     />
                     <Text style={styles.emptyButtonText}>
                         {isError ? 'Retry' : 'Expand search'}

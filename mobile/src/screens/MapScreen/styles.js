@@ -96,7 +96,7 @@ export const styles = StyleSheet.create({
     filterBadgeText: {
         fontSize: 10,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
         letterSpacing: -0.2,
     },
 
@@ -136,7 +136,7 @@ export const styles = StyleSheet.create({
     },
 
     miniChipTextActive: {
-        color: '#fff',
+        color: TOKENS.onPrimary,
         fontWeight: '600',
     },
 
@@ -159,7 +159,7 @@ export const styles = StyleSheet.create({
         borderRadius: 7,
         backgroundColor: TOKENS.primary,
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: TOKENS.surface,
     },
 
     markerDotSelected: {
@@ -168,7 +168,7 @@ export const styles = StyleSheet.create({
         borderRadius: 9,
         backgroundColor: TOKENS.primary,
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: TOKENS.surface,
     },
 
     // ===== Pin marker =====
@@ -184,7 +184,7 @@ export const styles = StyleSheet.create({
         borderRadius: 16,
         backgroundColor: TOKENS.primary,
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: TOKENS.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -193,7 +193,7 @@ export const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#fff',
+        backgroundColor: TOKENS.surface,
     },
 
     pinStem: {
@@ -319,6 +319,6 @@ export const styles = StyleSheet.create({
     placementBtnPrimaryText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
     },
 });

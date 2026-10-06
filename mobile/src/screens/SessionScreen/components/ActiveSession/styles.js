@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS, alpha } from '../../../../constants/theme';
+import { RADIUS, TOKENS, alpha } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     scrollContent: {
@@ -137,7 +137,7 @@ export const styles = StyleSheet.create({
     extendButton: {
         flex: 1,
         backgroundColor: TOKENS.surfaceMuted,
-        borderRadius: 12,
+        borderRadius: RADIUS.xl, // two-line tile
         padding: 14,
         alignItems: 'center',
         borderWidth: StyleSheet.hairlineWidth,
@@ -198,7 +198,7 @@ export const styles = StyleSheet.create({
     detailIcon: {
         width: 34,
         height: 34,
-        borderRadius: 10,
+        borderRadius: 17, // icon badge reads as a circle
         backgroundColor: TOKENS.surfaceMuted,
         alignItems: 'center',
         justifyContent: 'center',
@@ -243,7 +243,7 @@ export const styles = StyleSheet.create({
     },
     endButton: {
         minHeight: 54,
-        borderRadius: 14,
+        borderRadius: RADIUS.pill,
         backgroundColor: TOKENS.danger,
         flexDirection: 'row',
         alignItems: 'center',
@@ -258,7 +258,7 @@ export const styles = StyleSheet.create({
     endButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
     },
     bottomHint: {
         fontSize: 12,

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS, alpha } from '../../../../constants/theme';
+import { RADIUS, TOKENS, alpha } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     scrollContent: {
@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
     stepIndicator: {
         width: 30,
         height: 30,
-        borderRadius: 10,
+        borderRadius: 15, // numbered step marker reads as a circle
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -78,7 +78,7 @@ export const styles = StyleSheet.create({
 
     plateInput: {
         minHeight: 50,
-        borderRadius: 12,
+        borderRadius: RADIUS.pill, // text fields are pills, like the map search
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -101,7 +101,7 @@ export const styles = StyleSheet.create({
     durationOption: {
         width: '48%',
         minHeight: 60,
-        borderRadius: 12,
+        borderRadius: RADIUS.xl, // two-line tile: soft, not a stretched pill
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -145,7 +145,7 @@ export const styles = StyleSheet.create({
     rateOption: {
         flex: 1,
         minHeight: 44,
-        borderRadius: 10,
+        borderRadius: RADIUS.pill,
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -163,7 +163,7 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
     rateTextActive: {
-        color: '#fff',
+        color: TOKENS.onPrimary,
         fontWeight: '600',
     },
 
@@ -171,7 +171,7 @@ export const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 16,
         marginBottom: 16,
-        borderRadius: 12,
+        borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -206,7 +206,7 @@ export const styles = StyleSheet.create({
 
     primaryButton: {
         minHeight: 54,
-        borderRadius: 14,
+        borderRadius: RADIUS.pill, // primary actions are pills app-wide
         backgroundColor: TOKENS.primary,
         flexDirection: 'row',
         alignItems: 'center',
@@ -225,6 +225,6 @@ export const styles = StyleSheet.create({
     primaryButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
     },
 });

@@ -88,7 +88,7 @@ export const styles = StyleSheet.create({
   spotTypeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: TOKENS.onPrimary,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
@@ -318,13 +318,13 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 20,
-    color: '#ffffff',
+    color: TOKENS.onPrimary,
   },
   navBtnEta: {
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 15,
-    color: 'rgba(255, 255, 255, 0.82)',
+    color: TOKENS.onPrimaryMuted,
   },
 
   // --- Back: vertical spec sheet ---

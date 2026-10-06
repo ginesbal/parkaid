@@ -93,6 +93,11 @@ export const TOKENS = {
     accent: PALETTE.cerulean[500],
     accentAlt: PALETTE.cerulean[400],
 
+    // content (text, icons) sitting on a solid fill — cerulean, a semantic
+    // color, or ink. White halos on the map use `surface`, not these.
+    onPrimary: '#FFFFFF',
+    onPrimaryMuted: 'rgba(255, 255, 255, 0.82)',
+
     // semantic — base hue for dots, fills, borders and large text.
     // The *Ink variants are for small/medium TEXT, where the base hue falls
     // short of WCAG AA: warning is 3.3:1 on white, danger 4.4:1 on its soft

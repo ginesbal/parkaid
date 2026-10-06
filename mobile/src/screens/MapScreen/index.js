@@ -21,6 +21,7 @@ import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingC
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
 import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS } from '../../constants/parking';
+import { TOKENS } from '../../constants/theme';
 
 // logs
 import { logger } from '../../utils/loggers';
@@ -461,7 +462,7 @@ function MapScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle="dark-content" backgroundColor={TOKENS.surface} />
 
             {/* map — rendered FIRST so iOS hitTest routes taps on later siblings
                 (header, FAB, bottom sheet) to those overlays instead of leaking
@@ -559,7 +560,7 @@ function MapScreen() {
                         <MaterialCommunityIcons
                             name={searchMode === 'pinned' ? 'map-marker' : 'crosshairs-gps'}
                             size={22}
-                            color="#fff"
+                            color={TOKENS.onPrimary}
                         />
                     </Pressable>
                 </Animated.View>
@@ -601,7 +602,7 @@ function MapScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Search this area"
                         >
-                            <MaterialCommunityIcons name="map-marker-check" size={18} color="#fff" />
+                            <MaterialCommunityIcons name="map-marker-check" size={18} color={TOKENS.onPrimary} />
                             <Text style={styles.placementBtnPrimaryText}>Search here</Text>
                         </Pressable>
                     </View>

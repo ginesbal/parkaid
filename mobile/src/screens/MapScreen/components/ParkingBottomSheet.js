@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
         color: TOKENS.text,
     },
     radiusChipTextActive: {
-        color: '#fff',
+        color: TOKENS.onPrimary,
         fontWeight: '600',
     },
     clearButton: {

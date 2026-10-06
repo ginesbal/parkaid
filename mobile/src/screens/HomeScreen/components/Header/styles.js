@@ -134,7 +134,7 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
     },
     filterChipTextActive: {
-        color: '#fff',
+        color: TOKENS.onPrimary,
         fontWeight: '600',
     },
     distanceRow: {
@@ -180,7 +180,7 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
     },
     distanceOptionTextActive: {
-        color: '#fff',
+        color: TOKENS.onPrimary,
         fontWeight: '600',
     },
     statusBanner: {

@@ -163,7 +163,7 @@ const SetupCard = ({
                 <MaterialCommunityIcons
                     name="timer-play"
                     size={20}
-                    color="#fff"
+                    color={TOKENS.onPrimary}
                 />
                 <Text style={styles.primaryButtonText}>Start session</Text>
             </TouchableOpacity>

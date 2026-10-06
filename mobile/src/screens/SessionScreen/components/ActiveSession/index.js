@@ -6,6 +6,7 @@ import QuickExtend from './QuickExtend';
 import SessionDetails from './SessionDetails';
 import { styles } from './styles';
 import TimerCard from './TimerCard';
+import { TOKENS } from '../../../../constants/theme';
 
 /**
  * ActiveSession - Displays and manages an active parking session
@@ -70,7 +71,7 @@ const ActiveSession = ({
                     <MaterialCommunityIcons
                         name="stop-circle"
                         size={20}
-                        color="#fff"
+                        color={TOKENS.onPrimary}
                     />
                     <Text style={styles.endButtonText}>End session</Text>
                 </TouchableOpacity>
