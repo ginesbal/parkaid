@@ -424,3 +424,31 @@ export const getRestrictions = (spot) => {
 
     return out;
 };
+
+// ---- parking timer ---------------------------------------------------------
+
+/**
+ * What the parking timer needs to know about a spot, in a small serializable
+ * shape that can travel between tabs and live in storage. Only spots a driver
+ * may actually park at qualify — there is no timer for a residents-only block.
+ *
+ *   hourlyRate     -> $/hour when the spot has a real hourly rate, else null
+ *   maxStayMinutes -> the posted limit, used to keep the timer within it
+ */
+export const getTimerSpot = (spot) => {
+    if (!spot || getAccess(spot).kind !== 'public') return null;
+    const addr = parseAddress(spot);
+    const price = getPriceInfo(spot);
+    const maxStay = getMaxStay(spot);
+    const hourlyRate =
+        price.kind === 'paid' && price.perHour && price.amount > 0 ? price.amount : null;
+    return {
+        id: spot.id ?? null,
+        address: addr.primary,
+        secondary: addr.secondary || null,
+        hourlyRate,
+        priceText: hourlyRate ? `${price.value} per hour` : price.kind === 'free' ? 'Free' : null,
+        maxStayMinutes: maxStay ? maxStay.minutes : null,
+        maxStayText: maxStay ? maxStay.text : null,
+    };
+};

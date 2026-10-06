@@ -21,7 +21,9 @@ import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingC
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
 import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS } from '../../constants/parking';
+import { STORAGE_KEYS } from '../../constants/session';
 import { TOKENS } from '../../constants/theme';
+import { getTimerSpot } from '../../utils/spotInfo';
 
 // logs
 import { logger } from '../../utils/loggers';
@@ -323,6 +325,13 @@ function MapScreen({ route, navigation }) {
         setFlippableCardVisible(false);
         bottomSheetRef.current?.dismiss();
 
+        // Remember the last public spot opened — the Park tab offers it as
+        // "Use this spot", so its rate and time limit come along for free.
+        const timerSpot = getTimerSpot(spot);
+        if (timerSpot) {
+            AsyncStorage.setItem(STORAGE_KEYS.LAST_SPOT, JSON.stringify(timerSpot)).catch(() => {});
+        }
+
         if (spot?.coordinates) {
             const lat = spot.coordinates.coordinates[1];
             const lng = spot.coordinates.coordinates[0];
@@ -394,6 +403,16 @@ function MapScreen({ route, navigation }) {
                 .catch(() => logger.log('open_external_navigation_failed', { lat, lng }, 'WARN'));
         }
     };
+
+    // "Park here" — hand the open spot to the Park tab's timer.
+    const handleParkHere = useCallback(() => {
+        const timerSpot = getTimerSpot(flippableCardSpot);
+        if (!timerSpot) return;
+        logger.log('park_here_pressed', { spotId: timerSpot.id }, 'UI_EVENT');
+        setFlippableCardVisible(false);
+        setSelectedSpot(null);
+        navigation?.navigate('Park', { spot: timerSpot });
+    }, [flippableCardSpot, navigation]);
 
     const dynamicStyles = useMemo(() => ({
         topNavigation: { ...styles.topNavigation, paddingTop: insets.top + 4 },
@@ -669,6 +688,7 @@ function MapScreen({ route, navigation }) {
                     setSelectedSpot(null);
                 }}
                 onNavigate={() => onNavigate(flippableCardSpot)}
+                onParkHere={handleParkHere}
             />
         </View>
 

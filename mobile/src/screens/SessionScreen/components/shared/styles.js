@@ -9,8 +9,6 @@ export const styles = StyleSheet.create({
         gap: 8,
         paddingVertical: 4,
     },
-    statusBadgeWarning: {},
-    statusBadgeDanger: {},
     statusDot: {
         width: 7,
         height: 7,
@@ -33,7 +31,7 @@ export const styles = StyleSheet.create({
         color: TOKENS.warningInk,
     },
     statusTextDanger: {
-        color: TOKENS.danger,
+        color: TOKENS.dangerInk,
     },
 
     // InfoCard → hairline divider rows, no bg

@@ -44,6 +44,7 @@ function FlippableParkingCard({
     bottomBoundary = SCREEN_HEIGHT - 140,
     onClose = () => { },
     onNavigate = () => { },
+    onParkHere = null,
 }) {
     const [isFlipped, setIsFlipped] = useState(false);
     // With Reduce Motion on, the 180° 3D flip becomes a crossfade and the
@@ -174,6 +175,8 @@ function FlippableParkingCard({
     const addr = parseAddress(spot);
     const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
     const isPublic = access.kind === 'public';
+    // A timer only makes sense where a visitor can actually park.
+    const canPark = isPublic && typeof onParkHere === 'function';
 
     // The walk-time ETA rides on the Navigate button. Minutes is the metric a
     // driver actually decides on; exact distance would just restate the same
@@ -254,15 +257,32 @@ function FlippableParkingCard({
                             <MaterialCommunityIcons name={type.icon} size={14} color={TOKENS.onPrimary} />
                             <Text style={styles.spotTypeText}>{type.label}</Text>
                         </View>
-                        <TouchableOpacity
-                            style={styles.closeBtn}
-                            onPress={onClose}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Close details"
-                        >
-                            <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
-                        </TouchableOpacity>
+                        <View style={styles.headerActions}>
+                            {canPark ? (
+                                <TouchableOpacity
+                                    style={styles.parkBtn}
+                                    onPress={onParkHere}
+                                    activeOpacity={0.7}
+                                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Park here"
+                                    accessibilityHint="Starts a parking timer for this spot"
+                                >
+                                    <MaterialCommunityIcons name="timer-outline" size={16} color={TOKENS.primary} />
+                                    {/* The header row is narrow; keep the pill from crowding the tag. */}
+                                    <Text style={styles.parkBtnText} maxFontSizeMultiplier={1.4}>Park here</Text>
+                                </TouchableOpacity>
+                            ) : null}
+                            <TouchableOpacity
+                                style={styles.closeBtn}
+                                onPress={onClose}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                accessibilityRole="button"
+                                accessibilityLabel="Close details"
+                            >
+                                <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <View style={styles.frontBody}>

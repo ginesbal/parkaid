@@ -1,36 +1,52 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Animated } from 'react-native';
-import { DEFAULT_VALUES, STORAGE_KEYS } from '../constants/session.js';
-import { formatEndTime, formatTime } from '../utils/formatters';
-import { calculateProgress, calculateSessionState } from '../utils/sessionHelpers';
+import { Alert } from 'react-native';
+import {
+    DEFAULT_DURATION,
+    DURATION_OPTIONS,
+    STORAGE_KEYS,
+    UNDO_WINDOW_MS,
+} from '../constants/session.js';
+import { calculateCost, calculateSessionState } from '../utils/sessionHelpers';
+import { formatDuration } from '../utils/spotInfo';
 
+// The longest preset that fits within a spot's posted limit, preferring the
+// duration the user already picked. A limit shorter than every preset is
+// used as-is (e.g. a 15-minute loading zone).
+export const fitDurationToLimit = (maxStayMinutes, preferred = DEFAULT_DURATION) => {
+    if (!maxStayMinutes || preferred <= maxStayMinutes) return preferred;
+    const fitting = DURATION_OPTIONS.filter((option) => option.value <= maxStayMinutes);
+    return fitting.length ? fitting[fitting.length - 1].value : maxStayMinutes;
+};
+
+/**
+ * The Park tab's parking timer. A reminder, not a payment: it keeps time for
+ * an optional spot, and never plans past that spot's posted limit.
+ */
 export const useSessionManager = () => {
     // core state
     const [session, setSession] = useState(null);
     const [now, setNow] = useState(Date.now()); // ms
 
-    // form state for new sessions
-    const [vehiclePlate, setVehiclePlate] = useState('');
-    const [selectedRate, setSelectedRate] = useState(DEFAULT_VALUES.RATE);
-    const [selectedDuration, setSelectedDuration] = useState(DEFAULT_VALUES.DURATION);
+    // setup for the next timer
+    const [timerSpot, setTimerSpotState] = useState(null);
+    const [selectedDuration, setSelectedDuration] = useState(DEFAULT_DURATION);
 
-    // animation values
-    const pulseAnim = useState(new Animated.Value(1))[0];
+    // The most recent "Add time", kept briefly so it can be undone in place.
+    const [lastExtension, setLastExtension] = useState(null);
 
-    // load session from storage on mount
+    // load the running timer from storage on mount
     const loadSession = useCallback(async () => {
         try {
             const raw = await AsyncStorage.getItem(STORAGE_KEYS.SESSION);
-            const parsed = raw ? JSON.parse(raw) : null;
-            setSession(parsed);
+            setSession(raw ? JSON.parse(raw) : null);
+            setNow(Date.now());
         } catch (error) {
-            console.error('Failed to load session:', error);
+            console.error('Failed to load timer:', error);
             setSession(null);
         }
     }, []);
 
-    // save session to storage
     const saveSession = useCallback(async (sessionData) => {
         try {
             if (!sessionData) {
@@ -40,20 +56,37 @@ export const useSessionManager = () => {
             }
             await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(sessionData));
             setSession(sessionData);
+            // `now` only ticks once a second; without this a fresh 1-hour
+            // timer reads 01:00:01 (and "1 hour 1 minute") until the next tick.
+            setNow(Date.now());
         } catch (error) {
-            console.error('Failed to save session:', error);
+            console.error('Failed to save timer:', error);
         }
     }, []);
 
-    // initialize on mount
     useEffect(() => {
         loadSession();
     }, [loadSession]);
 
-    // update timer every 1 second
+    // tick every second
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(interval);
+    }, []);
+
+    // The undo offer is short-lived, like a toast.
+    useEffect(() => {
+        if (!lastExtension) return undefined;
+        const timer = setTimeout(() => setLastExtension(null), UNDO_WINDOW_MS);
+        return () => clearTimeout(timer);
+    }, [lastExtension]);
+
+    // Choosing a spot keeps the planned duration inside its posted limit.
+    const setTimerSpot = useCallback((spot) => {
+        setTimerSpotState(spot || null);
+        if (spot?.maxStayMinutes) {
+            setSelectedDuration((current) => fitDurationToLimit(spot.maxStayMinutes, current));
+        }
     }, []);
 
     // derived timestamps
@@ -67,138 +100,115 @@ export const useSessionManager = () => {
         [session]
     );
 
-    // millisecond precision
     const elapsedMs = useMemo(
         () => (startTime ? Math.max(0, now - startTime.getTime()) : 0),
         [now, startTime]
     );
 
-    const timeRemainingMs = useMemo(() => {
-        if (!endTime) return 0;
-        return Math.max(0, endTime.getTime() - now);
-    }, [now, endTime]);
-
-    // minute granularity (for helpers that expect minutes)
-    const elapsedTime = useMemo(
-        () => Math.floor(elapsedMs / 60000),
-        [elapsedMs]
+    const timeRemainingMs = useMemo(
+        () => (endTime ? Math.max(0, endTime.getTime() - now) : 0),
+        [now, endTime]
     );
 
-    const timeRemaining = useMemo(
-        () => Math.floor(timeRemainingMs / 60000),
-        [timeRemainingMs]
-    );
-
-    const totalCost = useMemo(() => {
-        if (!session) return 0;
-        const totalMin = session.duration || 60;
-        const hours = totalMin / 60;
-        return Number((hours * session.hourlyRate).toFixed(2));
-    }, [session]);
-
-    const progress = useMemo(
-        () => calculateProgress(elapsedTime, session?.duration),
-        [elapsedTime, session]
-    );
+    // Minute granularity. Remaining time rounds up, like any countdown: 59
+    // seconds left is "1 minute", and the timer only reads zero when it is.
+    const elapsedTime = useMemo(() => Math.floor(elapsedMs / 60000), [elapsedMs]);
+    const timeRemaining = useMemo(() => Math.ceil(timeRemainingMs / 60000), [timeRemainingMs]);
 
     const sessionState = useMemo(
         () => calculateSessionState(timeRemaining),
         [timeRemaining]
     );
 
-    // handle expiring animation
-    useEffect(() => {
-        if (sessionState === 'expiring') {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 1.05,
-                        duration: 1000,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 1000,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-        } else {
-            pulseAnim.setValue(1);
-        }
-    }, [sessionState, pulseAnim]);
+    // Only known when the timer is for a spot with a real hourly rate. It's
+    // an upper bound — the spot may be free for part of the time.
+    const estimatedCost = useMemo(() => {
+        const rate = session?.spot?.hourlyRate;
+        return rate ? calculateCost(session.duration, rate) : null;
+    }, [session]);
 
-    // action handlers
+    // Minutes still allowed under the spot's posted limit (null = no limit).
+    const remainingAllowance = session?.spot?.maxStayMinutes
+        ? Math.max(0, session.spot.maxStayMinutes - session.duration)
+        : null;
+
+    const canExtendBy = useCallback(
+        (minutes) => remainingAllowance == null || minutes <= remainingAllowance,
+        [remainingAllowance]
+    );
+
+    // actions
     const startSession = useCallback(async () => {
-        if (!vehiclePlate.trim()) {
-            Alert.alert(
-                'License Plate Required',
-                'Please enter your vehicle license plate to continue.'
-            );
-            return;
-        }
+        const minutes = selectedDuration;
+        if (!Number.isFinite(minutes) || minutes <= 0) return;
 
-        const startTime = new Date();
-        const endTime = new Date(startTime.getTime() + selectedDuration * 60000);
+        const start = new Date();
+        const end = new Date(start.getTime() + minutes * 60000);
 
-        const newSession = {
-            id: `session_${Date.now()}`,
-            locationName: 'Downtown Calgary',
-            locationAddress: '4th Avenue SW',
-            spotId: 'Meter 217',
-            hourlyRate: selectedRate,
-            duration: selectedDuration, // minutes
-            startedAt: startTime.toISOString(),
-            scheduledEnd: endTime.toISOString(),
-            vehiclePlate: vehiclePlate.trim().toUpperCase(),
-            totalCost: (selectedDuration / 60) * selectedRate,
-        };
+        await saveSession({
+            id: `timer_${start.getTime()}`,
+            startedAt: start.toISOString(),
+            scheduledEnd: end.toISOString(),
+            duration: minutes, // planned minutes from the start; grows with "Add time"
+            spot: timerSpot,
+        });
+        setLastExtension(null);
+    }, [selectedDuration, timerSpot, saveSession]);
 
-        await saveSession(newSession);
-        setVehiclePlate('');
-    }, [vehiclePlate, selectedRate, selectedDuration, saveSession]);
-
+    // Adds time immediately and offers an inline undo — no confirm dialog.
+    // Returns null when the amount is invalid or would pass the spot's limit.
     const extendSession = useCallback(async (additionalMinutes) => {
         // Guard the date math: a missing or non-numeric amount would build an
         // Invalid Date and throw from toISOString().
-        if (!session || !Number.isFinite(additionalMinutes) || additionalMinutes <= 0) return;
+        if (!session || !Number.isFinite(additionalMinutes) || additionalMinutes <= 0) return null;
 
-        const currentEnd = new Date(session.scheduledEnd);
-        const newEnd = new Date(currentEnd.getTime() + additionalMinutes * 60000);
-        const newDuration = session.duration + additionalMinutes;
-        const additionalCost = (additionalMinutes / 60) * session.hourlyRate;
+        // Never plan past the posted limit — that's how tickets happen.
+        const maxStay = session.spot?.maxStayMinutes;
+        if (maxStay && session.duration + additionalMinutes > maxStay) return null;
 
-        const updatedSession = {
+        const newEnd = new Date(new Date(session.scheduledEnd).getTime() + additionalMinutes * 60000);
+        const updated = {
             ...session,
             scheduledEnd: newEnd.toISOString(),
-            duration: newDuration,
-            totalCost: session.totalCost + additionalCost,
+            duration: session.duration + additionalMinutes,
         };
 
-        await saveSession(updatedSession);
-
-        Alert.alert(
-            'Time Extended! ✓',
-            `Added ${formatTime(additionalMinutes)}\nNew end time: ${formatEndTime(newEnd)}`,
-            [{ text: 'Got it', style: 'default' }]
-        );
+        await saveSession(updated);
+        setLastExtension({
+            previous: session,
+            minutes: additionalMinutes,
+            newEnd: updated.scheduledEnd,
+        });
+        return { minutes: additionalMinutes, newEnd };
     }, [session, saveSession]);
+
+    const undoExtension = useCallback(async () => {
+        if (!lastExtension) return;
+        await saveSession(lastExtension.previous);
+        setLastExtension(null);
+    }, [lastExtension, saveSession]);
 
     const endSession = useCallback(() => {
         if (!session) return;
 
+        // Once time is up there's nothing to lose — no confirm.
+        if (timeRemaining <= 0) {
+            saveSession(null);
+            setLastExtension(null);
+            return;
+        }
+
         Alert.alert(
-            'End Parking Session?',
-            timeRemaining > 0
-                ? `You still have ${formatTime(timeRemaining)} remaining.\nAre you sure you want to end now?`
-                : 'Are you sure you want to end this session?',
+            'End this timer?',
+            `You still have ${formatDuration(timeRemaining)} left.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'End Session',
+                    text: 'End timer',
                     style: 'destructive',
                     onPress: async () => {
                         await saveSession(null);
+                        setLastExtension(null);
                     },
                 },
             ]
@@ -206,31 +216,30 @@ export const useSessionManager = () => {
     }, [session, timeRemaining, saveSession]);
 
     return {
-        // session data
+        // running timer
         session,
         sessionState,
         timeRemaining,      // minutes
         timeRemainingMs,    // ms
         elapsedTime,        // minutes
         elapsedMs,          // ms
-        progress,
-        totalCost,
+        estimatedCost,
         startTime,
         endTime,
+        remainingAllowance, // minutes still allowed by the spot's limit, or null
+        canExtendBy,
+        lastExtension,
 
         // actions
         startSession,
         endSession,
         extendSession,
+        undoExtension,
 
-        // form state
-        vehiclePlate,
-        setVehiclePlate,
-        selectedRate,
-        setSelectedRate,
+        // setup for the next timer
+        timerSpot,
+        setTimerSpot,
         selectedDuration,
         setSelectedDuration,
-
-        pulseAnim,
     };
 };

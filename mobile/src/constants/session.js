@@ -1,96 +1,33 @@
-
+// Parking timer.
+//
+// parkaid can't pay for parking — in Calgary that's tied to your licence
+// plate through the City's system — so the Park tab is an honest reminder
+// timer: it keeps time for a spot you chose, inside that spot's posted limit.
+// It deliberately doesn't ask for a plate, which would imply you'd paid.
 
 export const STORAGE_KEYS = {
-    SESSION: 'parking_session_v2',
-    USER_PREFERENCES: 'user_preferences',
-    HISTORY: 'session_history',
+    // v3: the timer shape (an optional spot summary). The old demo session —
+    // plate, hand-picked rate, a made-up meter — lived under an older key and
+    // is ignored.
+    SESSION: 'parking_timer_v3',
+    // The last public spot opened on the map, offered as "Use this spot".
+    LAST_SPOT: 'last_viewed_spot',
 };
 
-export const DEFAULT_VALUES = {
-    RATE: 2.5,
-    DURATION: 60, // minutes
-    LOCATION: 'Downtown Calgary',
-    MAX_PLATE_LENGTH: 10,
-};
+export const DEFAULT_DURATION = 60; // minutes
 
 export const DURATION_OPTIONS = [
-    { value: 30, label: '30 minutes', quickSelect: true },
-    { value: 60, label: '1 hour', quickSelect: true },
-    { value: 120, label: '2 hours', quickSelect: true },
-    { value: 180, label: '3 hours', quickSelect: true },
-    { value: 240, label: '4 hours', quickSelect: false },
-    { value: 480, label: '8 hours', quickSelect: false },
-];
-
-export const RATE_OPTIONS = [
-    { value: 1.5, label: '$1.50/hr', tier: 'economy' },
-    { value: 2.5, label: '$2.50/hr', tier: 'standard' },
-    { value: 3.5, label: '$3.50/hr', tier: 'premium' },
+    { value: 30, label: '30 min' },
+    { value: 60, label: '1 hour' },
+    { value: 120, label: '2 hours' },
+    { value: 180, label: '3 hours' },
 ];
 
 export const EXTENSION_OPTIONS = [
-    { minutes: 15, label: '+15min', highlight: false },
-    { minutes: 30, label: '+30min', highlight: false },
-    { minutes: 60, label: '+1hr', highlight: true },
-    { minutes: 120, label: '+2hr', highlight: false },
+    { minutes: 15, label: '+15 min' },
+    { minutes: 30, label: '+30 min' },
+    { minutes: 60, label: '+1 hour' },
 ];
 
-export const SESSION_STATES = {
-    ACTIVE: 'active',
-    EXPIRING: 'expiring',
-    EXPIRED: 'expired',
-};
-
-export const ALERTS = {
-    EXPIRING_THRESHOLD: 10, // minutes
-    URGENT_THRESHOLD: 5, // minutes
-    UPDATE_INTERVAL: 30000, // milliseconds (30 seconds)
-};
-
-export const DEMO_LOCATIONS = [
-    {
-        id: 'meter_217',
-        name: 'Downtown Calgary',
-        address: '4th Avenue SW',
-        spotId: 'Meter 217',
-        coordinates: { lat: 51.0447, lng: -114.0719 },
-    },
-    {
-        id: 'meter_318',
-        name: 'Kensington',
-        address: 'Kensington Road NW',
-        spotId: 'Meter 318',
-        coordinates: { lat: 51.0522, lng: -114.1253 },
-    },
-    {
-        id: 'lot_a42',
-        name: 'Airport Parking',
-        address: 'Calgary International Airport',
-        spotId: 'Lot A-42',
-        coordinates: { lat: 51.1215, lng: -114.0076 },
-    },
-];
-
-export const VALIDATION = {
-    PLATE: {
-        MIN_LENGTH: 2,
-        MAX_LENGTH: 10,
-        PATTERN: /^[A-Z0-9\s-]+$/i,
-        ERROR_MESSAGES: {
-            REQUIRED: 'License plate is required',
-            TOO_SHORT: 'License plate must be at least 2 characters',
-            TOO_LONG: 'License plate must be 10 characters or less',
-            INVALID: 'License plate can only contain letters, numbers, spaces, and hyphens',
-        },
-    },
-};
-
-export const UI_CONFIG = {
-    ANIMATION: {
-        PULSE_DURATION: 1000,
-        TRANSITION_DURATION: 300,
-    },
-    REFRESH_RATE: 30000, // 30 seconds
-    SHOW_TIPS: true,
-    ENABLE_NOTIFICATIONS: true,
-};
+// How long "Undo" stays available after adding time.
+export const UNDO_WINDOW_MS = 15000;

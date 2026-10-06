@@ -126,6 +126,30 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  // "Park here" rides in the header beside close: a quiet tinted pill, so it
+  // adds an action without adding height to a face that's already full.
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  parkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    backgroundColor: TOKENS.primaryWash,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TOKENS.primaryBorder,
+  },
+  parkBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: TOKENS.primary,
+  },
+
   // --- Front content ---
   // One spacing rhythm runs the whole face: 20 between sections (address,
   // headline, facts), 16 between fact rows, 8 within the headline, 4 inside a

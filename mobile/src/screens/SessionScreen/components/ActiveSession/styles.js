@@ -3,27 +3,24 @@ import { RADIUS, TOKENS, alpha } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     scrollContent: {
-        paddingBottom: 184,
+        paddingBottom: 32,
     },
 
     header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
         paddingHorizontal: 20,
         paddingVertical: 16,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: TOKENS.hairline,
         backgroundColor: TOKENS.surface,
     },
-    statusBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    locationText: {
+    headerSpot: {
         flex: 1,
         fontSize: 13,
         color: TOKENS.textMuted,
-        fontWeight: '400',
         textAlign: 'right',
     },
 
@@ -66,11 +63,12 @@ export const styles = StyleSheet.create({
         marginBottom: 20,
         fontVariant: ['tabular-nums'],
     },
+    // Inks, not the raw hues: amber on its own tint is under 3:1 even at 48pt.
     timerValueWarning: {
-        color: TOKENS.warning,
+        color: TOKENS.warningInk,
     },
     timerValueDanger: {
-        color: TOKENS.danger,
+        color: TOKENS.dangerInk,
     },
     progressContainer: {
         width: '100%',
@@ -79,13 +77,6 @@ export const styles = StyleSheet.create({
         backgroundColor: alpha(TOKENS.primary, 0.14),
         overflow: 'hidden',
         marginBottom: 20,
-    },
-    progressBackground: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
     },
     progressBar: {
         position: 'absolute',
@@ -119,132 +110,88 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
 
-    // Quick extend
-    quickActions: {
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: TOKENS.textMuted,
+        marginBottom: 10,
+    },
+
+    // Add time — one tap, inline undo.
+    extendSection: {
         marginHorizontal: 20,
         marginTop: 24,
     },
-    quickActionsTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.text,
-        marginBottom: 12,
-    },
-    extendGrid: {
+    extendRow: {
         flexDirection: 'row',
         gap: 8,
     },
     extendButton: {
         flex: 1,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderRadius: RADIUS.xl, // two-line tile
-        padding: 14,
-        alignItems: 'center',
+        minHeight: 44,
+        borderRadius: RADIUS.pill,
+        backgroundColor: TOKENS.surface,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-    },
-    extendButtonHighlight: {
-        backgroundColor: TOKENS.primaryWash,
-        borderColor: TOKENS.primary,
+        borderColor: TOKENS.primaryBorder,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 8,
     },
     extendButtonDisabled: {
-        opacity: 0.4,
-    },
-    extendTopRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
+        backgroundColor: TOKENS.surfaceMuted,
+        borderColor: TOKENS.hairline,
+        opacity: 0.6,
     },
     extendButtonText: {
-        fontSize: 13,
+        fontSize: 15,
         fontWeight: '600',
         color: TOKENS.primary,
-        marginTop: 0,
+        fontVariant: ['tabular-nums'],
     },
     extendButtonTextDisabled: {
         color: TOKENS.textMuted,
     },
-    extendButtonCost: {
-        fontSize: 11,
-        color: TOKENS.textMuted,
-        marginTop: 2,
-        fontWeight: '500',
+    undoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginTop: 12,
+    },
+    undoText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
-    extendButtonCostDisabled: {
-        color: alpha(TOKENS.textMuted, 0.5),
+    undoAction: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primary,
+    },
+    extendNote: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+        marginTop: 12,
     },
 
-    detailsCard: {
+    // Time's up — one clear next step.
+    expiredSection: {
         marginHorizontal: 20,
         marginTop: 24,
-        gap: 0,
+        gap: 14,
     },
-    detailsTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.textMuted,
-        marginBottom: 10,
-        letterSpacing: 0.3,
-        textTransform: 'uppercase',
-    },
-    detailRow: {
-        flexDirection: 'row',
-        paddingVertical: 14,
-        paddingHorizontal: 0,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: TOKENS.divider,
-    },
-    detailIcon: {
-        width: 34,
-        height: 34,
-        borderRadius: 17, // icon badge reads as a circle
-        backgroundColor: TOKENS.surfaceMuted,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    detailContent: {
-        flex: 1,
-    },
-    detailLabel: {
-        fontSize: 11,
-        color: TOKENS.textMuted,
-        marginBottom: 4,
-        letterSpacing: 0.3,
-        fontWeight: '500',
-        textTransform: 'uppercase',
-    },
-    detailValue: {
+    expiredText: {
         fontSize: 15,
-        fontWeight: '600',
+        lineHeight: 21,
         color: TOKENS.text,
+        textAlign: 'center',
     },
-    detailSubvalue: {
-        fontSize: 13,
-        color: TOKENS.textMuted,
-        marginTop: 2,
-        fontVariant: ['tabular-nums'],
-        fontWeight: '500',
-    },
-
-    // Bottom actions
-    bottomActions: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: TOKENS.surface,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: TOKENS.hairline,
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 8,
-    },
-    endButton: {
+    primaryButton: {
         minHeight: 54,
         borderRadius: RADIUS.pill,
-        backgroundColor: TOKENS.danger,
+        backgroundColor: TOKENS.primary,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -255,17 +202,78 @@ export const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 2,
     },
-    endButtonText: {
+    primaryButtonText: {
         fontSize: 16,
         fontWeight: '600',
         color: TOKENS.onPrimary,
     },
-    bottomHint: {
+
+    // Details — plain label/value rows.
+    detailsCard: {
+        marginHorizontal: 20,
+        marginTop: 28,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 16,
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: TOKENS.divider,
+    },
+    detailRowLast: {
+        borderBottomWidth: 0,
+    },
+    detailLabel: {
+        fontSize: 14,
+        color: TOKENS.textMuted,
+    },
+    detailValueWrap: {
+        flex: 1,
+        alignItems: 'flex-end',
+    },
+    detailValue: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.text,
+        textAlign: 'right',
+        fontVariant: ['tabular-nums'],
+    },
+    detailSubvalue: {
+        fontSize: 13,
+        color: TOKENS.textMuted,
+        marginTop: 2,
+        textAlign: 'right',
+    },
+
+    // Ending early is a secondary action: quiet, not a red slab.
+    endButton: {
+        marginHorizontal: 20,
+        marginTop: 24,
+        minHeight: 48,
+        borderRadius: RADIUS.pill,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: alpha(TOKENS.danger, 0.32),
+        backgroundColor: TOKENS.dangerSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    endButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.dangerInk,
+    },
+    footnote: {
         fontSize: 12,
+        lineHeight: 18,
         color: TOKENS.textMuted,
         textAlign: 'center',
-        marginTop: 8,
-        fontWeight: '400',
-        lineHeight: 18,
+        marginTop: 12,
+        marginHorizontal: 20,
+    },
+
+    pressed: {
+        transform: [{ scale: 0.97 }],
+        opacity: 0.9,
     },
 });

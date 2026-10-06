@@ -1,38 +1,55 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useRef } from 'react';
+import { AccessibilityInfo, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { TOKENS } from '../../../../constants/theme';
 import StatusBadge from '../shared/StatusBadge';
 import QuickExtend from './QuickExtend';
 import SessionDetails from './SessionDetails';
 import { styles } from './styles';
 import TimerCard from './TimerCard';
-import { TOKENS } from '../../../../constants/theme';
+
+const STATE_ANNOUNCEMENTS = {
+    expiring: 'Your parking timer ends in 10 minutes.',
+    expired: "Time's up on your parking timer.",
+};
 
 /**
- * ActiveSession - Displays and manages an active parking session
+ * ActiveSession — a running parking timer.
  */
 const ActiveSession = ({
     session,
     sessionState,
-    timeRemaining,
+    timeRemainingMs,
     elapsedTime,
-    progress,
-    totalCost,
+    estimatedCost,
     endTime,
+    remainingAllowance,
+    canExtendBy,
+    lastExtension,
     onExtend,
+    onUndoExtend,
     onEnd,
 }) => {
-    const sessionLabel = [session?.spotId, session?.locationName].filter(Boolean).join(' • ');
+    const isExpired = sessionState === 'expired';
+
+    // Say it when the timer crosses into its last ten minutes, or runs out,
+    // while this screen is open. (Android reads the live region below.)
+    const prevStateRef = useRef(sessionState);
+    useEffect(() => {
+        const prev = prevStateRef.current;
+        prevStateRef.current = sessionState;
+        if (prev === sessionState || Platform.OS !== 'ios') return;
+        const message = STATE_ANNOUNCEMENTS[sessionState];
+        if (message) AccessibilityInfo.announceForAccessibility(message);
+    }, [sessionState]);
 
     return (
         <>
             <View style={styles.header}>
-                <View style={styles.statusBar}>
-                    <StatusBadge state={sessionState} />
-                    <Text style={styles.locationText} numberOfLines={1}>
-                        {sessionLabel}
-                    </Text>
-                </View>
+                <StatusBadge state={sessionState} />
+                <Text style={styles.headerSpot} numberOfLines={1}>
+                    {session.spot?.address || 'Parking timer'}
+                </Text>
             </View>
 
             <ScrollView
@@ -41,44 +58,55 @@ const ActiveSession = ({
             >
                 <TimerCard
                     sessionState={sessionState}
-                    timeRemaining={timeRemaining}
-                    progress={progress}
+                    timeRemainingMs={timeRemainingMs}
+                    plannedMinutes={session.duration}
                     endTime={endTime}
-                    totalCost={totalCost}
+                    estimatedCost={estimatedCost}
                 />
 
-                <QuickExtend
-                    onExtend={onExtend}
-                    hourlyRate={session.hourlyRate}
-                    disabled={sessionState === 'expired'}
-                />
-
-                <SessionDetails
-                    session={session}
-                    elapsedTime={elapsedTime}
-                />
-            </ScrollView>
-
-            <SafeAreaView edges={['bottom']} style={styles.bottomActions}>
-                <TouchableOpacity
-                    onPress={onEnd}
-                    activeOpacity={0.9}
-                    style={styles.endButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="End parking session"
-                    accessibilityHint="Stops your current parking session"
-                >
-                    <MaterialCommunityIcons
-                        name="stop-circle"
-                        size={20}
-                        color={TOKENS.onPrimary}
+                {isExpired ? (
+                    <View style={styles.expiredSection} accessibilityLiveRegion="polite">
+                        <Text style={styles.expiredText}>
+                            Move your car or pay for more time, then start a new timer.
+                        </Text>
+                        <Pressable
+                            onPress={onEnd}
+                            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Start a new timer"
+                        >
+                            <MaterialCommunityIcons name="timer-refresh" size={20} color={TOKENS.onPrimary} />
+                            <Text style={styles.primaryButtonText}>Start a new timer</Text>
+                        </Pressable>
+                    </View>
+                ) : (
+                    <QuickExtend
+                        onExtend={onExtend}
+                        onUndo={onUndoExtend}
+                        canExtendBy={canExtendBy}
+                        lastExtension={lastExtension}
+                        maxStayText={session.spot?.maxStayText}
+                        remainingAllowance={remainingAllowance}
                     />
-                    <Text style={styles.endButtonText}>End session</Text>
-                </TouchableOpacity>
-                <Text style={styles.bottomHint}>
-                    Ending early will stop the demo timer immediately.
+                )}
+
+                <SessionDetails session={session} elapsedTime={elapsedTime} />
+
+                {!isExpired ? (
+                    <Pressable
+                        onPress={onEnd}
+                        style={({ pressed }) => [styles.endButton, pressed && styles.pressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel="End timer"
+                    >
+                        <Text style={styles.endButtonText}>End timer</Text>
+                    </Pressable>
+                ) : null}
+
+                <Text style={styles.footnote}>
+                    A reminder only — this doesn't pay for parking.
                 </Text>
-            </SafeAreaView>
+            </ScrollView>
         </>
     );
 };

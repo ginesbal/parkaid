@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, TOKENS, alpha } from '../../../../constants/theme';
+import { RADIUS, TOKENS } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     scrollContent: {
@@ -34,7 +34,7 @@ export const styles = StyleSheet.create({
     setupCard: {
         backgroundColor: TOKENS.surface,
         borderRadius: 18,
-        padding: 22,
+        padding: 20,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
         shadowColor: TOKENS.shadow,
@@ -44,54 +44,71 @@ export const styles = StyleSheet.create({
         elevation: 1,
     },
 
-    setupSection: {
-        flexDirection: 'row',
-        marginBottom: 20,
-    },
-    stepIndicator: {
-        width: 30,
-        height: 30,
-        borderRadius: 15, // numbered step marker reads as a circle
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 14,
-        marginTop: 2,
-    },
-    stepNumber: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.primary,
-    },
-    setupContent: {
-        flex: 1,
-    },
     setupLabel: {
         fontSize: 13,
         fontWeight: '600',
         color: TOKENS.textMuted,
-        marginBottom: 12,
-        letterSpacing: 0,
+        marginBottom: 10,
+    },
+    setupLabelSpaced: {
+        marginTop: 20,
     },
 
-    plateInput: {
-        minHeight: 50,
-        borderRadius: RADIUS.pill, // text fields are pills, like the map search
+    // Where — the chosen spot, a suggestion, or a way to pick one.
+    spotRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        minHeight: 56,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
-        paddingHorizontal: 16,
-        fontSize: 18,
+    },
+    suggestionRow: {
+        backgroundColor: TOKENS.surface,
+        borderColor: TOKENS.primaryBorder,
+    },
+    spotText: {
+        flex: 1,
+        gap: 2,
+    },
+    spotAddress: {
+        fontSize: 15,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: 2,
-        textAlign: 'center',
-        textTransform: 'uppercase',
+    },
+    spotMeta: {
+        fontSize: 13,
+        color: TOKENS.textMuted,
         fontVariant: ['tabular-nums'],
     },
+    spotClear: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    suggestionLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: TOKENS.textMuted,
+    },
+    suggestionAction: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primary,
+    },
+    findSpotText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: TOKENS.text,
+    },
 
+    // How long — single-line options are pills, like every other control.
     durationGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -100,50 +117,6 @@ export const styles = StyleSheet.create({
     },
     durationOption: {
         width: '48%',
-        minHeight: 60,
-        borderRadius: RADIUS.xl, // two-line tile: soft, not a stretched pill
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-    },
-    durationOptionActive: {
-        backgroundColor: TOKENS.primaryWash,
-        borderColor: TOKENS.primary,
-    },
-    durationTime: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: TOKENS.text,
-        marginBottom: 4,
-        textAlign: 'center',
-        fontVariant: ['tabular-nums'],
-    },
-    durationTimeActive: {
-        color: TOKENS.primary,
-        fontWeight: '600',
-    },
-    durationCost: {
-        fontSize: 12,
-        color: TOKENS.textMuted,
-        fontWeight: '500',
-        textAlign: 'center',
-        fontVariant: ['tabular-nums'],
-    },
-    durationCostActive: {
-        color: TOKENS.primary,
-        fontWeight: '500',
-    },
-
-    rateOptions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    rateOption: {
-        flex: 1,
         minHeight: 44,
         borderRadius: RADIUS.pill,
         backgroundColor: TOKENS.surfaceMuted,
@@ -151,25 +124,37 @@ export const styles = StyleSheet.create({
         borderColor: TOKENS.hairline,
         alignItems: 'center',
         justifyContent: 'center',
+        paddingHorizontal: 12,
     },
-    rateOptionActive: {
+    durationOptionActive: {
         backgroundColor: TOKENS.primary,
         borderColor: TOKENS.primary,
     },
-    rateText: {
-        fontSize: 12,
-        fontWeight: '500',
+    durationOptionDisabled: {
+        opacity: 0.45,
+    },
+    durationTime: {
+        fontSize: 15,
+        fontWeight: '600',
         color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
-    rateTextActive: {
+    durationTimeActive: {
         color: TOKENS.onPrimary,
-        fontWeight: '600',
+    },
+    durationTimeDisabled: {
+        color: TOKENS.textMuted,
+    },
+    limitNote: {
+        fontSize: 13,
+        color: TOKENS.textMuted,
+        marginTop: 10,
     },
 
     summaryBox: {
         paddingVertical: 16,
         paddingHorizontal: 16,
+        marginTop: 20,
         marginBottom: 16,
         borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.surfaceMuted,
@@ -193,7 +178,7 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
     summaryValueLarge: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '600',
         color: TOKENS.primary,
         fontVariant: ['tabular-nums'],
@@ -218,13 +203,14 @@ export const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 2,
     },
-    primaryButtonDisabled: {
-        backgroundColor: alpha(TOKENS.textMuted, 0.2),
-        shadowOpacity: 0,
-    },
     primaryButtonText: {
         fontSize: 16,
         fontWeight: '600',
         color: TOKENS.onPrimary,
+    },
+
+    optionPressed: {
+        transform: [{ scale: 0.97 }],
+        opacity: 0.9,
     },
 });

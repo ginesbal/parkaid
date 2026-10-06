@@ -1,6 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { STORAGE_KEYS } from '../../constants/session';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { logger } from '../../utils/loggers';
 import ActiveSession from './components/ActiveSession';
@@ -8,119 +11,101 @@ import EmptyState from './components/EmptyState';
 import { styles } from './SessionScreen.styles';
 
 /**
- * SessionScreen - parking session management
+ * SessionScreen — the Park tab's parking timer.
  */
-export default function SessionScreen() {
+export default function SessionScreen({ route, navigation }) {
   const {
     session,
     sessionState,
-    timeRemaining,
+    timeRemainingMs,
     elapsedTime,
-    progress,
+    estimatedCost,
+    endTime,
+    remainingAllowance,
+    canExtendBy,
+    lastExtension,
     startSession,
     endSession,
     extendSession,
-    vehiclePlate,
-    setVehiclePlate,
-    selectedRate,
-    setSelectedRate,
+    undoExtension,
+    timerSpot,
+    setTimerSpot,
     selectedDuration,
     setSelectedDuration,
-    totalCost,
-    endTime,
   } = useSessionManager();
 
   const hasSession = Boolean(session);
 
+  // "Park here" on a spot's card hands that spot over. If a timer is already
+  // running, the spot waits in setup for when it ends.
+  const incomingSpot = route?.params?.spot;
   React.useEffect(() => {
-    logger.log('session_screen_mount');
-  }, []);
+    if (!incomingSpot) return;
+    logger.log('park_here_received', { spotId: incomingSpot.id }, 'UI_EVENT');
+    setTimerSpot(incomingSpot);
+    navigation?.setParams({ spot: undefined });
+  }, [incomingSpot, navigation, setTimerSpot]);
 
-  React.useEffect(() => {
-    logger.log('session_state_update', {
-      hasSession,
-      state: sessionState || 'idle',
-      totalCost,
-      endTime,
-    });
-  }, [endTime, hasSession, sessionState, totalCost]);
-
-  React.useEffect(() => {
-    if (hasSession) {
-      logger.log('session_view_active', {
-        timeRemainingSec: timeRemaining,
-        progress,
-      });
-      return;
-    }
-
-    logger.log('session_view_empty');
-  }, [hasSession, progress, timeRemaining]);
+  // The last public spot opened on the map, offered as a one-tap
+  // suggestion — so nobody has to remember the rate or the time limit.
+  const [suggestedSpot, setSuggestedSpot] = React.useState(null);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      AsyncStorage.getItem(STORAGE_KEYS.LAST_SPOT)
+        .then((raw) => {
+          if (!active) return;
+          try {
+            setSuggestedSpot(raw ? JSON.parse(raw) : null);
+          } catch {
+            setSuggestedSpot(null);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   const handleStart = React.useCallback(() => {
-    logger.log('session_start_request', {
-      plate: vehiclePlate || null,
-      rate: selectedRate,
+    logger.log('timer_start', {
+      spotId: timerSpot?.id ?? null,
       durationMin: selectedDuration,
     });
     startSession();
-  }, [vehiclePlate, selectedRate, selectedDuration, startSession]);
+  }, [timerSpot, selectedDuration, startSession]);
 
-  // QuickExtend passes the minutes the user picked. Dropping that argument
-  // used to make every "Add time" a silent no-op (extendSession(undefined)
-  // threw a RangeError building the new end time).
   const handleExtend = React.useCallback((minutes) => {
-    logger.log('session_extend_request', {
-      minutes,
-      currentEndTime: endTime,
-      elapsedMin: elapsedTime,
-    });
-    extendSession(minutes);
-  }, [extendSession, endTime, elapsedTime]);
+    logger.log('timer_extend', { minutes, currentEndTime: endTime });
+    return extendSession(minutes);
+  }, [extendSession, endTime]);
 
   const handleEnd = React.useCallback(() => {
-    logger.log('session_end_request', {
-      elapsedSec: elapsedTime,
-      totalCost,
-    });
+    logger.log('timer_end_request', { elapsedMin: elapsedTime });
     endSession();
-  }, [endSession, elapsedTime, totalCost]);
+  }, [endSession, elapsedTime]);
 
-  const prevFormRef = React.useRef({
-    plate: vehiclePlate,
-    rate: selectedRate,
-    duration: selectedDuration,
-  });
+  const handleFindSpot = React.useCallback(() => {
+    navigation?.navigate('Map');
+  }, [navigation]);
 
-  React.useEffect(() => {
-    const prev = prevFormRef.current;
-
-    if (vehiclePlate !== prev.plate) {
-      logger.log('form_plate_changed', { plateLen: vehiclePlate?.length || 0 });
-      prev.plate = vehiclePlate;
-    }
-    if (selectedRate !== prev.rate) {
-      logger.log('form_rate_changed', { rate: selectedRate });
-      prev.rate = selectedRate;
-    }
-    if (selectedDuration !== prev.duration) {
-      logger.log('form_duration_changed', { minutes: selectedDuration });
-      prev.duration = selectedDuration;
-    }
-  }, [vehiclePlate, selectedRate, selectedDuration]);
-
+  // No 'bottom' edge: the tab bar already sits on the home indicator, and
+  // bottom tabs hands screens the raw insets — adding it again leaves a gap.
   if (!hasSession) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
         <StatusBar style="dark" />
         <EmptyState
-          vehiclePlate={vehiclePlate}
-          setVehiclePlate={setVehiclePlate}
-          selectedRate={selectedRate}
-          setSelectedRate={setSelectedRate}
+          timerSpot={timerSpot}
+          // Don't suggest the spot that's already chosen.
+          suggestedSpot={suggestedSpot && suggestedSpot.id !== timerSpot?.id ? suggestedSpot : null}
+          onUseSpot={setTimerSpot}
+          onClearSpot={() => setTimerSpot(null)}
+          onFindSpot={handleFindSpot}
           selectedDuration={selectedDuration}
           setSelectedDuration={setSelectedDuration}
-          onStartSession={handleStart}
+          onStart={handleStart}
         />
       </SafeAreaView>
     );
@@ -132,12 +117,15 @@ export default function SessionScreen() {
       <ActiveSession
         session={session}
         sessionState={sessionState}
-        timeRemaining={timeRemaining}
+        timeRemainingMs={timeRemainingMs}
         elapsedTime={elapsedTime}
-        progress={progress}
-        totalCost={totalCost}
+        estimatedCost={estimatedCost}
         endTime={endTime}
+        remainingAllowance={remainingAllowance}
+        canExtendBy={canExtendBy}
+        lastExtension={lastExtension}
         onExtend={handleExtend}
+        onUndoExtend={undoExtension}
         onEnd={handleEnd}
       />
     </SafeAreaView>

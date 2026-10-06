@@ -6,24 +6,23 @@ import SetupCard from './SetupCard';
 import { styles } from './styles';
 
 /**
- * EmptyState - Displays when no active parking session
- * Guides user through starting a new session
+ * EmptyState — shown when no timer is running. Sets up the next one.
  */
 const EmptyState = ({
-    vehiclePlate,
-    setVehiclePlate,
-    selectedRate,
-    setSelectedRate,
+    timerSpot,
+    suggestedSpot,
+    onUseSpot,
+    onClearSpot,
+    onFindSpot,
     selectedDuration,
     setSelectedDuration,
-    onStartSession,
+    onStart,
 }) => {
     return (
         <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
         >
-            {/* Header Section */}
             <View style={styles.header}>
                 <View style={styles.iconContainer}>
                     <MaterialCommunityIcons
@@ -32,25 +31,25 @@ const EmptyState = ({
                         color={TOKENS.primary}
                     />
                 </View>
-                <Text style={styles.title}>You're not parked yet</Text>
-                <Text style={styles.subtitle}>Set up a session for downtown Calgary</Text>
+                <Text style={styles.title}>Parking timer</Text>
+                <Text style={styles.subtitle}>Know exactly when your time is up.</Text>
             </View>
 
-            {/* Setup Card - Main interaction area */}
             <SetupCard
-                vehiclePlate={vehiclePlate}
-                setVehiclePlate={setVehiclePlate}
-                selectedRate={selectedRate}
-                setSelectedRate={setSelectedRate}
+                timerSpot={timerSpot}
+                suggestedSpot={suggestedSpot}
+                onUseSpot={onUseSpot}
+                onClearSpot={onClearSpot}
+                onFindSpot={onFindSpot}
                 selectedDuration={selectedDuration}
                 setSelectedDuration={setSelectedDuration}
-                onStartSession={onStartSession}
+                onStart={onStart}
             />
 
-            {/* Info Card - Demo disclaimer */}
+            {/* Honest about what this is: a reminder, not a payment. */}
             <InfoCard
                 icon="information-outline"
-                text="This is a demo session, so no payment is required. Session details stay on this device for testing."
+                text="parkaid doesn't pay for parking. Pay at the pay station or in the City's parking app, then start your timer here."
                 type="info"
             />
         </ScrollView>
