@@ -216,7 +216,10 @@ export default function HomeScreen({ navigation }) {
     <>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top']} style={{ backgroundColor: TOKENS.surface }} />
-      <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.container}>
+      {/* No 'bottom' edge: the tab bar already covers the home indicator,
+          and bottom tabs gives screens the raw insets — adding it again
+          left a blank strip above the tab bar. */}
+      <SafeAreaView edges={['left', 'right']} style={styles.container}>
         <FlatList
           data={spots}
           renderItem={renderSpot}

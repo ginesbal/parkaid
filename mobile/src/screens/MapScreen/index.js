@@ -70,6 +70,9 @@ function MapScreen({ route, navigation }) {
     // fires on iOS when the user taps the search bar (the native recognizer
     // fires in parallel with RN's touch delivery to the TextInput).
     const searchFocusAtRef = useRef(0);
+    // A ref, not state: focusing search must not re-render the map screen
+    // while the keyboard animates in.
+    const searchFocusedRef = useRef(false);
     // Mirror of placingPin for the region-change handlers, which are created
     // once and would otherwise close over a stale value.
     const placingPinRef = useRef(false);
@@ -91,7 +94,6 @@ function MapScreen({ route, navigation }) {
     const [selectedSpot, setSelectedSpot] = useState(null);
     // Bumped by "Try again" to refetch the same search after a failed load.
     const [reloadKey, setReloadKey] = useState(0);
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
     // Camera calls are no-ops until the native map is ready.
     const [mapReady, setMapReady] = useState(false);
 
@@ -412,7 +414,7 @@ function MapScreen({ route, navigation }) {
     // onPress that fires from Google Maps' native tap recognizer on iOS.
     const handleSearchFocusChange = useCallback((focused) => {
         if (focused) searchFocusAtRef.current = Date.now();
-        setIsSearchFocused(focused);
+        searchFocusedRef.current = focused;
     }, []);
 
     const handleMapPress = useCallback(() => {
@@ -423,10 +425,10 @@ function MapScreen({ route, navigation }) {
         // dismiss the instant it appears.
         const dtSinceFocus = Date.now() - searchFocusAtRef.current;
         if (dtSinceFocus < 400) return;
-        if (isSearchFocused) Keyboard.dismiss();
+        if (searchFocusedRef.current) Keyboard.dismiss();
         setSelectedSpot(null);
         setFlippableCardVisible(false);
-    }, [isSearchFocused]);
+    }, []);
 
     const handleMapPanDrag = useCallback(() => {
         setFlippableCardVisible(false);
@@ -537,6 +539,7 @@ function MapScreen({ route, navigation }) {
                     setFilterType={setFilterType}
                     onPlaceSelected={handlePlaceSelected}
                     onSearchResultsChange={handleSearchResultsChange}
+                    onSearchFocusChange={handleSearchFocusChange}
                 />
             </View>
 

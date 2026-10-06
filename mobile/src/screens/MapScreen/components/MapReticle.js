@@ -9,7 +9,7 @@ const PIN_HEIGHT = HEAD + STEM;
 const HALF = HEAD / 2;
 
 /**
- * MapReticle — a screen-fixed pin used for the "set search location" flow.
+ * MapReticle — a screen-fixed pin used for the "Drop pin" flow.
  *
  * It is a plain RN overlay (not a native map marker), so it animates on the
  * native driver at 60fps and sidesteps the react-native-maps

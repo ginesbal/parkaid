@@ -155,8 +155,11 @@ export const styles = StyleSheet.create({
   // headline, facts), 16 between fact rows, 8 within the headline, 4 inside a
   // label/value pair. No mixed values, no padding that stacks with the gaps.
   // The group is centered so whitespace stays balanced on shorter cards.
-  frontBody: {
+  frontScroll: {
     flex: 1,
+  },
+  frontBody: {
+    flexGrow: 1,
     justifyContent: 'center',
     gap: 20,
   },

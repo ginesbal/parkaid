@@ -108,6 +108,7 @@ export default function PlacesSearchBar({
   containerStyle,
   style,
   onResultsVisibleChange,
+  onFocusChange,
 }) {
   const inputRef = useRef(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -157,11 +158,16 @@ export default function PlacesSearchBar({
   };
 
   // Hide the suggestions list when the user dismisses the keyboard on an
-  // empty field. No other focus-state tracking — we deliberately keep the
-  // TextInput visually static across focus transitions so iOS doesn't
-  // resign first responder mid-animation.
+  // empty field. Focus is only reported to the parent — the TextInput stays
+  // visually static across focus transitions so iOS doesn't resign first
+  // responder mid-animation.
+  const handleFocus = () => {
+    onFocusChange?.(true);
+  };
+
   const handleBlur = () => {
     if (!input) setShowSuggestions(false);
+    onFocusChange?.(false);
   };
 
   // Return key: pick the top suggestion if we have one, otherwise just
@@ -226,6 +232,7 @@ export default function PlacesSearchBar({
           value={input}
           placeholder={placeholder}
           onChangeText={handleChangeText}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           onSubmitEditing={handleSubmit}
           style={styles.input}

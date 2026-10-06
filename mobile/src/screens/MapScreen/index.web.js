@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     overlayText: {
-        color: '#fff',
+        color: TOKENS.onPrimary,
         fontSize: 13,
         fontWeight: '600',
         textAlign: 'center',

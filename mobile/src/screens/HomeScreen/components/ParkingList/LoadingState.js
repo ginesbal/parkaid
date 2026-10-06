@@ -34,7 +34,7 @@ const LoadingState = ({ searchRadius }) => {
     }, [pulseAnim]);
 
     return (
-        <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right', 'bottom']}>
+        <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right']}>
             <StatusBar style="dark" />
             <View style={styles.loadingContainer}>
                 <View style={styles.loadingIcon}>

@@ -26,6 +26,7 @@ function MapHeader({
     setFilterType,
     onPlaceSelected,
     onSearchResultsChange,
+    onSearchFocusChange,
 }) {
     const [resultsOpen, setResultsOpen] = useState(false);
 
@@ -44,6 +45,7 @@ function MapHeader({
             <PlacesSearchBar
                 onPlaceSelected={onPlaceSelected}
                 onResultsVisibleChange={handleResultsVisibleChange}
+                onFocusChange={onSearchFocusChange}
                 style={styles.searchContainer}
             />
 

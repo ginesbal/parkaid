@@ -285,7 +285,15 @@ function FlippableParkingCard({
                         </View>
                     </View>
 
-                    <View style={styles.frontBody}>
+                    {/* Centered when it fits. On small phones (SE, mini) the
+                        fixed-height face can't hold it all, so it scrolls
+                        instead of spilling over the header and buttons. */}
+                    <ScrollView
+                        style={styles.frontScroll}
+                        contentContainerStyle={styles.frontBody}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                    >
                         <View style={styles.addressBlock}>
                             <Text style={styles.addressPrimary} numberOfLines={2}>
                                 {addr.primary}
@@ -389,7 +397,7 @@ function FlippableParkingCard({
                                 ))}
                             </View>
                         )}
-                    </View>
+                    </ScrollView>
 
                     <View style={styles.actionsLarge}>
                         <TouchableOpacity
