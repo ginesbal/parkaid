@@ -49,8 +49,48 @@ describe('useParkingSpots', () => {
             51.05,
             -114.0,
             500,
-            {}
+            {},
+            { force: false }
         );
+    });
+
+    it('refetches with the cache bypassed when reloadKey is bumped', async () => {
+        parkingAPI.findNearbySpots.mockResolvedValue({ data: [{ id: 1 }] });
+        const loc = { latitude: 51.0, longitude: -114.0 };
+
+        const { rerender } = renderHook(
+            ({ reloadKey }) => useParkingSpots(loc, 500, 'all', reloadKey),
+            { initialProps: { reloadKey: 0 } }
+        );
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { force: false });
+
+        // Pull-to-refresh / "Try again" bumps the key: same inputs, fresh data.
+        rerender({ reloadKey: 1 });
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(parkingAPI.findNearbySpots).toHaveBeenCalledTimes(2);
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { force: true });
+    });
+
+    it('flags loading immediately and reports when the fetch finished', async () => {
+        parkingAPI.findNearbySpots.mockResolvedValue({ data: [] });
+
+        const { result } = renderHook(() =>
+            useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500)
+        );
+        // Loading from the moment a fetch is scheduled, not after the debounce.
+        expect(result.current.loading).toBe(true);
+        expect(result.current.lastUpdated).toBeNull();
+
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.loading).toBe(false);
+        expect(typeof result.current.lastUpdated).toBe('number');
     });
 
     it('handles errors properly', async () => {

@@ -2,11 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { parkingAPI } from '../services/api';
 
 // `reloadKey` lets a caller force a fresh fetch for the same inputs (e.g. a
-// "Try again" button after a network error) by bumping a number.
+// "Try again" button or pull-to-refresh) by bumping a number. That fetch
+// bypasses the response cache, so the user actually gets new data.
 export function useParkingSpots(location, radius, filterType = 'all', reloadKey = 0) {
     const [spots, setSpots] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // When the most recent fetch finished (success or failure). Lets callers
+    // end a pull-to-refresh spinner exactly when fresh data lands.
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     // track if component is mounted to prevent state updates after unmount
     const isMountedRef = useRef(true);
@@ -15,6 +19,11 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
     // after an instant cache hit for the new one — so only the latest
     // request is allowed to write state.
     const latestRequestRef = useRef(0);
+    // A bumped reloadKey asks for one cache-bypassing fetch. Held in a ref
+    // until a fetch actually runs, so the request survives other inputs
+    // changing during the debounce.
+    const prevReloadKeyRef = useRef(reloadKey);
+    const forceNextFetchRef = useRef(false);
 
     useEffect(() => {
         return () => {
@@ -23,6 +32,11 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
     }, []);
 
     useEffect(() => {
+        if (reloadKey !== prevReloadKeyRef.current) {
+            prevReloadKeyRef.current = reloadKey;
+            forceNextFetchRef.current = true;
+        }
+
         // do not fetch if no location
         if (!location?.latitude || !location?.longitude) {
             return;
@@ -38,6 +52,8 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
         const fetchSpots = async () => {
             if (!isCurrent()) return;
 
+            const force = forceNextFetchRef.current;
+            forceNextFetchRef.current = false;
             setError(null);
 
             try {
@@ -46,7 +62,8 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
                     location.latitude,
                     location.longitude,
                     radius,
-                    params
+                    params,
+                    { force }
                 );
 
                 if (isCurrent()) {
@@ -60,6 +77,7 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
             } finally {
                 if (isCurrent()) {
                     setLoading(false);
+                    setLastUpdated(Date.now());
                 }
             }
         };
@@ -73,5 +91,5 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
         };
     }, [location?.latitude, location?.longitude, radius, filterType, reloadKey]);
 
-    return { spots, loading, error };
+    return { spots, loading, error, lastUpdated };
 }

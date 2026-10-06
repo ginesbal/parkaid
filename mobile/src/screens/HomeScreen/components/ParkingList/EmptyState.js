@@ -6,8 +6,12 @@ import { styles } from './styles';
 /**
  * EmptyState - Shown when no parking spots are available or loading fails
  */
-const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage }) => {
+const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, expandLabel, hint }) => {
     const isError = Boolean(errorMessage);
+    // The primary action is the most useful next step: retry after an error,
+    // otherwise widen the search — unless there's nothing left to widen, in
+    // which case the map becomes the primary action.
+    const hasPrimary = isError || Boolean(expandLabel);
 
     return (
         <View style={styles.emptyContainer}>
@@ -25,33 +29,35 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage }) => {
             <Text style={styles.emptySubtext}>
                 {isError
                     ? `${errorMessage} Try again, or switch to the map to browse a different area.`
-                    : 'Try widening the search radius, or switch to the map to look around the next block.'}
+                    : hint}
             </Text>
 
             <View style={styles.emptyActions}>
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.emptyButton,
-                        pressed && styles.emptyButtonPressed,
-                    ]}
-                    onPress={isError ? onRetry : onExpandSearch}
-                    accessibilityRole="button"
-                    accessibilityLabel={isError ? 'Retry loading parking spots' : 'Expand search radius'}
-                >
-                    <MaterialCommunityIcons
-                        name={isError ? 'refresh' : 'radar'}
-                        size={16}
-                        color={TOKENS.onPrimary}
-                    />
-                    <Text style={styles.emptyButtonText}>
-                        {isError ? 'Retry' : 'Expand search'}
-                    </Text>
-                </Pressable>
+                {hasPrimary ? (
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.emptyButton,
+                            pressed && styles.emptyButtonPressed,
+                        ]}
+                        onPress={isError ? onRetry : onExpandSearch}
+                        accessibilityRole="button"
+                        accessibilityLabel={isError ? 'Retry loading parking spots' : expandLabel}
+                    >
+                        <MaterialCommunityIcons
+                            name={isError ? 'refresh' : 'radar'}
+                            size={16}
+                            color={TOKENS.onPrimary}
+                        />
+                        <Text style={styles.emptyButtonText}>
+                            {isError ? 'Retry' : expandLabel}
+                        </Text>
+                    </Pressable>
+                ) : null}
 
                 <Pressable
                     style={({ pressed }) => [
                         styles.emptyButton,
-                        styles.emptyButtonSecondary,
+                        hasPrimary && styles.emptyButtonSecondary,
                         pressed && styles.emptyButtonPressed,
                     ]}
                     onPress={onViewMap}
@@ -61,9 +67,9 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage }) => {
                     <MaterialCommunityIcons
                         name="map-search-outline"
                         size={16}
-                        color={TOKENS.text}
+                        color={hasPrimary ? TOKENS.text : TOKENS.onPrimary}
                     />
-                    <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
+                    <Text style={[styles.emptyButtonText, hasPrimary && styles.emptyButtonTextSecondary]}>
                         View Map
                     </Text>
                 </Pressable>

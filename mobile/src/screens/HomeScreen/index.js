@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { FlatList, RefreshControl, Animated, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Animated, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Header from './components/Header';
@@ -14,10 +14,16 @@ import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 
 import { logger } from '../../utils/loggers';
-import { calculateQuickInfo } from '../../utils/parkingHelpers';
+import { calculateQuickInfo, getDistanceLabel } from '../../utils/parkingHelpers';
 
+import { RADIUS_OPTIONS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
 import { styles } from './HomeScreen.styles';
+
+const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
+// Never leave the pull-to-refresh spinner up if a refetch can't complete
+// (the API itself gives up after 8s).
+const REFRESH_TIMEOUT_MS = 10000;
 
 export default function HomeScreen({ navigation }) {
   // location & filter state
@@ -30,16 +36,22 @@ export default function HomeScreen({ navigation }) {
     setSearchRadius,
   } = useFilterState();
 
+  // Bumped by pull-to-refresh and "Retry" to refetch, bypassing the cache.
+  const [reloadKey, setReloadKey] = useState(0);
+
   // data fetching hook
-  const { spots, loading, error } = useParkingSpots(
+  const { spots, loading, error, lastUpdated } = useParkingSpots(
     location,
     searchRadius,
-    activeFilter
+    activeFilter,
+    reloadKey
   );
 
   // local UI state
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const refreshStartedAtRef = useRef(0);
+  const refreshTimeoutRef = useRef(null);
 
   // animations (UI concern, not data concern)
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -103,30 +115,57 @@ export default function HomeScreen({ navigation }) {
     });
   };
 
-  const handleExpandSearch = () => {
-    logger.log('expand_search', {
-      oldRadius: searchRadius,
-      newRadius: 1000
-    });
+  // The empty state's next step. Widen first — keeping the user's type
+  // filter — and only once at the widest radius offer to clear the filter.
+  // It never shrinks the radius (it used to jump to 1 km, even from 2 km).
+  const canWiden = searchRadius < WIDEST_RADIUS;
+  const canShowAllTypes = activeFilter !== 'all';
+  const expandLabel = canWiden
+    ? `Search within ${getDistanceLabel(WIDEST_RADIUS)}`
+    : canShowAllTypes
+      ? 'Show all parking types'
+      : null;
+  const emptyHint = expandLabel
+    ? 'Try a wider search, or switch to the map to look around the next block.'
+    : `Nothing within ${getDistanceLabel(WIDEST_RADIUS)}. Switch to the map to search somewhere else.`;
 
-    setSearchRadius(1000);
-    setActiveFilter('all');
+  const handleExpandSearch = () => {
+    if (canWiden) {
+      logger.log('expand_search', { oldRadius: searchRadius, newRadius: WIDEST_RADIUS });
+      setSearchRadius(WIDEST_RADIUS);
+      return;
+    }
+    if (canShowAllTypes) {
+      logger.log('expand_search', { clearedFilter: activeFilter });
+      setActiveFilter('all');
+    }
   };
 
+  // Pull-to-refresh refetches for real (bypassing the response cache) and
+  // the spinner stays up until that fetch has actually finished.
   const handleRefresh = useCallback(() => {
     logger.log('home_refresh', {
       filter: activeFilter,
       radius: searchRadius
     });
-    
+
+    refreshStartedAtRef.current = Date.now();
     setRefreshing(true);
     setLastRefresh(new Date());
-    
-    // reset refreshing after delay
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setReloadKey((key) => key + 1);
+
+    clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => setRefreshing(false), REFRESH_TIMEOUT_MS);
   }, [activeFilter, searchRadius]);
+
+  React.useEffect(() => {
+    if (refreshing && lastUpdated && lastUpdated >= refreshStartedAtRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      setRefreshing(false);
+    }
+  }, [refreshing, lastUpdated]);
+
+  React.useEffect(() => () => clearTimeout(refreshTimeoutRef.current), []);
 
   // filter/radius changes
   React.useEffect(() => {
@@ -141,8 +180,13 @@ export default function HomeScreen({ navigation }) {
     }
   }, [searchRadius]);
 
-  // initial loading state
-  if ((loading && !refreshing) || isLoadingLocation) {
+  // Full-screen loading only for the very first load. After that, changing
+  // a filter or the radius keeps the header (and the chip just tapped) on
+  // screen and shows progress in place instead of blanking everything.
+  const isFirstLoad = isLoadingLocation || (loading && lastUpdated === null);
+  const isUpdating = loading && !refreshing && !isFirstLoad;
+
+  if (isFirstLoad) {
     logger.log('home_loading_state', {
       loading,
       refreshing,
@@ -151,13 +195,17 @@ export default function HomeScreen({ navigation }) {
     return <LoadingState searchRadius={searchRadius} />;
   }
 
+  // While new results load, dim the current ones so it's clear they're
+  // about to change — without moving anything.
   const renderSpot = ({ item }) => (
-    <ParkingList.Item
-      spot={item}
-      onPress={() => handleSpotPress(item)}
-      fadeAnim={fadeAnim}
-      slideAnim={slideAnim}
-    />
+    <View style={isUpdating ? listStyles.updating : null}>
+      <ParkingList.Item
+        spot={item}
+        onPress={() => handleSpotPress(item)}
+        fadeAnim={fadeAnim}
+        slideAnim={slideAnim}
+      />
+    </View>
   );
 
   // Inset hairline between rows — begins where the address begins
@@ -172,6 +220,8 @@ export default function HomeScreen({ navigation }) {
         <FlatList
           data={spots}
           renderItem={renderSpot}
+          extraData={isUpdating}
+          accessibilityState={{ busy: isUpdating }}
           keyExtractor={(item) => String(item.id)}
           ItemSeparatorComponent={renderSeparator}
           ListHeaderComponent={
@@ -199,12 +249,22 @@ export default function HomeScreen({ navigation }) {
             />
           }
           ListEmptyComponent={
-            <EmptyState
-              onExpandSearch={handleExpandSearch}
-              onViewMap={handleMapPress}
-              onRetry={handleRefresh}
-              errorMessage={error}
-            />
+            // Loading with nothing on screen yet: a quiet spinner, not
+            // "Nothing nearby" — that would be an answer we don't have.
+            loading ? (
+              <View style={listStyles.inlineLoading}>
+                <ActivityIndicator color={TOKENS.primary} accessibilityLabel="Looking for spots" />
+              </View>
+            ) : (
+              <EmptyState
+                onExpandSearch={handleExpandSearch}
+                onViewMap={handleMapPress}
+                onRetry={handleRefresh}
+                errorMessage={error}
+                expandLabel={expandLabel}
+                hint={emptyHint}
+              />
+            )
           }
           contentContainerStyle={Array.isArray(spots) && spots.length === 0 ? styles.emptyList : null}
         />
@@ -220,5 +280,12 @@ const listStyles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: TOKENS.divider,
     marginLeft: 86,
+  },
+  updating: {
+    opacity: 0.45,
+  },
+  inlineLoading: {
+    paddingVertical: 48,
+    alignItems: 'center',
   },
 });

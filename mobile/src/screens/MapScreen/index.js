@@ -37,7 +37,7 @@ import { styles } from './styles';
 import { centerCamera, getMarkerScreenPosition } from './utils/camera';
 import { getCurrentPrice } from './utils/pricing';
 
-function MapScreen() {
+function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     // Compact header: ~70px content + safe area inset (collapsed filters)
     const [navigationHeight, setNavigationHeight] = useState(70 + insets.top);
@@ -81,6 +81,8 @@ function MapScreen() {
     // Bumped by "Try again" to refetch the same search after a failed load.
     const [reloadKey, setReloadKey] = useState(0);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    // Camera calls are no-ops until the native map is ready.
+    const [mapReady, setMapReady] = useState(false);
 
     // pin state
     const [pinnedLocation, setPinnedLocation] = useState(null);
@@ -355,6 +357,16 @@ function MapScreen() {
         selectSpot(spot, true);
     }, [selectSpot]);
 
+    // Tapping a spot on Home navigates here with it as `initialSpot`. Show it
+    // (center + card) once the map can move, then clear the param so coming
+    // back to this tab later doesn't re-open it.
+    const initialSpot = route?.params?.initialSpot;
+    useEffect(() => {
+        if (!initialSpot || !mapReady) return;
+        selectSpot(initialSpot, true);
+        navigation?.setParams({ initialSpot: undefined, fromList: undefined });
+    }, [initialSpot, mapReady, navigation, selectSpot]);
+
     const handleClearPin = useCallback(() => {
         logger.log('clear_pin_button_pressed', {}, 'UI_EVENT');
         setPinnedLocation(null);
@@ -474,6 +486,7 @@ function MapScreen() {
                 initialRegion={region}
                 onRegionChange={handleRegionChange}
                 onRegionChangeComplete={handleRegionChangeComplete}
+                onMapReady={() => setMapReady(true)}
                 onPanDrag={handleMapPanDrag}
                 onPress={handleMapPress}
                 onLongPress={handleMapLongPress}

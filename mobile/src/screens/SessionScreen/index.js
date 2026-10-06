@@ -66,12 +66,16 @@ export default function SessionScreen() {
     startSession();
   }, [vehiclePlate, selectedRate, selectedDuration, startSession]);
 
-  const handleExtend = React.useCallback(() => {
+  // QuickExtend passes the minutes the user picked. Dropping that argument
+  // used to make every "Add time" a silent no-op (extendSession(undefined)
+  // threw a RangeError building the new end time).
+  const handleExtend = React.useCallback((minutes) => {
     logger.log('session_extend_request', {
+      minutes,
       currentEndTime: endTime,
-      elapsedSec: elapsedTime,
+      elapsedMin: elapsedTime,
     });
-    extendSession();
+    extendSession(minutes);
   }, [extendSession, endTime, elapsedTime]);
 
   const handleEnd = React.useCallback(() => {

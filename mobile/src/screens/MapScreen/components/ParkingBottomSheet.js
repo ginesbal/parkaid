@@ -1,6 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Animated,
+    PanResponder,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
@@ -279,6 +289,23 @@ const ParkingBottomSheet = memo(forwardRef(({
         : error
             ? "Couldn't load parking"
             : `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} nearby`;
+
+    // Android reads title changes through accessibilityLiveRegion; iOS has
+    // no live regions, so announce them explicitly — e.g. the new count
+    // after a radius tap, or a failed load. Skipped on first render so it
+    // doesn't talk over the screen opening.
+    const announcement = error ? `${headerTitle}. Check your connection and try again.` : headerTitle;
+    const lastAnnouncementRef = useRef(null);
+    useEffect(() => {
+        if (Platform.OS !== 'ios') return;
+        if (lastAnnouncementRef.current === null) {
+            lastAnnouncementRef.current = announcement;
+            return;
+        }
+        if (lastAnnouncementRef.current === announcement) return;
+        lastAnnouncementRef.current = announcement;
+        AccessibilityInfo.announceForAccessibility(announcement);
+    }, [announcement]);
 
     return (
         <Animated.View

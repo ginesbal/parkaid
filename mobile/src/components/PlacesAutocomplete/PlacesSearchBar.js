@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   FlatList,
   Keyboard,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -184,6 +186,21 @@ export default function PlacesSearchBar({
     !error &&
     input.length >= minChars &&
     suggestions.length === 0;
+
+  // The empty and error messages below use accessibilityLiveRegion, which
+  // only Android supports. Announce them on iOS so VoiceOver users hear
+  // whether the search found anything.
+  const showError = Boolean(error) && !loading;
+  useEffect(() => {
+    if (Platform.OS === 'ios' && showError) {
+      AccessibilityInfo.announceForAccessibility(USER_ERROR_MESSAGE);
+    }
+  }, [showError]);
+  useEffect(() => {
+    if (Platform.OS === 'ios' && showEmptyState) {
+      AccessibilityInfo.announceForAccessibility('No matches. Try a street or landmark.');
+    }
+  }, [showEmptyState]);
 
   return (
     <View style={[styles.container, containerStyle, style]}>

@@ -159,7 +159,9 @@ export const useSessionManager = () => {
     }, [vehiclePlate, selectedRate, selectedDuration, saveSession]);
 
     const extendSession = useCallback(async (additionalMinutes) => {
-        if (!session) return;
+        // Guard the date math: a missing or non-numeric amount would build an
+        // Invalid Date and throw from toISOString().
+        if (!session || !Number.isFinite(additionalMinutes) || additionalMinutes <= 0) return;
 
         const currentEnd = new Date(session.scheduledEnd);
         const newEnd = new Date(currentEnd.getTime() + additionalMinutes * 60000);
