@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
@@ -33,7 +33,9 @@ const EXPANDED_Y = 0;
 // The widest preset — what the empty state offers when nothing is in range.
 const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
 
-const ParkingBottomSheet = forwardRef(({
+// Memoized: the map screen re-renders on every pan settle, and none of the
+// sheet's props change then — so the sheet and its list skip that work.
+const ParkingBottomSheet = memo(forwardRef(({
     spots,
     selectedSpot,
     searchMode,
@@ -466,7 +468,7 @@ const ParkingBottomSheet = forwardRef(({
             </View>
         </Animated.View>
     );
-});
+}));
 
 ParkingBottomSheet.displayName = 'ParkingBottomSheet';
 

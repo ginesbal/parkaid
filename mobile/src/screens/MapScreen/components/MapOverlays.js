@@ -1,8 +1,35 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { View } from 'react-native';
 import { Circle, Marker } from 'react-native-maps';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
+
+// One memoized marker per spot. Selecting a spot re-renders only the two
+// markers whose `isSelected` flips, instead of all ~100 on the map.
+const SpotMarker = memo(function SpotMarker({ spot, isSelected, onSelectSpot }) {
+    const handlePress = useCallback(() => onSelectSpot(spot), [onSelectSpot, spot]);
+
+    return (
+        <Marker
+            coordinate={{
+                latitude: spot.coordinates.coordinates[1],
+                longitude: spot.coordinates.coordinates[0],
+            }}
+            onPress={handlePress}
+            tracksViewChanges={false}
+            anchor={{ x: 0.5, y: 0.5 }}
+        >
+            <View style={styles.marker}>
+                <View
+                    style={[
+                        isSelected ? styles.markerDotSelected : styles.markerDot,
+                        !isSelected && spot.no_stopping && { backgroundColor: TOKENS.danger },
+                    ]}
+                />
+            </View>
+        </Marker>
+    );
+});
 
 function MapOverlays({
     searchCenter,
@@ -49,29 +76,19 @@ function MapOverlays({
 
             {spots.map(spot => {
                 if (!spot.coordinates) return null;
-                const coords = {
-                    latitude: spot.coordinates.coordinates[1],
-                    longitude: spot.coordinates.coordinates[0],
-                };
                 const isSelected = selectedSpot?.id === spot.id;
 
+                // With tracksViewChanges={false} the native marker keeps the
+                // bitmap it snapshotted on mount, so a style change alone may
+                // never reach the screen. Keying on selection remounts just
+                // the affected marker so the selected dot actually redraws.
                 return (
-                    <Marker
-                        key={spot.id}
-                        coordinate={coords}
-                        onPress={() => onSelectSpot(spot)}
-                        tracksViewChanges={false}
-                        anchor={{ x: 0.5, y: 0.5 }}
-                    >
-                        <View style={styles.marker}>
-                            <View
-                                style={[
-                                    isSelected ? styles.markerDotSelected : styles.markerDot,
-                                    !isSelected && spot.no_stopping && { backgroundColor: TOKENS.danger },
-                                ]}
-                            />
-                        </View>
-                    </Marker>
+                    <SpotMarker
+                        key={isSelected ? `${spot.id}-selected` : String(spot.id)}
+                        spot={spot}
+                        isSelected={isSelected}
+                        onSelectSpot={onSelectSpot}
+                    />
                 );
             })}
         </>

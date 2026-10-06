@@ -95,6 +95,15 @@ function MapScreen() {
         placingPinRef.current = placingPin;
     }, [placingPin]);
 
+    // `region` updates on every map settle. Callbacks that only need it at
+    // call time read it from this ref, so their identity stays stable and the
+    // memoized children they're passed to (header, markers, sheet) don't
+    // re-render on every pan.
+    const regionRef = useRef(region);
+    useEffect(() => {
+        regionRef.current = region;
+    }, [region]);
+
     // Where the API search is centered. While placing the pin we follow the
     // map center (updated on settle); otherwise the pinned or current location.
     const searchLocation = useMemo(() => {
@@ -218,7 +227,7 @@ function MapScreen() {
     // Enter placement, centering the map on the most relevant existing point.
     const startPlacing = useCallback(() => {
         const target =
-            (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : (userLocation || region);
+            (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : (userLocation || regionRef.current);
 
         setSelectedSpot(null);
         setFlippableCardVisible(false);
@@ -232,7 +241,7 @@ function MapScreen() {
                 { duration: 220 }
             );
         }
-    }, [pinnedLocation, searchMode, userLocation, region]);
+    }, [pinnedLocation, searchMode, userLocation]);
 
     // Lock the current map center as the pinned search location.
     const confirmPlacement = useCallback(() => {
@@ -294,7 +303,9 @@ function MapScreen() {
         }
     }, [reticleLift]);
 
-    const selectSpot = async (spot, fromList = false) => {
+    // Stable across pans (reads region via ref) — it's passed to every map
+    // marker, so a new identity here would re-render all of them.
+    const selectSpot = useCallback(async (spot, fromList = false) => {
         // important: deep snapshot of the chosen spot for diagnostics
         logger.logSpotData(spot, `Selected from ${fromList ? 'LIST' : 'MAP'}`);
         setSelectedSpot(spot);
@@ -305,7 +316,7 @@ function MapScreen() {
             const lat = spot.coordinates.coordinates[1];
             const lng = spot.coordinates.coordinates[0];
 
-            await centerCamera(mapRef, region, lat, lng, 140);
+            await centerCamera(mapRef, regionRef.current, lat, lng, 140);
             // important: confirm camera move for traceability
             logger.log('camera_centered_on_spot', { id: spot?.id, lat, lng }, 'INFO');
 
@@ -336,7 +347,20 @@ function MapScreen() {
                 }, delay);
             }, 0);
         }
-    };
+    }, [detailCardTopBoundary, detailCardBottomBoundary]);
+
+    // selectSpot already collapses the sheet.
+    const handleListItemPress = useCallback((spot) => {
+        selectSpot(spot, true);
+    }, [selectSpot]);
+
+    const handleClearPin = useCallback(() => {
+        logger.log('clear_pin_button_pressed', {}, 'UI_EVENT');
+        setPinnedLocation(null);
+        setSearchMode('current');
+        setSelectedSpot(null);
+        setFlippableCardVisible(false);
+    }, []);
 
     const onNavigate = (spot) => {
         if (!spot) return;
@@ -599,17 +623,8 @@ function MapScreen() {
                 onPeekHeightChange={setSheetPeekHeight}
                 tabBarHeight={tabBarHeight}
                 topInset={navigationHeight}
-                onItemPress={(spot) => {
-                    selectSpot(spot, true);
-                    bottomSheetRef.current?.dismiss();
-                }}
-                onClearPin={() => {
-                    logger.log('clear_pin_button_pressed', {}, 'UI_EVENT');
-                    setPinnedLocation(null);
-                    setSearchMode('current');
-                    setSelectedSpot(null);
-                    setFlippableCardVisible(false);
-                }}
+                onItemPress={handleListItemPress}
+                onClearPin={handleClearPin}
             />
 
             {/* flippable card */}
