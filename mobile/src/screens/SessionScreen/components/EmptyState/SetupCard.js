@@ -80,8 +80,7 @@ const SetupCard = ({
                                     ]}
                                     numberOfLines={1}
                                     adjustsFontSizeToFit
-                                    minimumFontScale={0.85}
-                                    maxFontSizeMultiplier={1.0}
+                                    minimumFontScale={0.7}
                                 >
                                     {option.label}
                                 </Text>
@@ -92,8 +91,7 @@ const SetupCard = ({
                                     ]}
                                     numberOfLines={1}
                                     adjustsFontSizeToFit
-                                    minimumFontScale={0.85}
-                                    maxFontSizeMultiplier={1.0}
+                                    minimumFontScale={0.7}
                                 >
                                     {formatMoney(calculateCost(option.value, selectedRate))}
                                 </Text>

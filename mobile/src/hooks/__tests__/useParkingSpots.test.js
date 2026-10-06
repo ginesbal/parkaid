@@ -67,4 +67,35 @@ describe('useParkingSpots', () => {
         expect(result.current.error).toBe('Network error');
         expect(result.current.spots).toEqual([]);
     });
+
+    it('ignores a slow response for a location the user already moved away from', async () => {
+        let resolveStale;
+        parkingAPI.findNearbySpots
+            .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }))
+            .mockResolvedValueOnce({ data: [{ id: 'fresh' }] });
+
+        const { result, rerender } = renderHook(
+            ({ loc }) => useParkingSpots(loc, 500, 'all'),
+            { initialProps: { loc: { latitude: 51.0, longitude: -114.0 } } }
+        );
+
+        // First request goes out and hangs on a slow network.
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+
+        // The user moves the pin; the second request resolves immediately.
+        rerender({ loc: { latitude: 51.1, longitude: -114.0 } });
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.spots).toEqual([{ id: 'fresh' }]);
+
+        // The stale response finally lands — it must not overwrite the fresh one.
+        await act(async () => {
+            resolveStale({ data: [{ id: 'stale' }] });
+        });
+        expect(result.current.spots).toEqual([{ id: 'fresh' }]);
+        expect(result.current.loading).toBe(false);
+    });
 });

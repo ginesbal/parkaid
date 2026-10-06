@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
@@ -30,12 +30,18 @@ const RUBBER_BAND_FACTOR = 0.35;
 // that depends on expandTo from re-running on every parent re-render.
 const EXPANDED_Y = 0;
 
+// The widest preset — what the empty state offers when nothing is in range.
+const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
+
 const ParkingBottomSheet = forwardRef(({
     spots,
     selectedSpot,
     searchMode,
     searchRadius,
     onRadiusChange,
+    loading = false,
+    error = null,
+    onRetry,
     getCurrentPrice,
     onItemPress,
     onClearPin,
@@ -45,6 +51,9 @@ const ParkingBottomSheet = forwardRef(({
 }, ref) => {
     const insets = useSafeAreaInsets();
     const listRef = useRef(null);
+    // Mirrors the snap state for screen readers: the list below the peek is
+    // only exposed to them when it's actually on screen.
+    const [isExpanded, setIsExpanded] = useState(false);
     // Start conservatively low — onLayout will set the real height on first
     // paint. Undershooting is safer than overshooting: a slightly-too-short
     // peek is corrected upward once measured; a too-tall peek would leak the
@@ -69,6 +78,7 @@ const ParkingBottomSheet = forwardRef(({
 
     // Tighter spring for expand (user is waiting to see content)
     const expandTo = useCallback((velocity = 0) => {
+        setIsExpanded(true);
         Animated.spring(translateY, {
             toValue: EXPANDED_Y,
             velocity,
@@ -80,6 +90,7 @@ const ParkingBottomSheet = forwardRef(({
 
     // Slightly faster spring for collapse — exit should feel snappier than enter
     const collapseTo = useCallback((velocity = 0) => {
+        setIsExpanded(false);
         Animated.spring(translateY, {
             toValue: PEEK_Y,
             velocity,
@@ -99,6 +110,19 @@ const ParkingBottomSheet = forwardRef(({
         present: () => expandTo(),
         dismiss: () => collapseTo(),
     }));
+
+    // The PanResponder below is created once, so it must read layout and
+    // snap functions through refs. Capturing them directly froze the first
+    // render's values: on shorter phones, where the sheet height is capped,
+    // PEEK_Y changes once the header is measured, and a drag-to-collapse
+    // would land at the stale position and cut the header off.
+    const gestureRef = useRef({ PEEK_Y, HIDDEN_Y, expandTo, collapseTo });
+    gestureRef.current = { PEEK_Y, HIDDEN_Y, expandTo, collapseTo };
+
+    const toggleExpanded = useCallback(() => {
+        if (isExpanded) collapseTo();
+        else expandTo();
+    }, [collapseTo, expandTo, isExpanded]);
 
     const handleHeaderLayout = useCallback((event) => {
         // Use the header's true measured height — no artificial floor.
@@ -175,10 +199,11 @@ const ParkingBottomSheet = forwardRef(({
                 isDragging.current = true;
 
                 translateY.stopAnimation((cur) => {
-                    dragStartY.current = cur ?? PEEK_Y;
+                    dragStartY.current = cur ?? gestureRef.current.PEEK_Y;
                 });
             },
             onPanResponderMove: (_, g) => {
+                const { HIDDEN_Y: hiddenY } = gestureRef.current;
                 const raw = dragStartY.current + g.dy;
 
                 // Rubber-band damping when pulling past the top boundary
@@ -187,32 +212,45 @@ const ParkingBottomSheet = forwardRef(({
                     const damped = EXPANDED_Y - (overPull * RUBBER_BAND_FACTOR);
                     translateY.setValue(damped);
                 } else {
-                    translateY.setValue(clamp(raw, EXPANDED_Y, HIDDEN_Y));
+                    translateY.setValue(clamp(raw, EXPANDED_Y, hiddenY));
                 }
             },
             onPanResponderRelease: (_, g) => {
                 isDragging.current = false;
 
-                const finalY = clamp(dragStartY.current + g.dy, EXPANDED_Y, HIDDEN_Y);
+                const { PEEK_Y: peekY, HIDDEN_Y: hiddenY, expandTo: expand, collapseTo: collapse } =
+                    gestureRef.current;
+                const finalY = clamp(dragStartY.current + g.dy, EXPANDED_Y, hiddenY);
                 const velocity = Math.abs(g.vy);
 
                 // Momentum-based snap: a quick flick should decide regardless of position
                 if (velocity > VELOCITY_THRESHOLD) {
                     if (g.vy < 0) {
-                        expandTo(g.vy);
+                        expand(g.vy);
                     } else {
-                        collapseTo(g.vy);
+                        collapse(g.vy);
                     }
                     return;
                 }
 
                 // Position-based snap for slow drags
-                const mid = (PEEK_Y + EXPANDED_Y) / 2;
+                const mid = (peekY + EXPANDED_Y) / 2;
                 if (finalY <= mid) {
-                    expandTo(g.vy);
+                    expand(g.vy);
                 } else {
-                    collapseTo(g.vy);
+                    collapse(g.vy);
                 }
+            },
+            // The system took the gesture mid-drag (e.g. an incoming call
+            // banner). Clear the multi-touch guard and settle to the nearest
+            // snap point instead of leaving the sheet stranded halfway.
+            onPanResponderTerminate: () => {
+                isDragging.current = false;
+                translateY.stopAnimation((cur) => {
+                    const { PEEK_Y: peekY, expandTo: expand, collapseTo: collapse } = gestureRef.current;
+                    if ((cur ?? peekY) <= (peekY + EXPANDED_Y) / 2) expand();
+                    else collapse();
+                });
             },
         })
     ).current;
@@ -226,6 +264,15 @@ const ParkingBottomSheet = forwardRef(({
         />
     ), [getCurrentPrice, onItemPress, selectedSpot?.id]);
 
+    // The title is the one line always visible in the peek, so it carries the
+    // load state too — "0 spots nearby" while loading or offline would read
+    // as an answer when it's really "we don't know yet".
+    const headerTitle = spots.length === 0 && loading
+        ? 'Finding parking…'
+        : error
+            ? "Couldn't load parking"
+            : `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} nearby`;
+
     return (
         <Animated.View
             style={[
@@ -238,23 +285,54 @@ const ParkingBottomSheet = forwardRef(({
             ]}
         >
             <View style={styles.header} onLayout={handleHeaderLayout} {...panResponder.panHandlers}>
-                <View style={styles.handle} />
+                {/* Dragging is the only visual way to open the list, so give
+                    screen readers an equivalent: the handle is a button. */}
+                <View
+                    style={styles.handleHit}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={isExpanded ? 'Collapse spot list' : 'Expand spot list'}
+                    accessibilityActions={[{ name: 'activate' }]}
+                    onAccessibilityAction={(event) => {
+                        if (event.nativeEvent.actionName === 'activate') toggleExpanded();
+                    }}
+                >
+                    <View style={styles.handle} />
+                </View>
 
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
-                        <Text style={styles.headerTitle}>
-                            {spots.length} {spots.length === 1 ? 'spot' : 'spots'} nearby
+                        <Text style={styles.headerTitle} accessibilityLiveRegion="polite">
+                            {headerTitle}
                         </Text>
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
-                            {selectedSpot?.address
-                                ? `Selected: ${selectedSpot.address}`
-                                : searchMode === 'pinned'
-                                    ? 'Around your pinned location'
-                                    : 'Near your current location'}
+                            {error
+                                ? 'Check your connection and try again'
+                                : selectedSpot?.address
+                                    ? `Selected: ${selectedSpot.address}`
+                                    : searchMode === 'pinned'
+                                        ? 'Around your pinned location'
+                                        : 'Near your current location'}
                         </Text>
                     </View>
 
-                    {searchMode === 'pinned' && onClearPin && (
+                    {/* The peek is all most people see, so a failed load is
+                        recoverable from here without expanding the sheet. */}
+                    {error && onRetry ? (
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.clearButton,
+                                pressed && styles.clearButtonPressed
+                            ]}
+                            onPress={onRetry}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Try loading parking again"
+                        >
+                            <MaterialCommunityIcons name="refresh" size={14} color={TOKENS.primary} />
+                            <Text style={styles.clearButtonText}>Try again</Text>
+                        </Pressable>
+                    ) : searchMode === 'pinned' && onClearPin && (
                         <Pressable
                             style={({ pressed }) => [
                                 styles.clearButton,
@@ -310,21 +388,57 @@ const ParkingBottomSheet = forwardRef(({
                 )}
             </View>
 
-            {spots.length === 0 ? (
+            {/* Below the peek: hidden from screen readers while collapsed, so
+                focus never lands on rows that are off screen. */}
+            <View
+                style={styles.body}
+                accessibilityElementsHidden={!isExpanded}
+                importantForAccessibility={isExpanded ? 'auto' : 'no-hide-descendants'}
+            >
+            {spots.length === 0 && loading ? (
+                <View style={styles.emptyState}>
+                    <ActivityIndicator color={TOKENS.primary} />
+                </View>
+            ) : spots.length === 0 && error ? (
+                <View style={styles.emptyState}>
+                    <View style={styles.emptyIconContainer}>
+                        <MaterialCommunityIcons name="wifi-off" size={26} color={TOKENS.textMuted} />
+                    </View>
+                    <Text style={styles.emptyHint}>
+                        Spots will show up here as soon as the connection is back.
+                    </Text>
+                </View>
+            ) : spots.length === 0 ? (
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
                         <MaterialCommunityIcons
                             name={searchMode === 'pinned' ? 'map-marker-remove' : 'parking'}
-                            size={28}
-                            color={TOKENS.textFaint}
+                            size={26}
+                            color={TOKENS.textMuted}
                         />
                     </View>
-                    <Text style={styles.emptyTitle}>No spots in this area</Text>
+                    <Text style={styles.emptyTitle}>
+                        No spots within {getDistanceLabel(searchRadius)}
+                    </Text>
                     <Text style={styles.emptyHint}>
                         {searchMode === 'pinned'
-                            ? 'Move your pin or widen the radius'
-                            : 'Pan or zoom the map to search elsewhere'}
+                            ? 'Try a wider radius, or move your pin.'
+                            : 'Try a wider radius, or set a pin to search somewhere else.'}
                     </Text>
+                    {onRadiusChange && searchRadius < WIDEST_RADIUS ? (
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.emptyAction,
+                                pressed && styles.clearButtonPressed,
+                            ]}
+                            onPress={() => onRadiusChange(WIDEST_RADIUS)}
+                            accessibilityRole="button"
+                        >
+                            <Text style={styles.emptyActionText}>
+                                Search within {getDistanceLabel(WIDEST_RADIUS)}
+                            </Text>
+                        </Pressable>
+                    ) : null}
                 </View>
             ) : (
                 <Animated.FlatList
@@ -349,6 +463,7 @@ const ParkingBottomSheet = forwardRef(({
                     }}
                 />
             )}
+            </View>
         </Animated.View>
     );
 });
@@ -381,13 +496,23 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: TOKENS.divider,
     },
-    handle: {
+    // Padding gives the accessibility focus frame some size; the negative
+    // top margin cancels it so the handle sits exactly where it did.
+    handleHit: {
         alignSelf: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 6,
+        marginTop: -6,
+        marginBottom: 6,
+    },
+    handle: {
         backgroundColor: alpha(TOKENS.text, 0.12),
         width: 36,
         height: 3,
         borderRadius: 2,
-        marginBottom: 12,
+    },
+    body: {
+        flex: 1,
     },
     headerContent: {
         flexDirection: 'row',
@@ -511,6 +636,22 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         textAlign: 'center',
         maxWidth: 260,
+    },
+    // The next best action, not just "nothing here".
+    emptyAction: {
+        marginTop: 16,
+        minHeight: 44,
+        paddingHorizontal: 18,
+        justifyContent: 'center',
+        borderRadius: 999,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.primaryBorder,
+    },
+    emptyActionText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primary,
     },
 });
 

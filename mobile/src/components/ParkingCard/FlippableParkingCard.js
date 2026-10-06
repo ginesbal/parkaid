@@ -50,9 +50,24 @@ function FlippableParkingCard({
     const scaleAnim = useRef(new Animated.Value(0.96)).current;
     const translateYAnim = useRef(new Animated.Value(12)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    // Pending post-exit reset. Held in a ref so a reopen can cancel it.
+    const resetTimerRef = useRef(null);
+
+    useEffect(() => () => clearTimeout(resetTimerRef.current), []);
 
     useEffect(() => {
         if (visible && spot) {
+            // Tapping a new marker while a card is closing reopens the card
+            // inside the 200ms exit window. Without cancelling the pending
+            // reset, it would fire mid-entrance and snap the new card back to
+            // its start pose. Do the reset now, synchronously, instead.
+            if (resetTimerRef.current) {
+                clearTimeout(resetTimerRef.current);
+                resetTimerRef.current = null;
+                setIsFlipped(false);
+                flipAnim.setValue(0);
+            }
+
             logger.logSpotData(spot, 'FlippableParkingCard opened');
 
             Animated.parallel([
@@ -92,7 +107,9 @@ function FlippableParkingCard({
                     useNativeDriver: true,
                 }),
             ]).start();
-            setTimeout(() => {
+            clearTimeout(resetTimerRef.current);
+            resetTimerRef.current = setTimeout(() => {
+                resetTimerRef.current = null;
                 setIsFlipped(false);
                 flipAnim.setValue(0);
                 scaleAnim.setValue(0.96);
@@ -170,7 +187,13 @@ function FlippableParkingCard({
     return (
         <>
             {visible && (
-                <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
+                <TouchableOpacity
+                    style={styles.overlay}
+                    activeOpacity={1}
+                    onPress={onClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close details"
+                >
                     <View />
                 </TouchableOpacity>
             )}
@@ -187,8 +210,14 @@ function FlippableParkingCard({
                     },
                 ]}
                 pointerEvents="box-none"
+                // iOS: keep VoiceOver inside the card while it's open, and let
+                // the two-finger "scrub" escape gesture close it.
+                accessibilityViewIsModal
+                onAccessibilityEscape={onClose}
             >
-                {/* front of card */}
+                {/* front of card — both faces stay mounted for the flip, so the
+                    hidden one must also be removed from touch and from the
+                    accessibility tree, not just faded to opacity 0. */}
                 <Animated.View
                     style={[
                         styles.card,
@@ -198,6 +227,9 @@ function FlippableParkingCard({
                             transform: [{ perspective: 1000 }, { rotateY: frontRotateY }],
                         },
                     ]}
+                    pointerEvents={isFlipped ? 'none' : 'auto'}
+                    accessibilityElementsHidden={isFlipped}
+                    importantForAccessibility={isFlipped ? 'no-hide-descendants' : 'auto'}
                 >
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
@@ -208,6 +240,8 @@ function FlippableParkingCard({
                             style={styles.closeBtn}
                             onPress={onClose}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close details"
                         >
                             <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
                         </TouchableOpacity>
@@ -319,11 +353,24 @@ function FlippableParkingCard({
                     </View>
 
                     <View style={styles.actionsLarge}>
-                        <TouchableOpacity style={styles.detailsBtnLarge} onPress={flip} activeOpacity={0.7}>
+                        <TouchableOpacity
+                            style={styles.detailsBtnLarge}
+                            onPress={flip}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel="Show all details"
+                        >
                             <MaterialCommunityIcons name="information-outline" size={20} color={TOKENS.text} />
                             <Text style={styles.detailsBtnTextLarge}>Details</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.navBtnLarge} onPress={onNavigate} activeOpacity={0.85}>
+                        <TouchableOpacity
+                            style={styles.navBtnLarge}
+                            onPress={onNavigate}
+                            activeOpacity={0.85}
+                            accessibilityRole="button"
+                            accessibilityLabel={eta ? `Navigate, ${eta}` : 'Navigate'}
+                            accessibilityHint="Opens walking directions in Google Maps"
+                        >
                             <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
                             <View style={styles.navBtnTextWrap}>
                                 <Text style={styles.navBtnTextLarge}>Navigate</Text>
@@ -343,22 +390,29 @@ function FlippableParkingCard({
                             transform: [{ perspective: 1000 }, { rotateY: backRotateY }],
                         },
                     ]}
+                    pointerEvents={isFlipped ? 'auto' : 'none'}
+                    accessibilityElementsHidden={!isFlipped}
+                    importantForAccessibility={isFlipped ? 'auto' : 'no-hide-descendants'}
                 >
                     <View style={styles.cardHeaderBack}>
                         <TouchableOpacity
                             onPress={flip}
                             style={styles.backBtn}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Back to summary"
                         >
                             <MaterialCommunityIcons name="arrow-left" size={20} color={TOKENS.text} />
                         </TouchableOpacity>
-                        <Text style={styles.backTitle} numberOfLines={1}>
+                        <Text style={styles.backTitle} numberOfLines={1} accessibilityRole="header">
                             {spot.address || spot.address_desc || 'Details'}
                         </Text>
                         <TouchableOpacity
                             style={styles.closeBtn}
                             onPress={onClose}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close details"
                         >
                             <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
                         </TouchableOpacity>
@@ -391,7 +445,12 @@ function FlippableParkingCard({
                                                 <Text
                                                     style={[styles.detailValue, styles.linkText]}
                                                     numberOfLines={2}
-                                                    onPress={() => Linking.openURL(item.link)}
+                                                    accessibilityRole="link"
+                                                    // City URLs come from open data; a malformed one
+                                                    // must not surface as an unhandled rejection.
+                                                    onPress={() => Linking.openURL(item.link).catch(() => {
+                                                        logger.log('detail_link_open_failed', { link: item.link }, 'WARN');
+                                                    })}
                                                 >
                                                     {item.value || 'Open link'}
                                                 </Text>
@@ -416,7 +475,13 @@ function FlippableParkingCard({
                     </ScrollView>
 
                     <View style={styles.backFooter}>
-                        <TouchableOpacity style={styles.navBtnFullLarge} onPress={onNavigate} activeOpacity={0.85}>
+                        <TouchableOpacity
+                            style={styles.navBtnFullLarge}
+                            onPress={onNavigate}
+                            activeOpacity={0.85}
+                            accessibilityRole="button"
+                            accessibilityHint="Opens walking directions in Google Maps"
+                        >
                             <MaterialCommunityIcons name="navigation-variant" size={22} color="#FFFFFF" />
                             <Text style={styles.navBtnTextLarge}>Navigate to spot</Text>
                         </TouchableOpacity>

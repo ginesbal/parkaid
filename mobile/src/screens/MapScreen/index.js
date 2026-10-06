@@ -77,6 +77,8 @@ function MapScreen() {
     const [filterType, setFilterType] = useState('all');
     const [searchRadius, setSearchRadius] = useState(DEFAULT_SEARCH_RADIUS);
     const [selectedSpot, setSelectedSpot] = useState(null);
+    // Bumped by "Try again" to refetch the same search after a failed load.
+    const [reloadKey, setReloadKey] = useState(0);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     // pin state
@@ -110,7 +112,16 @@ function MapScreen() {
 
     // Fetch once at the largest preset, then narrow client-side as the user
     // switches presets. Changing the radius is instant and never refetches.
-    const { spots: allSpots } = useParkingSpots(searchLocation, FETCH_RADIUS, filterType);
+    const {
+        spots: allSpots,
+        loading: spotsLoading,
+        error: spotsError,
+    } = useParkingSpots(searchLocation, FETCH_RADIUS, filterType, reloadKey);
+
+    const handleRetry = useCallback(() => {
+        logger.log('spots_retry_pressed', {}, 'UI_EVENT');
+        setReloadKey((k) => k + 1);
+    }, []);
     const spots = useMemo(() => (
         Array.isArray(allSpots)
             ? allSpots.filter(s => (typeof s.distance === 'number' ? s.distance : Infinity) <= searchRadius)
@@ -334,7 +345,8 @@ function MapScreen() {
         if (typeof lat === 'number' && typeof lng === 'number') {
             // important: record external handoff to maps
             logger.log('open_external_navigation', { lat, lng, provider: 'google' }, 'UI_EVENT');
-            Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+            Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`)
+                .catch(() => logger.log('open_external_navigation_failed', { lat, lng }, 'WARN'));
         }
     };
 
@@ -498,6 +510,12 @@ function MapScreen() {
                 >
                     <Pressable
                         style={({ pressed }) => [styles.fab, styles.fabPrimary, pressed && styles.fabPressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            searchMode === 'pinned'
+                                ? 'Center map on your pinned location'
+                                : 'Center map on your location'
+                        }
                         onPress={() => {
                             logger.log('ui_recenter_pressed', { mode: searchMode }, 'UI_EVENT');
 
@@ -574,6 +592,9 @@ function MapScreen() {
                 searchMode={searchMode}
                 searchRadius={searchRadius}
                 onRadiusChange={handleRadiusChange}
+                loading={spotsLoading}
+                error={spotsError}
+                onRetry={handleRetry}
                 getCurrentPrice={getCurrentPrice}
                 onPeekHeightChange={setSheetPeekHeight}
                 tabBarHeight={tabBarHeight}

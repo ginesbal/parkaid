@@ -277,8 +277,11 @@ export const styles = StyleSheet.create({
         gap: 8,
     },
 
+    // minHeight, not height — the label must be free to grow with the
+    // user's text size instead of clipping inside a fixed 48pt pill.
     placementBtn: {
-        height: 48,
+        minHeight: 48,
+        paddingVertical: 12,
         borderRadius: 999,
         alignItems: 'center',
         justifyContent: 'center',
