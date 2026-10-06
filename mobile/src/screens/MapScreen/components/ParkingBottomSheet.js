@@ -33,6 +33,11 @@ const EXPANDED_Y = 0;
 // The widest preset — what the empty state offers when nothing is in range.
 const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
 
+// Radius pills render ~29pt tall; extend the touch area to the 44pt minimum
+// for one-handed use without enlarging them. Vertical only — the pills sit
+// 8pt apart, so horizontal slop would overlap the neighbouring pill.
+const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
+
 // Memoized: the map screen re-renders on every pan settle, and none of the
 // sheet's props change then — so the sheet and its list skip that work.
 const ParkingBottomSheet = memo(forwardRef(({
@@ -373,6 +378,7 @@ const ParkingBottomSheet = memo(forwardRef(({
                                         pressed && styles.radiusChipPressed,
                                     ]}
                                     onPress={() => onRadiusChange(option.value)}
+                                    hitSlop={CHIP_HIT_SLOP}
                                     accessibilityRole="button"
                                     accessibilityState={{ selected: isActive }}
                                     accessibilityLabel={`Within ${getDistanceLabel(option.value)}, about a ${metersToWalkMinutes(option.value)} minute walk`}

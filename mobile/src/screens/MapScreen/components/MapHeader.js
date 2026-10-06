@@ -17,6 +17,11 @@ const TYPE_FILTERS = [
     { type: 'residential', label: 'Permit' },
 ];
 
+// The pills render ~29pt tall; extend the touch area to the 44pt minimum
+// without making them visually heavier. Vertical only — horizontally the
+// pills are 8pt apart and already ≥48pt wide, so slop there would overlap.
+const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
+
 function MapHeader({
     isDetailActive,
     placingPin,
@@ -120,6 +125,7 @@ function MapHeader({
                                 pressed && styles.filterChipPressed,
                             ]}
                             onPress={() => handleFilterPress(f.type)}
+                            hitSlop={CHIP_HIT_SLOP}
                             accessibilityRole="button"
                             accessibilityState={{ selected: filterType === f.type }}
                         >
