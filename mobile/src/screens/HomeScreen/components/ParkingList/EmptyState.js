@@ -4,31 +4,32 @@ import { TOKENS, alpha } from '../../../../constants/theme';
 import { styles } from './styles';
 
 /**
- * EmptyState - Shown when no parking spots are available or loading fails
+ * EmptyState - Shown when no parking spots are available or loading fails.
+ * Says what happened in plain words — never the raw error — and offers the
+ * most useful next step.
  */
-const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, expandLabel, hint }) => {
-    const isError = Boolean(errorMessage);
-    // The primary action is the most useful next step: retry after an error,
-    // otherwise widen the search — unless there's nothing left to widen, in
-    // which case the map becomes the primary action.
-    const hasPrimary = isError || Boolean(expandLabel);
+const EmptyState = ({ onExpandSearch, onViewMap, onRetry, hasError, title, expandLabel, hint }) => {
+    // The primary action is the most useful next step: try again after an
+    // error, otherwise widen the search — unless there's nothing left to
+    // widen, in which case the map becomes the primary action.
+    const hasPrimary = hasError || Boolean(expandLabel);
 
     return (
         <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIcon, isError && styles.emptyIconError]}>
+            <View style={[styles.emptyIcon, hasError && styles.emptyIconError]}>
                 <MaterialCommunityIcons
-                    name={isError ? 'wifi-alert' : 'parking'}
+                    name={hasError ? 'wifi-alert' : 'parking'}
                     size={64}
-                    color={isError ? TOKENS.danger : alpha(TOKENS.text, 0.15)}
+                    color={hasError ? TOKENS.danger : alpha(TOKENS.text, 0.15)}
                 />
             </View>
 
             <Text style={styles.emptyText}>
-                {isError ? 'Can\u2019t reach parking data' : 'Nothing nearby right now'}
+                {hasError ? 'Couldn’t load parking' : title || 'No spots nearby'}
             </Text>
             <Text style={styles.emptySubtext}>
-                {isError
-                    ? `${errorMessage} Try again, or switch to the map to browse a different area.`
+                {hasError
+                    ? 'Check your connection and try again, or browse the map.'
                     : hint}
             </Text>
 
@@ -39,17 +40,17 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, expandLa
                             styles.emptyButton,
                             pressed && styles.emptyButtonPressed,
                         ]}
-                        onPress={isError ? onRetry : onExpandSearch}
+                        onPress={hasError ? onRetry : onExpandSearch}
                         accessibilityRole="button"
-                        accessibilityLabel={isError ? 'Retry loading parking spots' : expandLabel}
+                        accessibilityLabel={hasError ? 'Try loading parking again' : expandLabel}
                     >
                         <MaterialCommunityIcons
-                            name={isError ? 'refresh' : 'radar'}
+                            name={hasError ? 'refresh' : 'radar'}
                             size={16}
                             color={TOKENS.onPrimary}
                         />
                         <Text style={styles.emptyButtonText}>
-                            {isError ? 'Retry' : expandLabel}
+                            {hasError ? 'Try again' : expandLabel}
                         </Text>
                     </Pressable>
                 ) : null}
@@ -70,7 +71,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, expandLa
                         color={hasPrimary ? TOKENS.text : TOKENS.onPrimary}
                     />
                     <Text style={[styles.emptyButtonText, hasPrimary && styles.emptyButtonTextSecondary]}>
-                        View Map
+                        View map
                     </Text>
                 </Pressable>
             </View>

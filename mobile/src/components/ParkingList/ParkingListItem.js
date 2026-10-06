@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { TOKENS, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
+import { getDistanceLabel } from '../../utils/parkingHelpers';
 import { getAccess, getMaxStay, getPriceInfo, getSpotType, parseAddress } from '../../utils/spotInfo';
 
 const PRICE_TONE = {
@@ -84,6 +85,15 @@ export default function ParkingListItem({
         : price.kind === 'free' ? 'free'
         : 'rate not listed';
 
+    // Spoken in words: "5 minute walk, 400 meters away" — and when the walk
+    // time is missing, say so rather than reading out a dash.
+    const a11yLabel = [
+        `Parking at ${addr.primary}`,
+        walk != null ? `${walk} minute walk` : 'walk time unknown',
+        Number.isFinite(spot.distance) ? `${getDistanceLabel(spot.distance)} away` : null,
+        a11yPrice,
+    ].filter(Boolean).join(', ');
+
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             {/* Selected: a 3px primary rail on the leading edge. Selection should
@@ -96,7 +106,7 @@ export default function ParkingListItem({
                 android_ripple={{ color: alpha(TOKENS.text, 0.04), borderless: false }}
                 style={[styles.row, isSelected && styles.rowSelected]}
                 accessibilityRole="button"
-                accessibilityLabel={`Parking at ${addr.primary}, ${walk ?? '—'} minute walk, ${spot.distance} meters away, ${a11yPrice}`}
+                accessibilityLabel={a11yLabel}
                 hitSlop={4}
             >
                 {/* Tier 1a — walk time, the hero metric */}

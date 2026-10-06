@@ -52,6 +52,7 @@ const ParkingBottomSheet = memo(forwardRef(({
     spots,
     selectedSpot,
     searchMode,
+    placingPin = false,
     searchRadius,
     onRadiusChange,
     loading = false,
@@ -339,14 +340,18 @@ const ParkingBottomSheet = memo(forwardRef(({
                         <Text style={styles.headerTitle} accessibilityLiveRegion="polite">
                             {headerTitle}
                         </Text>
+                        {/* What the count is counting. While placing, the
+                            count follows the pin as the map moves. */}
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {error
                                 ? 'Check your connection and try again'
-                                : selectedSpot?.address
-                                    ? `Selected: ${selectedSpot.address}`
-                                    : searchMode === 'pinned'
-                                        ? 'Around your pinned location'
-                                        : 'Near your current location'}
+                                : placingPin
+                                    ? 'Around the pin'
+                                    : selectedSpot?.address
+                                        ? `Selected: ${selectedSpot.address}`
+                                        : searchMode === 'pinned'
+                                            ? 'Around your pin'
+                                            : 'Near you'}
                         </Text>
                     </View>
 
@@ -375,7 +380,7 @@ const ParkingBottomSheet = memo(forwardRef(({
                             onPress={onClearPin}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel="Clear pinned search location"
+                            accessibilityLabel="Clear the search pin"
                         >
                             <MaterialCommunityIcons
                                 name="close-circle"
@@ -439,8 +444,9 @@ const ParkingBottomSheet = memo(forwardRef(({
                     <View style={styles.emptyIconContainer}>
                         <MaterialCommunityIcons name="wifi-off" size={26} color={TOKENS.textMuted} />
                     </View>
+                    {/* Nothing retries on its own, so don't promise it. */}
                     <Text style={styles.emptyHint}>
-                        Spots will show up here as soon as the connection is back.
+                        Once you're back online, tap Try again.
                     </Text>
                 </View>
             ) : spots.length === 0 ? (
@@ -456,9 +462,9 @@ const ParkingBottomSheet = memo(forwardRef(({
                         No spots within {getDistanceLabel(searchRadius)}
                     </Text>
                     <Text style={styles.emptyHint}>
-                        {searchMode === 'pinned'
+                        {searchMode === 'pinned' || placingPin
                             ? 'Try a wider radius, or move your pin.'
-                            : 'Try a wider radius, or set a pin to search somewhere else.'}
+                            : 'Try a wider radius, or drop a pin to search somewhere else.'}
                     </Text>
                     {onRadiusChange && searchRadius < WIDEST_RADIUS ? (
                         <Pressable

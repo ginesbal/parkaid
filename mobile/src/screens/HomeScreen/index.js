@@ -236,8 +236,9 @@ export default function HomeScreen({ navigation }) {
               fadeAnim={fadeAnim}
               slideAnim={slideAnim}
               onLocationPress={handleMapPress}
-              statusMessage={error || locationError}
-              statusTone={error ? 'warning' : 'info'}
+              // Only the location notice: a failed load already explains
+              // itself, with a way out, in the empty state below.
+              statusMessage={locationError}
             />
           }
           refreshControl={
@@ -260,7 +261,8 @@ export default function HomeScreen({ navigation }) {
                 onExpandSearch={handleExpandSearch}
                 onViewMap={handleMapPress}
                 onRetry={handleRefresh}
-                errorMessage={error}
+                hasError={Boolean(error)}
+                title={`No spots within ${getDistanceLabel(searchRadius)}`}
                 expandLabel={expandLabel}
                 hint={emptyHint}
               />

@@ -99,6 +99,9 @@ function MapScreen({ route, navigation }) {
     const [pinnedLocation, setPinnedLocation] = useState(null);
     const [searchMode, setSearchMode] = useState('current'); // 'current' | 'pinned'
     const [placingPin, setPlacingPin] = useState(false);
+    // True while the map is moving under the reticle. The preview ring is a
+    // map shape, so it would trail the drag; it shows once the map settles.
+    const [reticleMoving, setReticleMoving] = useState(false);
 
     // flippable card state
     const [flippableCardVisible, setFlippableCardVisible] = useState(false);
@@ -132,6 +135,14 @@ function MapScreen({ route, navigation }) {
     const circleCenter = useMemo(() => (
         (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation
     ), [searchMode, pinnedLocation, userLocation]);
+
+    // While placing, preview the area "Search here" would cover: a ring at
+    // the settled map center (which mapPadding keeps under the reticle).
+    const placementCenter = useMemo(() => (
+        placingPin && !reticleMoving
+            ? { latitude: region.latitude, longitude: region.longitude }
+            : null
+    ), [placingPin, reticleMoving, region.latitude, region.longitude]);
 
     // Fetch once at the largest preset, then narrow client-side as the user
     // switches presets. Changing the radius is instant and never refetches.
@@ -250,6 +261,7 @@ function MapScreen({ route, navigation }) {
     const handleRegionChange = useCallback(() => {
         if (!placingPinRef.current || reticleLiftedRef.current) return;
         reticleLiftedRef.current = true;
+        setReticleMoving(true);
         Animated.spring(reticleLift, {
             toValue: 1,
             tension: 120,
@@ -261,6 +273,7 @@ function MapScreen({ route, navigation }) {
     // ...and drop it (plus refresh the search center) when it settles.
     const handleRegionChangeComplete = useCallback((nextRegion) => {
         setRegion(nextRegion);
+        setReticleMoving(false);
         if (placingPinRef.current) {
             reticleLiftedRef.current = false;
             Animated.spring(reticleLift, {
@@ -498,6 +511,7 @@ function MapScreen({ route, navigation }) {
             >
                 <MapOverlays
                     searchCenter={circleCenter}
+                    placementCenter={placementCenter}
                     searchRadius={searchRadius}
                     searchMode={searchMode}
                     pinnedLocation={pinnedLocation}
@@ -553,7 +567,7 @@ function MapScreen({ route, navigation }) {
                         accessibilityRole="button"
                         accessibilityLabel={
                             searchMode === 'pinned'
-                                ? 'Center map on your pinned location'
+                                ? 'Center map on your pin'
                                 : 'Center map on your location'
                         }
                         onPress={() => {
@@ -589,7 +603,7 @@ function MapScreen({ route, navigation }) {
                 >
                     <View style={styles.placementHintPill}>
                         <Text style={styles.placementHintText}>
-                            Move the map to position the pin
+                            Drag the map to move the search area
                         </Text>
                     </View>
 
@@ -602,7 +616,7 @@ function MapScreen({ route, navigation }) {
                             ]}
                             onPress={cancelPlacement}
                             accessibilityRole="button"
-                            accessibilityLabel="Cancel setting search location"
+                            accessibilityLabel="Cancel dropping the pin"
                         >
                             <Text style={styles.placementBtnGhostText}>Cancel</Text>
                         </Pressable>
@@ -630,6 +644,7 @@ function MapScreen({ route, navigation }) {
                 spots={spots}
                 selectedSpot={selectedSpot}
                 searchMode={searchMode}
+                placingPin={placingPin}
                 searchRadius={searchRadius}
                 onRadiusChange={handleRadiusChange}
                 loading={spotsLoading}

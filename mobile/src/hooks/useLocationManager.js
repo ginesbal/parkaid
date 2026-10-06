@@ -31,7 +31,7 @@ export const useLocationManager = () => {
                 // use default location if permission denied
                 setLocation(DEFAULT_LOCATION);
                 setLocationName(DEFAULT_LOCATION.name);
-                setLocationError('Location permission denied. Using default location.');
+                setLocationError('Showing downtown Calgary. Turn on location to see spots near you.');
             } else {
                 // get current location
                 const currentLocation = await Location.getCurrentPositionAsync({
@@ -66,7 +66,7 @@ export const useLocationManager = () => {
             }
         } catch (error) {
             console.error('Error loading location:', error);
-            setLocationError('Failed to load location. Using default.');
+            setLocationError("Couldn't find your location. Showing downtown Calgary.");
             setLocation(DEFAULT_LOCATION);
             setLocationName(DEFAULT_LOCATION.name);
         } finally {

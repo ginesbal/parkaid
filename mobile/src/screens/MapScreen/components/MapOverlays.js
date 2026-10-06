@@ -33,6 +33,7 @@ const SpotMarker = memo(function SpotMarker({ spot, isSelected, onSelectSpot }) 
 
 function MapOverlays({
     searchCenter,
+    placementCenter,
     searchRadius,
     searchMode,
     pinnedLocation,
@@ -43,12 +44,13 @@ function MapOverlays({
 }) {
     return (
         <>
-            {/* Radius ring — hidden while placing, when the center is moving and
-                the reticle alone communicates the target. Shown for a settled
-                current/pinned search so the area reads clearly. */}
-            {!placingPin && searchCenter && (
+            {/* Radius ring — the settled current/pinned search area. While
+                placing, it previews the area under the reticle instead, and
+                only once the map stops moving (a map shape would trail the
+                drag). */}
+            {(placingPin ? placementCenter : searchCenter) && (
                 <Circle
-                    center={searchCenter}
+                    center={placingPin ? placementCenter : searchCenter}
                     radius={searchRadius}
                     fillColor={alpha(TOKENS.primary, 0.06)}
                     strokeColor={alpha(TOKENS.primary, 0.22)}
