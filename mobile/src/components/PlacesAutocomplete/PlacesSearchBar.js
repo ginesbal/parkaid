@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -107,6 +107,7 @@ export default function PlacesSearchBar({
   debounceMs = 250,
   containerStyle,
   style,
+  onResultsVisibleChange,
 }) {
   const inputRef = useRef(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -201,6 +202,15 @@ export default function PlacesSearchBar({
       AccessibilityInfo.announceForAccessibility('No matches. Try a street or landmark.');
     }
   }, [showEmptyState]);
+
+  // Tell the parent when a results panel opens or closes, so it can make room
+  // and hold its layout steady. A layout effect, so the parent hears about it
+  // before the new size is measured.
+  const resultsVisible =
+    (showSuggestions && suggestions.length > 0) || showEmptyState || showError;
+  useLayoutEffect(() => {
+    onResultsVisibleChange?.(resultsVisible);
+  }, [resultsVisible, onResultsVisibleChange]);
 
   return (
     <View style={[styles.container, containerStyle, style]}>

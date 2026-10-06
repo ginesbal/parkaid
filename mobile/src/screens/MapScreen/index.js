@@ -41,8 +41,9 @@ import { getCurrentPrice } from './utils/pricing';
 
 function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
-    // Compact header: ~70px content + safe area inset (collapsed filters)
-    const [navigationHeight, setNavigationHeight] = useState(70 + insets.top);
+    // Header: search (44) + type chips (~30), with its padding, under the
+    // status bar. Measured on layout; this only seeds the first frame.
+    const [navigationHeight, setNavigationHeight] = useState(94 + insets.top);
     const [sheetPeekHeight, setSheetPeekHeight] = useState(108);
 
     // All layout below is in this screen's own coordinates. React Navigation
@@ -64,8 +65,6 @@ function MapScreen({ route, navigation }) {
     // refs
     const mapRef = useRef(null);
     const bottomSheetRef = useRef(null);
-    const lastMapInteraction = useRef(null);
-    const hideControlsTimer = useRef(null);
     // Tracks the last time the search input became focused. Used to suppress
     // the spurious MapView.onPress that Google Maps' native gesture recognizer
     // fires on iOS when the user taps the search bar (the native recognizer
@@ -75,10 +74,12 @@ function MapScreen({ route, navigation }) {
     // once and would otherwise close over a stale value.
     const placingPinRef = useRef(false);
     const reticleLiftedRef = useRef(false);
+    // While search results are open the header grows to hold them. Its
+    // height drives the map padding, so measuring it then would shove the
+    // map down as you type; we keep the last steady height instead.
+    const searchResultsOpenRef = useRef(false);
 
     // animations
-    const controlsOpacity = useRef(new Animated.Value(1)).current;
-    const controlsTranslateY = useRef(new Animated.Value(0)).current;
     // Drives the screen-fixed reticle: 0 dropped (settled), 1 lifted (moving).
     const reticleLift = useRef(new Animated.Value(0)).current;
 
@@ -187,53 +188,8 @@ function MapScreen({ route, navigation }) {
                 logger.log('location_error_fallback_default', DEFAULT_LOCATION, 'ERROR');
             }
         })();
-
-        return () => {
-            if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-        };
     }, []);
 
-
-    const showControls = useCallback(() => {
-        Animated.parallel([
-            Animated.timing(controlsOpacity, {
-                toValue: 1,
-                duration: 200,
-                useNativeDriver: true
-            }),
-            Animated.timing(controlsTranslateY, {
-                toValue: 0,
-                duration: 200,
-                useNativeDriver: true
-            }),
-        ]).start();
-    }, [controlsOpacity, controlsTranslateY]);
-
-    const hideControls = useCallback(() => {
-        Animated.parallel([
-            Animated.timing(controlsOpacity, {
-                toValue: 0,
-                duration: 200,
-                useNativeDriver: true
-            }),
-            Animated.timing(controlsTranslateY, {
-                toValue: -50,
-                duration: 200,
-                useNativeDriver: true
-            }),
-        ]).start();
-    }, [controlsOpacity, controlsTranslateY]);
-
-    const handleMapInteraction = useCallback(() => {
-        lastMapInteraction.current = Date.now();
-        showControls();
-        if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-        hideControlsTimer.current = setTimeout(() => {
-            if (Date.now() - lastMapInteraction.current >= 3000) {
-                hideControls();
-            }
-        }, 3000);
-    }, [hideControls, showControls]);
 
     // ===== Reticle placement flow =====
 
@@ -426,7 +382,12 @@ function MapScreen({ route, navigation }) {
         ));
     }, []);
 
+    const handleSearchResultsChange = useCallback((open) => {
+        searchResultsOpenRef.current = open;
+    }, []);
+
     const handleNavigationLayout = useCallback((event) => {
+        if (searchResultsOpenRef.current) return;
         const measuredHeight = Math.ceil(event.nativeEvent.layout.height);
         setNavigationHeight((currentHeight) => (
             Math.abs(currentHeight - measuredHeight) > 1 ? measuredHeight : currentHeight
@@ -455,9 +416,8 @@ function MapScreen({ route, navigation }) {
     }, [isSearchFocused]);
 
     const handleMapPanDrag = useCallback(() => {
-        handleMapInteraction();
         setFlippableCardVisible(false);
-    }, [handleMapInteraction]);
+    }, []);
 
     // Selecting a place from search is an explicit, precise choice — pin it
     // directly without entering the reticle flow.
@@ -559,28 +519,35 @@ function MapScreen({ route, navigation }) {
                 <MapHeader
                     isDetailActive={flippableCardVisible}
                     placingPin={placingPin}
-                    pinnedLocation={pinnedLocation}
-                    searchMode={searchMode}
-                    onStartPlacing={startPlacing}
                     filterType={filterType}
                     setFilterType={setFilterType}
                     onPlaceSelected={handlePlaceSelected}
+                    onSearchResultsChange={handleSearchResultsChange}
                 />
             </View>
 
-            {/* floating recenter button — hidden while placing the pin */}
+            {/* floating controls, in thumb reach above the sheet — the
+                placement dock takes their place while placing the pin */}
             {!placingPin && (
-                <Animated.View
-                    style={[
-                        styles.fabContainer,
-                        {
-                            opacity: controlsOpacity,
-                            transform: [{ translateY: Animated.multiply(controlsTranslateY, -1) }],
-                            bottom: FLOATING_CONTROLS_BOTTOM,
-                        }
-                    ]}
-                    pointerEvents="auto"
+                <View
+                    style={[styles.fabContainer, { bottom: FLOATING_CONTROLS_BOTTOM }]}
+                    pointerEvents="box-none"
                 >
+                    <Pressable
+                        style={({ pressed }) => [styles.pinPill, pressed && styles.fabPressed]}
+                        onPress={startPlacing}
+                        accessibilityRole="button"
+                        accessibilityLabel={pinnedLocation ? 'Move the search pin' : 'Drop a pin to search another area'}
+                        accessibilityHint="Move the map under the pin, then confirm"
+                    >
+                        <MaterialCommunityIcons
+                            name={pinnedLocation ? 'map-marker' : 'map-marker-plus'}
+                            size={18}
+                            color={TOKENS.primary}
+                        />
+                        <Text style={styles.pinPillText}>{pinnedLocation ? 'Move pin' : 'Drop pin'}</Text>
+                    </Pressable>
+
                     <Pressable
                         style={({ pressed }) => [styles.fab, styles.fabPrimary, pressed && styles.fabPressed]}
                         accessibilityRole="button"
@@ -611,7 +578,7 @@ function MapScreen({ route, navigation }) {
                             color={TOKENS.onPrimary}
                         />
                     </Pressable>
-                </Animated.View>
+                </View>
             )}
 
             {/* placement controls — shown while setting the search pin */}

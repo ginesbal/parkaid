@@ -1,20 +1,13 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useCallback, useState } from 'react';
-import { LayoutAnimation, Platform, Pressable, Text, UIManager, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
-import { TOKENS } from '../../../constants/theme';
 import { styles } from '../styles';
 
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const TYPE_FILTERS = [
-    { type: 'all', label: 'All' },
-    { type: 'on_street', label: 'Street' },
-    { type: 'off_street', label: 'Lot' },
-    { type: 'residential', label: 'Permit' },
+    { type: 'all', label: 'All', spoken: 'Show all parking' },
+    { type: 'on_street', label: 'Street', spoken: 'Show street parking' },
+    { type: 'off_street', label: 'Lot', spoken: 'Show parking lots' },
+    { type: 'residential', label: 'Permit', spoken: 'Show permit parking' },
 ];
 
 // The pills render ~29pt tall; extend the touch area to the 44pt minimum
@@ -22,123 +15,67 @@ const TYPE_FILTERS = [
 // pills are 8pt apart and already ≥48pt wide, so slop there would overlap.
 const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
 
+/**
+ * MapHeader — search first, then the parking-type chips, always in view.
+ * Dropping a search pin lives with the floating controls, in thumb reach.
+ */
 function MapHeader({
     isDetailActive,
     placingPin,
-    pinnedLocation,
-    searchMode,
-    onStartPlacing,
     filterType,
     setFilterType,
     onPlaceSelected,
+    onSearchResultsChange,
 }) {
-    const [filtersExpanded, setFiltersExpanded] = useState(false);
+    const [resultsOpen, setResultsOpen] = useState(false);
 
-    const handleFilterPress = useCallback((type) => {
-        setFilterType(type);
-    }, [setFilterType]);
+    const handleResultsVisibleChange = useCallback((open) => {
+        setResultsOpen(open);
+        onSearchResultsChange?.(open);
+    }, [onSearchResultsChange]);
 
-    const toggleFilters = useCallback(() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setFiltersExpanded(prev => !prev);
-    }, []);
-
-    // Only the type filter contributes to the badge now — the radius lives on
-    // the map as an always-visible control, so it is never "hidden" state.
-    const activeFilterCount = filterType !== 'all' ? 1 : 0;
-
-    // Quick actions are suppressed while a detail card is open or while the
-    // user is placing the search pin (the placement panel owns the screen then).
-    const quickActionsMuted = isDetailActive || placingPin;
-    const hasPin = !!pinnedLocation;
+    // The chips step aside while a card is open, the pin is being placed, or
+    // search results are showing. They fade but keep their space, so the
+    // header — and the map padding measured from it — never reflows.
+    const chipsMuted = isDetailActive || placingPin || resultsOpen;
 
     return (
         <View style={styles.headerBar}>
-            {/* Quick actions row — filter + pin buttons sit above the search
-                bar, right-aligned. */}
-            <View
-                style={[
-                    styles.quickActions,
-                    quickActionsMuted && styles.quickActionsHidden,
-                ]}
-                pointerEvents={quickActionsMuted ? 'none' : 'auto'}
-                accessibilityElementsHidden={quickActionsMuted}
-                importantForAccessibility={quickActionsMuted ? 'no-hide-descendants' : 'auto'}
-            >
-                {/* Filter toggle */}
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.quickAction,
-                        filtersExpanded && styles.quickActionActive,
-                        pressed && styles.quickActionPressed,
-                    ]}
-                    onPress={toggleFilters}
-                    accessibilityRole="button"
-                    accessibilityLabel={filtersExpanded ? 'Hide filters' : 'Show filters'}
-                >
-                    <MaterialCommunityIcons
-                        name="tune-vertical"
-                        size={20}
-                        color={filtersExpanded ? TOKENS.onPrimary : TOKENS.primaryAlt}
-                    />
-                    {activeFilterCount > 0 && !filtersExpanded && (
-                        <View style={styles.filterBadge}>
-                            <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                        </View>
-                    )}
-                </Pressable>
-
-                {/* Set / move search pin — enters the reticle placement flow. */}
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.quickAction,
-                        hasPin && searchMode === 'pinned' && styles.quickActionActive,
-                        pressed && styles.quickActionPressed,
-                    ]}
-                    onPress={onStartPlacing}
-                    accessibilityRole="button"
-                    accessibilityLabel={hasPin ? 'Move search pin' : 'Set a search location'}
-                >
-                    <MaterialCommunityIcons
-                        name={hasPin ? 'map-marker' : 'map-marker-plus'}
-                        size={20}
-                        color={hasPin && searchMode === 'pinned' ? TOKENS.onPrimary : TOKENS.primaryAlt}
-                    />
-                </Pressable>
-            </View>
-
-            {/* Search bar — full width, below the quick actions. */}
             <PlacesSearchBar
                 onPlaceSelected={onPlaceSelected}
+                onResultsVisibleChange={handleResultsVisibleChange}
                 style={styles.searchContainer}
             />
 
-            {/* Expandable filters — parking type only */}
-            {filtersExpanded && !isDetailActive && (
-                <View style={styles.filtersInline}>
-                    {TYPE_FILTERS.map(f => (
+            <View
+                style={[styles.typeChips, chipsMuted && styles.typeChipsMuted]}
+                pointerEvents={chipsMuted ? 'none' : 'auto'}
+                accessibilityElementsHidden={chipsMuted}
+                importantForAccessibility={chipsMuted ? 'no-hide-descendants' : 'auto'}
+            >
+                {TYPE_FILTERS.map((f) => {
+                    const isActive = filterType === f.type;
+                    return (
                         <Pressable
                             key={f.type}
                             style={({ pressed }) => [
                                 styles.miniChip,
-                                filterType === f.type && styles.miniChipActive,
+                                isActive && styles.miniChipActive,
                                 pressed && styles.filterChipPressed,
                             ]}
-                            onPress={() => handleFilterPress(f.type)}
+                            onPress={() => setFilterType(f.type)}
                             hitSlop={CHIP_HIT_SLOP}
                             accessibilityRole="button"
-                            accessibilityState={{ selected: filterType === f.type }}
+                            accessibilityLabel={f.spoken}
+                            accessibilityState={{ selected: isActive }}
                         >
-                            <Text style={[
-                                styles.miniChipText,
-                                filterType === f.type && styles.miniChipTextActive,
-                            ]}>
+                            <Text style={[styles.miniChipText, isActive && styles.miniChipTextActive]}>
                                 {f.label}
                             </Text>
                         </Pressable>
-                    ))}
-                </View>
-            )}
+                    );
+                })}
+            </View>
         </View>
     );
 }

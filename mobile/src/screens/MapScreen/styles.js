@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // ===== Floating header — single compact bar =====
+    // ===== Floating header — search, then type chips =====
     topNavigation: {
         position: 'absolute',
         top: 0,
@@ -22,15 +22,15 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingBottom: 8,
         zIndex: 1000,
-        // Android: without elevation, taps on the header (search + quick
-        // actions) can fall through to the underlying MapView SurfaceView.
+        // Android: without elevation, taps on the header (search + chips)
+        // can fall through to the underlying MapView SurfaceView.
         // Must be >= any child's elevation so the whole header is a single
         // touch target from Android's compositor perspective.
         elevation: 10,
     },
 
-    // No containing slab — the search pill, circular buttons, and filter
-    // pills each float directly over the map with their own quiet surface.
+    // No containing slab — the search pill and the chips each float
+    // directly over the map with their own quiet surface.
     headerBar: {
         gap: 8,
     },
@@ -39,75 +39,17 @@ export const styles = StyleSheet.create({
         width: '100%',
     },
 
-    quickActions: {
+    // Parking-type chips: always in view, left-aligned under the search
+    // text so the two read as one column.
+    typeChips: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 8,
-    },
-
-    // Used to fade out the quick actions while keeping them mounted, so we
-    // never reflow the header layout mid-animation.
-    quickActionsHidden: {
-        opacity: 0,
-    },
-
-    quickAction: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: TOKENS.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-
-    quickActionActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
-
-    quickActionPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
-    },
-
-    // Small count badge on the filter button
-    filterBadge: {
-        position: 'absolute',
-        top: 1,
-        right: 1,
-        minWidth: 16,
-        height: 16,
-        paddingHorizontal: 4,
-        borderRadius: 8,
-        backgroundColor: TOKENS.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1.5,
-        borderColor: TOKENS.surface,
-    },
-
-    filterBadgeText: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: TOKENS.onPrimary,
-        letterSpacing: -0.2,
-    },
-
-    // Inline filter pills (expandable) — right-aligned so they read as
-    // belonging to the filter button that opened them.
-    filtersInline: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: 8,
         flexWrap: 'wrap',
+        gap: 8,
+    },
+
+    // Faded, not removed, so the header never reflows.
+    typeChipsMuted: {
+        opacity: 0,
     },
 
     miniChip: {
@@ -203,13 +145,38 @@ export const styles = StyleSheet.create({
         marginTop: -2,
     },
 
-    // ===== FABs =====
+    // ===== Floating controls — bottom-right, in thumb reach =====
     fabContainer: {
         position: 'absolute',
         right: 16,
         bottom: SHEET_MIN_HEIGHT + 16,
+        alignItems: 'flex-end',
         gap: 10,
         zIndex: 500,
+    },
+
+    // "Drop pin": a labeled pill, quieter than the solid recenter button.
+    pinPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minHeight: 44,
+        paddingHorizontal: 16,
+        borderRadius: 999,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+        shadowColor: TOKENS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+
+    pinPillText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primary,
     },
 
     fab: {
@@ -221,7 +188,6 @@ export const styles = StyleSheet.create({
         borderColor: TOKENS.hairline,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
     },
 
     fabPrimary: {
