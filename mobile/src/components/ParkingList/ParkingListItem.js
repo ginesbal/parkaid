@@ -25,7 +25,7 @@ import { getAccess, getMaxStay, getPriceInfo, getSpotType, parseAddress } from '
 const PRICE_TONE = {
     text: TOKENS.text,
     success: TOKENS.success,
-    warning: TOKENS.warning,
+    warning: TOKENS.warningInk, // "Residents" — the base amber is 3.3:1
     danger: TOKENS.danger,
     muted: TOKENS.textMuted,
 };

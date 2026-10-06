@@ -30,7 +30,7 @@ export const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     statusTextWarning: {
-        color: TOKENS.warning,
+        color: TOKENS.warningInk,
     },
     statusTextDanger: {
         color: TOKENS.danger,

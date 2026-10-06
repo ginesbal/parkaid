@@ -85,7 +85,7 @@ export const styles = StyleSheet.create({
     },
     quickInfoMetaLabel: {
         fontSize: 11,
-        color: TOKENS.textLight,
+        color: TOKENS.textMuted,
         fontWeight: '600',
     },
     quickInfoMetaValue: {

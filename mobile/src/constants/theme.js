@@ -93,12 +93,17 @@ export const TOKENS = {
     accent: PALETTE.cerulean[500],
     accentAlt: PALETTE.cerulean[400],
 
-    // semantic — single value each, no ramps
+    // semantic — base hue for dots, fills, borders and large text.
+    // The *Ink variants are for small/medium TEXT, where the base hue falls
+    // short of WCAG AA: warning is 3.3:1 on white, danger 4.4:1 on its soft
+    // banner. Ink keeps the hue but darkens it to pass on both grounds.
     danger: '#B5524A',
+    dangerInk: '#9E4038',      // 6.5:1 on white, 5.8:1 on dangerSoft
     dangerSoft: 'rgba(181, 82, 74, 0.08)',
-    success: '#2C7A6B',
+    success: '#2C7A6B',        // 5.1:1 on white — already passes as text
     successSoft: 'rgba(44, 122, 107, 0.08)',
     warning: '#B8832D',
+    warningInk: '#8F6418',     // 5.2:1 on white, 4.8:1 on warningSoft
     warningSoft: 'rgba(184, 131, 45, 0.08)',
 
     shadow: '#0F1A26',

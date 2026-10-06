@@ -195,7 +195,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statusLabelFree: { color: TOKENS.success },
-  statusLabelPaid: { color: TOKENS.warning },
+  statusLabelPaid: { color: TOKENS.warningInk },
   statusDetail: {
     fontSize: 15,
     fontWeight: '400',

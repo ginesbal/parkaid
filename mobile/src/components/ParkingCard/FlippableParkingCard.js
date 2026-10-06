@@ -312,13 +312,14 @@ function FlippableParkingCard({
                                 <MaterialCommunityIcons
                                     name={access.icon}
                                     size={24}
-                                    color={access.tone === 'danger' ? TOKENS.danger : TOKENS.warning}
+                                    color={access.tone === 'danger' ? TOKENS.dangerInk : TOKENS.warningInk}
                                 />
                                 <View style={styles.accessTextWrap}>
                                     <Text
                                         style={[
                                             styles.accessLabel,
-                                            { color: access.tone === 'danger' ? TOKENS.danger : TOKENS.warning },
+                                            // Ink tones: the base hues fail AA on the soft banner.
+                                            { color: access.tone === 'danger' ? TOKENS.dangerInk : TOKENS.warningInk },
                                         ]}
                                     >
                                         {access.label}
