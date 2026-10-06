@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { TOKENS, alpha } from '../../../constants/theme';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 
 const HEAD = 34;
 const STEM = 16;
@@ -19,9 +20,12 @@ const HALF = HEAD / 2;
  * settles (`lift` -> 0); the shadow stays pinned to the ground point.
  */
 function MapReticle({ lift, x, y }) {
-    const translateY = lift.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
-    const shadowScale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
-    const shadowOpacity = lift.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0.08] });
+    // Reduce Motion: the pin stays planted on its point while the map moves.
+    const reduceMotion = useReducedMotion();
+    const travel = reduceMotion ? 0 : -16;
+    const translateY = lift.interpolate({ inputRange: [0, 1], outputRange: [0, travel] });
+    const shadowScale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, reduceMotion ? 1 : 0.55] });
+    const shadowOpacity = lift.interpolate({ inputRange: [0, 1], outputRange: [0.22, reduceMotion ? 0.22 : 0.08] });
 
     return (
         <View pointerEvents="none" style={styles.layer}>

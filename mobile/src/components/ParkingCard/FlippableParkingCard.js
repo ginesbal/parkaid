@@ -11,6 +11,7 @@ import {
     View
 } from 'react-native';
 import { TOKENS } from '../../constants/theme';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { logger } from '../../utils/loggers';
 import {
     getAccess,
@@ -45,6 +46,9 @@ function FlippableParkingCard({
     onNavigate = () => { },
 }) {
     const [isFlipped, setIsFlipped] = useState(false);
+    // With Reduce Motion on, the 180° 3D flip becomes a crossfade and the
+    // entrance/exit drop their scale and slide — fades only.
+    const reduceMotion = useReducedMotion();
 
     const flipAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.96)).current;
@@ -70,43 +74,57 @@ function FlippableParkingCard({
 
             logger.logSpotData(spot, 'FlippableParkingCard opened');
 
-            Animated.parallel([
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    tension: 60,
-                    friction: 8,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(translateYAnim, {
-                    toValue: 0,
-                    tension: 70,
-                    friction: 9,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 220,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+            const fadeIn = Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 220,
+                useNativeDriver: true,
+            });
+
+            if (reduceMotion) {
+                scaleAnim.setValue(1);
+                translateYAnim.setValue(0);
+                fadeIn.start();
+            } else {
+                Animated.parallel([
+                    Animated.spring(scaleAnim, {
+                        toValue: 1,
+                        tension: 60,
+                        friction: 8,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(translateYAnim, {
+                        toValue: 0,
+                        tension: 70,
+                        friction: 9,
+                        useNativeDriver: true,
+                    }),
+                    fadeIn,
+                ]).start();
+            }
         } else if (!visible) {
-            Animated.parallel([
-                Animated.timing(scaleAnim, {
-                    toValue: 0.98,
-                    duration: 180,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(translateYAnim, {
-                    toValue: 14,
-                    duration: 180,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(fadeAnim, {
-                    toValue: 0,
-                    duration: 180,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+            const fadeOut = Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 180,
+                useNativeDriver: true,
+            });
+
+            if (reduceMotion) {
+                fadeOut.start();
+            } else {
+                Animated.parallel([
+                    Animated.timing(scaleAnim, {
+                        toValue: 0.98,
+                        duration: 180,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(translateYAnim, {
+                        toValue: 14,
+                        duration: 180,
+                        useNativeDriver: true,
+                    }),
+                    fadeOut,
+                ]).start();
+            }
             clearTimeout(resetTimerRef.current);
             resetTimerRef.current = setTimeout(() => {
                 resetTimerRef.current = null;
@@ -116,16 +134,16 @@ function FlippableParkingCard({
                 translateYAnim.setValue(12);
             }, 200);
         }
-    }, [fadeAnim, flipAnim, scaleAnim, spot, translateYAnim, visible]);
+    }, [fadeAnim, flipAnim, reduceMotion, scaleAnim, spot, translateYAnim, visible]);
 
     const flip = () => {
         const toValue = isFlipped ? 0 : 1;
-        Animated.spring(flipAnim, {
-            toValue,
-            tension: 65,
-            friction: 9,
-            useNativeDriver: true,
-        }).start();
+        // Reduced motion: a short crossfade (the face opacities already key
+        // off flipAnim) with no rotation applied — see the face transforms.
+        const animation = reduceMotion
+            ? Animated.timing(flipAnim, { toValue, duration: 200, useNativeDriver: true })
+            : Animated.spring(flipAnim, { toValue, tension: 65, friction: 9, useNativeDriver: true });
+        animation.start();
         setIsFlipped(!isFlipped);
     };
 
@@ -224,7 +242,7 @@ function FlippableParkingCard({
                         styles.cardFront,
                         {
                             opacity: frontOpacity,
-                            transform: [{ perspective: 1000 }, { rotateY: frontRotateY }],
+                            transform: reduceMotion ? [] : [{ perspective: 1000 }, { rotateY: frontRotateY }],
                         },
                     ]}
                     pointerEvents={isFlipped ? 'none' : 'auto'}
@@ -388,7 +406,7 @@ function FlippableParkingCard({
                         styles.cardBack,
                         {
                             opacity: backOpacity,
-                            transform: [{ perspective: 1000 }, { rotateY: backRotateY }],
+                            transform: reduceMotion ? [] : [{ perspective: 1000 }, { rotateY: backRotateY }],
                         },
                     ]}
                     pointerEvents={isFlipped ? 'auto' : 'none'}

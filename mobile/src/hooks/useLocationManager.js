@@ -55,7 +55,7 @@ export const useLocationManager = () => {
                         newLocation.name = address.district || address.city || 'Current Location';
                     }
                 } catch (error) {
-                    console.log('Reverse geocoding failed:', error);
+                    if (__DEV__) console.log('Reverse geocoding failed:', error);
                 }
                 
                 setLocation(newLocation);

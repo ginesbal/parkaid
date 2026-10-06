@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     // Emil: "Buttons must feel responsive. Add scale(0.97) on active."
     clearButtonPressed: {
         transform: [{ scale: 0.97 }],
-        opacity: 0.8,
+        opacity: 0.9,
     },
     clearButtonText: {
         fontSize: 13,

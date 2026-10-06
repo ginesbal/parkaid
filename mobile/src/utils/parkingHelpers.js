@@ -41,12 +41,14 @@ export const formatPrice = (price) => {
     return price;
 };
 
-// format distance label in full words ("250 meters", "1.2 kilometers")
+// format distance label in full words ("250 meters", "1.5 kilometers").
+// Whole kilometers drop the decimal — "2 kilometers", not "2.0 kilometers".
 export const getDistanceLabel = (meters) => {
     if (!meters && meters !== 0) return '—';
     if (meters < 1000) return `${meters} ${meters === 1 ? 'meter' : 'meters'}`;
-    const km = (meters / 1000).toFixed(1);
-    return `${km} ${km === '1.0' ? 'kilometer' : 'kilometers'}`;
+    // Strip ".0" after rounding, so 1999 m also reads "2 kilometers".
+    const text = (meters / 1000).toFixed(1).replace(/\.0$/, '');
+    return `${text} ${text === '1' ? 'kilometer' : 'kilometers'}`;
 };
 
 // calculate walking time from distance

@@ -42,7 +42,7 @@ class ParkingAPI {
 
       // return cached data if within TTL or offline
       if (age < maxAge || !this.isOnline) {
-        console.log(`Cache hit for ${key} (age: ${Math.round(age / 1000)}s)`);
+        if (__DEV__) console.log(`Cache hit for ${key} (age: ${Math.round(age / 1000)}s)`);
         return data;
       }
 
@@ -83,7 +83,7 @@ class ParkingAPI {
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
-      console.log(`Fetching: ${url}`);
+      if (__DEV__) console.log(`Fetching: ${url}`);
 
       const response = await fetch(url, {
         method: options.method || 'GET',
@@ -124,7 +124,7 @@ class ParkingAPI {
       // try to get stale cache data
       const staleCache = await this.getCache(cacheKey, OFFLINE_TTL);
       if (staleCache) {
-        console.log('Using stale cache due to network error');
+        if (__DEV__) console.log('Using stale cache due to network error');
         return staleCache;
       }
 
