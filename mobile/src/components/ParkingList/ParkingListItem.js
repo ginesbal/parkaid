@@ -10,7 +10,7 @@
 // walk and what will it cost", so those two numbers anchor the row instead.
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import {
     Animated,
     Pressable,
@@ -34,7 +34,10 @@ const PRICE_TONE = {
 // Short, plain-language labels for spots that aren't public parking.
 const ACCESS_LABEL = { residents: 'Residents', no_parking: 'No stopping' };
 
-export default function ParkingListItem({
+// Memoized: lists re-render on every selection, refresh or load flag, but a
+// row only needs to when its spot or selection changes. Callers pass a stable
+// `onPress`, which is called with the spot.
+function ParkingListItem({
     spot,
     onPress,
     isSelected = false,
@@ -174,6 +177,8 @@ export default function ParkingListItem({
         </Animated.View>
     );
 }
+
+export default memo(ParkingListItem);
 
 const styles = StyleSheet.create({
     row: {

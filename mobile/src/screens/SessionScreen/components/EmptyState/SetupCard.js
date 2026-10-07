@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import { DURATION_OPTIONS } from '../../../../constants/session';
 import { TOKENS } from '../../../../constants/theme';
+import { useMinuteClock } from '../../../../hooks/useMinuteClock';
 import { WARNING_LEAD_MINUTES } from '../../../../services/timerReminders';
 import { formatEndTime, formatMoney } from '../../../../utils/formatters';
 import { calculateCost } from '../../../../utils/sessionHelpers';
@@ -29,7 +30,10 @@ const SetupCard = ({
     reminderStatus,
 }) => {
     const maxStay = timerSpot?.maxStayMinutes ?? null;
-    const endsAt = new Date(Date.now() + selectedDuration * 60000);
+    // Shown to the minute, so a once-a-minute clock keeps it current while
+    // the setup sits open (the timer's per-second tick only runs mid-timer).
+    const now = useMinuteClock();
+    const endsAt = new Date(now + selectedDuration * 60000);
     // An upper bound: the spot may be free for part of the time.
     const cost = timerSpot?.hourlyRate ? calculateCost(selectedDuration, timerSpot.hourlyRate) : null;
     // Say when the reminder comes, unless it can't: notifications are off

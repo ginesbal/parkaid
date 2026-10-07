@@ -120,11 +120,14 @@ export const useSessionManager = () => {
         return () => subscription?.remove?.();
     }, [setReminderStatus]);
 
-    // tick every second
+    // Tick every second — but only while a timer runs. The Park tab is always
+    // mounted, so an idle tick would wake the app every second for nothing.
+    const hasSession = Boolean(session);
     useEffect(() => {
+        if (!hasSession) return undefined;
         const interval = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [hasSession]);
 
     // The undo offer is short-lived, like a toast.
     useEffect(() => {

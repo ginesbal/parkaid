@@ -103,7 +103,9 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Map');
   };
 
-  const handleSpotPress = (spot) => {
+  // Stable, and called by the row with its spot — so memoized rows don't
+  // re-render every time Home does.
+  const handleSpotPress = useCallback((spot) => {
     logger.log('spot_selected_from_home', {
       spotId: spot?.id,
       address: spot?.address
@@ -113,7 +115,7 @@ export default function HomeScreen({ navigation }) {
       initialSpot: spot,
       fromList: true,
     });
-  };
+  }, [navigation]);
 
   // The empty state's next step. Widen first — keeping the user's type
   // filter — and only once at the widest radius offer to clear the filter.
@@ -201,7 +203,7 @@ export default function HomeScreen({ navigation }) {
     <View style={isUpdating ? listStyles.updating : null}>
       <ParkingList.Item
         spot={item}
-        onPress={() => handleSpotPress(item)}
+        onPress={handleSpotPress}
         fadeAnim={fadeAnim}
         slideAnim={slideAnim}
       />

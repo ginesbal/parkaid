@@ -58,7 +58,6 @@ const ParkingBottomSheet = memo(forwardRef(({
     loading = false,
     error = null,
     onRetry,
-    getCurrentPrice,
     onItemPress,
     onClearPin,
     onPeekHeightChange,
@@ -273,14 +272,16 @@ const ParkingBottomSheet = memo(forwardRef(({
         })
     ).current;
 
+    // Rows are memoized and get the stable `onItemPress` itself (they call it
+    // with their spot), so a selection change re-renders just the two rows
+    // whose `isSelected` flips.
     const renderItem = useCallback(({ item }) => (
         <ParkingListItem
             spot={item}
-            price={getCurrentPrice(item)}
             isSelected={selectedSpot?.id === item.id}
-            onPress={() => onItemPress(item)}
+            onPress={onItemPress}
         />
-    ), [getCurrentPrice, onItemPress, selectedSpot?.id]);
+    ), [onItemPress, selectedSpot?.id]);
 
     // The title is the one line always visible in the peek, so it carries the
     // load state too — "0 spots nearby" while loading or offline would read

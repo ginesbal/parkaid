@@ -37,7 +37,6 @@ import ParkingBottomSheet from './components/ParkingBottomSheet';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, SHEET_BOTTOM_OFFSET } from './constants';
 import { styles } from './styles';
 import { centerCamera, getMarkerScreenPosition } from './utils/camera';
-import { getCurrentPrice } from './utils/pricing';
 
 function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
@@ -653,7 +652,6 @@ function MapScreen({ route, navigation }) {
                 loading={spotsLoading}
                 error={spotsError}
                 onRetry={handleRetry}
-                getCurrentPrice={getCurrentPrice}
                 onPeekHeightChange={setSheetPeekHeight}
                 containerHeight={containerHeight}
                 topInset={navigationHeight}

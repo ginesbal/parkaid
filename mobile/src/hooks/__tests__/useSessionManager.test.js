@@ -387,3 +387,21 @@ describe('useSessionManager — switching spots', () => {
         expect(cancelTimerReminders).toHaveBeenCalled();
     });
 });
+
+describe('useSessionManager — idle cost', () => {
+    // The Park tab is always mounted; an idle per-second tick would wake the
+    // app every second for nothing.
+    it('runs no timers while no parking timer is running', async () => {
+        jest.useFakeTimers();
+        const hook = await renderTimer();
+        expect(jest.getTimerCount()).toBe(0);
+
+        await startTimer(hook);
+        expect(jest.getTimerCount()).toBe(1); // the countdown tick
+
+        await act(async () => {
+            hook.result.current.endSession({ confirm: false });
+        });
+        expect(jest.getTimerCount()).toBe(0);
+    });
+});
