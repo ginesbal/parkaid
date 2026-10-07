@@ -99,9 +99,6 @@ function ParkingListItem({
 
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            {/* Selected: a 3px primary rail on the leading edge. Selection should
-                register at a glance without tinting the whole row. */}
-            {isSelected && <View style={styles.selectedStripe} pointerEvents="none" />}
             <Pressable
                 onPress={handleRowPress}
                 onPressIn={handlePressIn}
@@ -110,6 +107,7 @@ function ParkingListItem({
                 style={[styles.row, isSelected && styles.rowSelected]}
                 accessibilityRole="button"
                 accessibilityLabel={a11yLabel}
+                accessibilityState={{ selected: isSelected }}
                 hitSlop={4}
             >
                 {/* Tier 1a — walk time, the hero metric */}
@@ -190,17 +188,9 @@ const styles = StyleSheet.create({
         gap: 10,
         backgroundColor: TOKENS.surface,
     },
+    // Selection is one quiet signal: a tint across the row (no side rail).
     rowSelected: {
-        backgroundColor: alpha(TOKENS.primary, 0.08),
-    },
-    selectedStripe: {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 3,
-        backgroundColor: TOKENS.primary,
-        zIndex: 1,
+        backgroundColor: TOKENS.primarySoft,
     },
     sectionDivider: {
         width: StyleSheet.hairlineWidth,

@@ -49,52 +49,17 @@ export const styles = StyleSheet.create({
         letterSpacing: -0.3,
     },
 
-    quickInfoBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
+    // One sentence, no slab: weight carries the numbers, not size.
+    quickInfoLine: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: TOKENS.textMuted,
         marginBottom: 10,
-        borderRadius: 14,
-        backgroundColor: TOKENS.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
     },
-    quickInfoItem: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: 6,
-        flexShrink: 1,
-    },
-    quickInfoValue: {
-        fontSize: 26,
+    quickInfoStrong: {
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: -0.7,
         fontVariant: ['tabular-nums'],
-    },
-    quickInfoLabel: {
-        fontSize: 13,
-        color: TOKENS.textMuted,
-        flexShrink: 1,
-    },
-    quickInfoMeta: {
-        alignItems: 'flex-end',
-        marginLeft: 12,
-    },
-    quickInfoMetaLabel: {
-        fontSize: 11,
-        color: TOKENS.textMuted,
-        fontWeight: '600',
-    },
-    quickInfoMetaValue: {
-        fontSize: 13,
-        color: TOKENS.primary,
-        fontWeight: '600',
-    },
-    statsRow: {
-        display: 'none',
     },
 
     filterBar: {
