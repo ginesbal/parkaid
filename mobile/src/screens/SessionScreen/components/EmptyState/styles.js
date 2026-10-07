@@ -189,6 +189,10 @@ export const styles = StyleSheet.create({
         marginVertical: 10,
     },
 
+    reminderNoteWrap: {
+        marginBottom: 16,
+    },
+
     primaryButton: {
         minHeight: 54,
         borderRadius: RADIUS.pill, // primary actions are pills app-wide

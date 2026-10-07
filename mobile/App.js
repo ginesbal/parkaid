@@ -3,9 +3,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,10 +17,12 @@ import MapScreen from './src/screens/MapScreen/index';
 import SessionScreen from './src/screens/SessionScreen/index';
 
 // services
+import { initTimerReminders, useReminderTaps } from './src/services/timerReminders';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
 
 const Tab = createBottomTabNavigator();
+const navigationRef = createNavigationContainerRef();
 const TAB_CONFIG = {
     Home: {
         label: 'Home',
@@ -46,6 +48,27 @@ function AppNavigation() {
     const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
     const tabBarHeight = 66 + tabBarBottomPadding;
 
+    // Parking reminders: show them even while the app is open, and open the
+    // Park tab when one is tapped. A tap can arrive before navigation is
+    // ready (it launched the app), so it waits for onReady.
+    useEffect(() => {
+        initTimerReminders();
+    }, []);
+    const pendingOpenParkRef = useRef(false);
+    const openPark = useCallback(() => {
+        if (navigationRef.isReady()) {
+            navigationRef.navigate('Park');
+        } else {
+            pendingOpenParkRef.current = true;
+        }
+    }, []);
+    const handleNavigationReady = useCallback(() => {
+        if (!pendingOpenParkRef.current) return;
+        pendingOpenParkRef.current = false;
+        navigationRef.navigate('Park');
+    }, []);
+    useReminderTaps(openPark);
+
     useEffect(() => {
         (async () => {
             const id = await getDeviceId();
@@ -61,7 +84,7 @@ function AppNavigation() {
     }, []);
 
     return (
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
             <Tab.Navigator
                 sceneContainerStyle={{
                     backgroundColor: TOKENS.bg,

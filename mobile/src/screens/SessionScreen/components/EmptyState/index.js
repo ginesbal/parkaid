@@ -17,6 +17,7 @@ const EmptyState = ({
     selectedDuration,
     setSelectedDuration,
     onStart,
+    reminderStatus,
 }) => {
     return (
         <ScrollView
@@ -44,6 +45,7 @@ const EmptyState = ({
                 selectedDuration={selectedDuration}
                 setSelectedDuration={setSelectedDuration}
                 onStart={onStart}
+                reminderStatus={reminderStatus}
             />
 
             {/* Honest about what this is: a reminder, not a payment. */}

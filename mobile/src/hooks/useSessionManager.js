@@ -1,12 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, AppState } from 'react-native';
 import {
     DEFAULT_DURATION,
     DURATION_OPTIONS,
     STORAGE_KEYS,
     UNDO_WINDOW_MS,
 } from '../constants/session.js';
+import {
+    cancelTimerReminders,
+    getReminderStatus,
+    scheduleTimerReminders,
+} from '../services/timerReminders';
 import { calculateCost, calculateSessionState } from '../utils/sessionHelpers';
 import { formatDuration } from '../utils/spotInfo';
 
@@ -35,23 +40,44 @@ export const useSessionManager = () => {
     // The most recent "Add time", kept briefly so it can be undone in place.
     const [lastExtension, setLastExtension] = useState(null);
 
+    // Whether reminders can reach the user: 'granted' | 'denied' |
+    // 'undetermined' (not asked yet) | 'unsupported' (web) — null until known.
+    // Mirrored in a ref so saving a timer can read it without re-creating
+    // every action that saves.
+    const [reminderStatus, setReminderStatusState] = useState(null);
+    const reminderStatusRef = useRef(null);
+    const setReminderStatus = useCallback((status) => {
+        reminderStatusRef.current = status;
+        setReminderStatusState(status);
+    }, []);
+    const sessionRef = useRef(null);
+
     // load the running timer from storage on mount
     const loadSession = useCallback(async () => {
         try {
             const raw = await AsyncStorage.getItem(STORAGE_KEYS.SESSION);
-            setSession(raw ? JSON.parse(raw) : null);
+            const stored = raw ? JSON.parse(raw) : null;
+            sessionRef.current = stored;
+            setSession(stored);
             setNow(Date.now());
+            return stored;
         } catch (error) {
             console.error('Failed to load timer:', error);
             setSession(null);
+            return null;
         }
     }, []);
 
+    // The single place a timer is saved — so it's also the single place its
+    // reminders follow along: rescheduled when the timer changes (start, Add
+    // time, Undo), cancelled when it ends.
     const saveSession = useCallback(async (sessionData) => {
         try {
+            sessionRef.current = sessionData || null;
             if (!sessionData) {
                 await AsyncStorage.removeItem(STORAGE_KEYS.SESSION);
                 setSession(null);
+                cancelTimerReminders();
                 return;
             }
             await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(sessionData));
@@ -59,14 +85,40 @@ export const useSessionManager = () => {
             // `now` only ticks once a second; without this a fresh 1-hour
             // timer reads 01:00:01 (and "1 hour 1 minute") until the next tick.
             setNow(Date.now());
+            if (reminderStatusRef.current === 'granted') scheduleTimerReminders(sessionData);
         } catch (error) {
             console.error('Failed to save timer:', error);
         }
     }, []);
 
+    // On launch: restore the timer, check (never ask) whether reminders are
+    // allowed, and re-sync them — so the phone's schedule matches the timer.
     useEffect(() => {
-        loadSession();
-    }, [loadSession]);
+        let active = true;
+        (async () => {
+            const stored = await loadSession();
+            const status = await getReminderStatus();
+            if (!active) return;
+            setReminderStatus(status);
+            if (status === 'granted' && stored) scheduleTimerReminders(stored);
+        })();
+        return () => {
+            active = false;
+        };
+    }, [loadSession, setReminderStatus]);
+
+    // Back from Settings with notifications newly turned on (or off): pick it
+    // up, and schedule the running timer's reminders if they're now allowed.
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', async (state) => {
+            if (state !== 'active') return;
+            const status = await getReminderStatus();
+            if (status === reminderStatusRef.current) return;
+            setReminderStatus(status);
+            if (status === 'granted' && sessionRef.current) scheduleTimerReminders(sessionRef.current);
+        });
+        return () => subscription?.remove?.();
+    }, [setReminderStatus]);
 
     // tick every second
     useEffect(() => {
@@ -144,16 +196,27 @@ export const useSessionManager = () => {
 
         const start = new Date();
         const end = new Date(start.getTime() + minutes * 60000);
-
-        await saveSession({
+        const started = {
             id: `timer_${start.getTime()}`,
             startedAt: start.toISOString(),
             scheduledEnd: end.toISOString(),
             duration: minutes, // planned minutes from the start; grows with "Add time"
             spot: timerSpot,
-        });
+        };
+
+        await saveSession(started);
         setLastExtension(null);
-    }, [selectedDuration, timerSpot, saveSession]);
+
+        // Ask for notifications here, once the timer is already running —
+        // the moment the reason is obvious. Declining never stops the timer.
+        if (reminderStatusRef.current !== 'granted') {
+            const status = await getReminderStatus({ ask: true });
+            setReminderStatus(status);
+            if (status === 'granted' && sessionRef.current?.id === started.id) {
+                scheduleTimerReminders(started);
+            }
+        }
+    }, [selectedDuration, timerSpot, saveSession, setReminderStatus]);
 
     // Adds time immediately and offers an inline undo — no confirm dialog.
     // Returns null when the amount is invalid or would pass the spot's limit.
@@ -229,6 +292,7 @@ export const useSessionManager = () => {
         remainingAllowance, // minutes still allowed by the spot's limit, or null
         canExtendBy,
         lastExtension,
+        reminderStatus,
 
         // actions
         startSession,

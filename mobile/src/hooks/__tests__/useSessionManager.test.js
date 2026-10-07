@@ -1,6 +1,11 @@
 import { act, renderHook } from '@testing-library/react-hooks';
-import { Alert } from 'react-native';
-import { UNDO_WINDOW_MS } from '../../constants/session';
+import { Alert, AppState } from 'react-native';
+import { STORAGE_KEYS, UNDO_WINDOW_MS } from '../../constants/session';
+import {
+    cancelTimerReminders,
+    getReminderStatus,
+    scheduleTimerReminders,
+} from '../../services/timerReminders';
 import { fitDurationToLimit, useSessionManager } from '../useSessionManager';
 
 const mockStore = {};
@@ -17,6 +22,13 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 jest.mock('react-native', () => ({
     Alert: { alert: jest.fn() },
+    AppState: { addEventListener: jest.fn(() => ({ remove: jest.fn() })) },
+}));
+
+jest.mock('../../services/timerReminders', () => ({
+    getReminderStatus: jest.fn(),
+    scheduleTimerReminders: jest.fn(async () => {}),
+    cancelTimerReminders: jest.fn(async () => {}),
 }));
 
 // A metered spot as the map hands it over (see getTimerSpot).
@@ -56,6 +68,8 @@ function moveClockTo(isoTime) {
 beforeEach(() => {
     Object.keys(mockStore).forEach((key) => delete mockStore[key]);
     jest.clearAllMocks();
+    getReminderStatus.mockReset();
+    getReminderStatus.mockResolvedValue('granted');
 });
 
 afterEach(() => {
@@ -264,5 +278,98 @@ describe('useSessionManager — ending a timer', () => {
         });
         expect(Alert.alert).not.toHaveBeenCalled();
         expect(hook.result.current.session).toBeNull();
+    });
+});
+
+describe('useSessionManager — reminders follow the timer', () => {
+    it('schedules reminders when a timer starts', async () => {
+        const hook = await renderTimer();
+        await startTimer(hook, { spot: METERED_SPOT });
+
+        expect(scheduleTimerReminders).toHaveBeenLastCalledWith(hook.result.current.session);
+        expect(hook.result.current.reminderStatus).toBe('granted');
+    });
+
+    it('reschedules after Add time and after Undo', async () => {
+        const hook = await renderTimer();
+        await startTimer(hook);
+        const original = hook.result.current.session;
+
+        await act(async () => {
+            await hook.result.current.extendSession(15);
+        });
+        expect(scheduleTimerReminders).toHaveBeenLastCalledWith(hook.result.current.session);
+        expect(scheduleTimerReminders.mock.calls.at(-1)[0].scheduledEnd).not.toBe(original.scheduledEnd);
+
+        await act(async () => {
+            await hook.result.current.undoExtension();
+        });
+        expect(scheduleTimerReminders).toHaveBeenLastCalledWith(original);
+    });
+
+    it('cancels reminders when the timer ends', async () => {
+        const hook = await renderTimer();
+        await startTimer(hook);
+
+        act(() => hook.result.current.endSession());
+        const buttons = Alert.alert.mock.calls[0][2];
+        await act(async () => {
+            await buttons.find((button) => button.style === 'destructive').onPress();
+        });
+        expect(cancelTimerReminders).toHaveBeenCalled();
+    });
+
+    it('asks for notifications on Start, never on launch', async () => {
+        getReminderStatus.mockResolvedValueOnce('undetermined').mockResolvedValueOnce('granted');
+        const hook = await renderTimer();
+        expect(getReminderStatus).toHaveBeenCalledTimes(1);
+        expect(getReminderStatus).toHaveBeenLastCalledWith();
+        expect(hook.result.current.reminderStatus).toBe('undetermined');
+
+        await startTimer(hook);
+        expect(getReminderStatus).toHaveBeenLastCalledWith({ ask: true });
+        expect(hook.result.current.reminderStatus).toBe('granted');
+        expect(scheduleTimerReminders).toHaveBeenCalledWith(hook.result.current.session);
+    });
+
+    it('keeps the timer running when notifications are declined', async () => {
+        getReminderStatus.mockResolvedValueOnce('undetermined').mockResolvedValueOnce('denied');
+        const hook = await renderTimer();
+        await startTimer(hook);
+
+        expect(hook.result.current.session).not.toBeNull();
+        expect(hook.result.current.reminderStatus).toBe('denied');
+        expect(scheduleTimerReminders).not.toHaveBeenCalled();
+    });
+
+    it('re-syncs reminders on launch for a timer that is still running', async () => {
+        const stored = {
+            id: 'timer_1',
+            startedAt: new Date(Date.now() - 10 * 60000).toISOString(),
+            scheduledEnd: new Date(Date.now() + 50 * 60000).toISOString(),
+            duration: 60,
+            spot: null,
+        };
+        mockStore[STORAGE_KEYS.SESSION] = JSON.stringify(stored);
+
+        await renderTimer();
+        expect(scheduleTimerReminders).toHaveBeenCalledWith(stored);
+    });
+
+    it('picks up notifications turned on in Settings', async () => {
+        getReminderStatus.mockResolvedValueOnce('undetermined').mockResolvedValueOnce('denied');
+        const hook = await renderTimer();
+        await startTimer(hook);
+        expect(scheduleTimerReminders).not.toHaveBeenCalled();
+
+        // Back from Settings with notifications on.
+        getReminderStatus.mockResolvedValueOnce('granted');
+        const onAppStateChange = AppState.addEventListener.mock.calls[0][1];
+        await act(async () => {
+            await onAppStateChange('active');
+        });
+
+        expect(hook.result.current.reminderStatus).toBe('granted');
+        expect(scheduleTimerReminders).toHaveBeenCalledWith(hook.result.current.session);
     });
 });

@@ -2,6 +2,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
+import { WARNING_LEAD_MINUTES } from '../../../../services/timerReminders';
+import { formatEndTime } from '../../../../utils/formatters';
+import ReminderNote from '../shared/ReminderNote';
 import StatusBadge from '../shared/StatusBadge';
 import QuickExtend from './QuickExtend';
 import SessionDetails from './SessionDetails';
@@ -26,11 +29,22 @@ const ActiveSession = ({
     remainingAllowance,
     canExtendBy,
     lastExtension,
+    reminderStatus,
     onExtend,
     onUndoExtend,
     onEnd,
 }) => {
     const isExpired = sessionState === 'expired';
+
+    // Reassurance at the anxious moment: when the reminder will come. More
+    // than ten minutes left means the heads-up is still ahead.
+    let reminderLine = null;
+    if (reminderStatus === 'granted' && !isExpired && endTime) {
+        reminderLine = sessionState === 'active'
+            ? `You'll get a reminder at ${formatEndTime(new Date(endTime.getTime() - WARNING_LEAD_MINUTES * 60000))}, ${WARNING_LEAD_MINUTES} minutes before it ends.`
+            : "You'll get a reminder when time's up.";
+    }
+    const footnote = [reminderLine, "This timer doesn't pay for parking."].filter(Boolean).join(' ');
 
     // Say it when the timer crosses into its last ten minutes, or runs out,
     // while this screen is open. (Android reads the live region below.)
@@ -63,6 +77,12 @@ const ActiveSession = ({
                     endTime={endTime}
                     estimatedCost={estimatedCost}
                 />
+
+                {reminderStatus === 'denied' && !isExpired ? (
+                    <View style={styles.reminderNoteWrap}>
+                        <ReminderNote text="Notifications are off, so you won't be reminded when the app is closed." />
+                    </View>
+                ) : null}
 
                 {isExpired ? (
                     <View style={styles.expiredSection} accessibilityLiveRegion="polite">
@@ -103,9 +123,7 @@ const ActiveSession = ({
                     </Pressable>
                 ) : null}
 
-                <Text style={styles.footnote}>
-                    A reminder only — this doesn't pay for parking.
-                </Text>
+                <Text style={styles.footnote}>{footnote}</Text>
             </ScrollView>
         </>
     );

@@ -30,6 +30,15 @@ export default {
       },
       package: "com.parkaid.app"
     },
+
+    plugins: [
+      // Reminders are local, so drop the push entitlement expo-notifications
+      // adds. It must come first: plugin changes apply in reverse list order.
+      "./plugins/withoutPushEntitlement",
+      // Local parking reminders. The color tints Android notifications once
+      // the committed android/ project is regenerated (npx expo prebuild).
+      ["expo-notifications", { color: "#1d6d8b" }]
+    ],
     web: {
       favicon: "src/utils/assets/favicon.png",
       bundler: "metro",

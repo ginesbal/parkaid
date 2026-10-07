@@ -110,6 +110,11 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
 
+    reminderNoteWrap: {
+        marginHorizontal: 20,
+        marginTop: 16,
+    },
+
     sectionTitle: {
         fontSize: 13,
         fontWeight: '600',

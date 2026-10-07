@@ -24,6 +24,7 @@ export default function SessionScreen({ route, navigation }) {
     remainingAllowance,
     canExtendBy,
     lastExtension,
+    reminderStatus,
     startSession,
     endSession,
     extendSession,
@@ -106,6 +107,7 @@ export default function SessionScreen({ route, navigation }) {
           selectedDuration={selectedDuration}
           setSelectedDuration={setSelectedDuration}
           onStart={handleStart}
+          reminderStatus={reminderStatus}
         />
       </SafeAreaView>
     );
@@ -124,6 +126,7 @@ export default function SessionScreen({ route, navigation }) {
         remainingAllowance={remainingAllowance}
         canExtendBy={canExtendBy}
         lastExtension={lastExtension}
+        reminderStatus={reminderStatus}
         onExtend={handleExtend}
         onUndoExtend={undoExtension}
         onEnd={handleEnd}

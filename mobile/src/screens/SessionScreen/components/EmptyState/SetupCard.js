@@ -2,8 +2,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import { DURATION_OPTIONS } from '../../../../constants/session';
 import { TOKENS } from '../../../../constants/theme';
+import { WARNING_LEAD_MINUTES } from '../../../../services/timerReminders';
 import { formatEndTime, formatMoney } from '../../../../utils/formatters';
 import { calculateCost } from '../../../../utils/sessionHelpers';
+import ReminderNote from '../shared/ReminderNote';
 import { styles } from './styles';
 
 // "$3.00 per hour · 2 hours max"
@@ -24,11 +26,19 @@ const SetupCard = ({
     selectedDuration,
     setSelectedDuration,
     onStart,
+    reminderStatus,
 }) => {
     const maxStay = timerSpot?.maxStayMinutes ?? null;
     const endsAt = new Date(Date.now() + selectedDuration * 60000);
     // An upper bound: the spot may be free for part of the time.
     const cost = timerSpot?.hourlyRate ? calculateCost(selectedDuration, timerSpot.hourlyRate) : null;
+    // Say when the reminder comes, unless it can't: notifications are off
+    // (then say so, with the fix) or the platform has none (web).
+    const remindersOff = reminderStatus === 'denied';
+    const showReminder = !remindersOff && reminderStatus !== 'unsupported';
+    const reminderText = selectedDuration > WARNING_LEAD_MINUTES
+        ? formatEndTime(new Date(endsAt.getTime() - WARNING_LEAD_MINUTES * 60000))
+        : 'When time’s up';
 
     return (
         <View style={styles.setupCard}>
@@ -128,6 +138,21 @@ const SetupCard = ({
                     <Text style={styles.summaryLabel}>Ends at</Text>
                     <Text style={styles.summaryValue}>{formatEndTime(endsAt)}</Text>
                 </View>
+                {showReminder ? (
+                    <>
+                        <View style={styles.summaryDivider} />
+                        <View
+                            style={styles.summaryRow}
+                            accessible
+                            accessibilityLabel={selectedDuration > WARNING_LEAD_MINUTES
+                                ? `Reminder at ${reminderText}, ${WARNING_LEAD_MINUTES} minutes before it ends`
+                                : 'Reminder when time’s up'}
+                        >
+                            <Text style={styles.summaryLabel}>Reminder</Text>
+                            <Text style={styles.summaryValue}>{reminderText}</Text>
+                        </View>
+                    </>
+                ) : null}
                 {cost != null ? (
                     <>
                         <View style={styles.summaryDivider} />
@@ -138,6 +163,12 @@ const SetupCard = ({
                     </>
                 ) : null}
             </View>
+
+            {remindersOff ? (
+                <View style={styles.reminderNoteWrap}>
+                    <ReminderNote text="Notifications are off, so you won't get a reminder." />
+                </View>
+            ) : null}
 
             <Pressable
                 onPress={onStart}
