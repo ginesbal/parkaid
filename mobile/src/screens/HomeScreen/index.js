@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Animated, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Animated, Linking, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Header from './components/Header';
@@ -27,7 +27,11 @@ const REFRESH_TIMEOUT_MS = 10000;
 
 export default function HomeScreen({ navigation }) {
   // location & filter state
-  const { location, isLoadingLocation, locationError } = useLocationManager();
+  const { location, isLoadingLocation, locationError, locationDenied } = useLocationManager();
+  // A refused permission is fixable — offer the way to fix it.
+  const openSettings = useCallback(() => {
+    Linking.openSettings().catch(() => {});
+  }, []);
 
   const {
     activeFilter,
@@ -40,7 +44,7 @@ export default function HomeScreen({ navigation }) {
   const [reloadKey, setReloadKey] = useState(0);
 
   // data fetching hook
-  const { spots, loading, error, lastUpdated } = useParkingSpots(
+  const { spots, loading, error, errorKind, lastUpdated } = useParkingSpots(
     location,
     searchRadius,
     activeFilter,
@@ -244,6 +248,7 @@ export default function HomeScreen({ navigation }) {
               // Only the location notice: a failed load already explains
               // itself, with a way out, in the empty state below.
               statusMessage={locationError}
+              statusAction={locationDenied ? { label: 'Open Settings', onPress: openSettings } : null}
             />
           }
           refreshControl={
@@ -267,6 +272,7 @@ export default function HomeScreen({ navigation }) {
                 onViewMap={handleMapPress}
                 onRetry={handleRefresh}
                 hasError={Boolean(error)}
+                errorKind={errorKind}
                 title={`No spots within ${getDistanceLabel(searchRadius)}`}
                 expandLabel={expandLabel}
                 hint={emptyHint}

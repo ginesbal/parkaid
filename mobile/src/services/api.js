@@ -120,8 +120,17 @@ class ParkingAPI {
       clearTimeout(timeout);
       console.error('Request failed:', error);
 
+      // What kind of failure, so screens can say what actually happened:
+      //   offline — the request never got a response (fetch's TypeError:
+      //             "Network request failed", or "Failed to fetch" on web)
+      //   slow    — no answer within the timeout above
+      //   server  — the server answered, but with an error
+      error.kind = error.name === 'AbortError' ? 'slow'
+        : error instanceof TypeError ? 'offline'
+        : 'server';
+
       // mark as offline
-      if (error.message === 'Network request failed' || error.name === 'AbortError') {
+      if (error.kind !== 'server') {
         this.isOnline = false;
       }
 

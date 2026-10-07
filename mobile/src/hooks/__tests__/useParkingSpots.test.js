@@ -105,7 +105,29 @@ describe('useParkingSpots', () => {
         });
 
         expect(result.current.error).toBe('Network error');
+        expect(result.current.errorKind).toBe('offline'); // unknown failures default to offline
         expect(result.current.spots).toEqual([]);
+    });
+
+    it('reports what kind of failure it was, and clears it on the next good load', async () => {
+        parkingAPI.findNearbySpots.mockRejectedValueOnce(Object.assign(new Error('HTTP 503'), { kind: 'server' }));
+
+        const { result, rerender } = renderHook(
+            ({ reload }) => useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500, 'all', reload),
+            { initialProps: { reload: 0 } }
+        );
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.errorKind).toBe('server');
+
+        parkingAPI.findNearbySpots.mockResolvedValueOnce({ data: [{ id: 1 }] });
+        rerender({ reload: 1 }); // "Try again"
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.errorKind).toBeNull();
+        expect(result.current.error).toBeNull();
     });
 
     it('ignores a slow response for a location the user already moved away from', async () => {

@@ -8,6 +8,9 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
     const [spots, setSpots] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // 'offline' | 'slow' | 'server' — what went wrong, in terms a screen can
+    // explain (see services/api.js). Null when the last fetch worked.
+    const [errorKind, setErrorKind] = useState(null);
     // When the most recent fetch finished (success or failure). Lets callers
     // end a pull-to-refresh spinner exactly when fresh data lands.
     const [lastUpdated, setLastUpdated] = useState(null);
@@ -55,6 +58,7 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
             const force = forceNextFetchRef.current;
             forceNextFetchRef.current = false;
             setError(null);
+            setErrorKind(null);
 
             try {
                 const params = filterType !== 'all' ? { type: filterType } : {};
@@ -72,6 +76,7 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
             } catch (err) {
                 if (isCurrent()) {
                     setError(err.message || 'Failed to load parking spots');
+                    setErrorKind(err.kind || 'offline');
                     setSpots([]);
                 }
             } finally {
@@ -91,5 +96,5 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
         };
     }, [location?.latitude, location?.longitude, radius, filterType, reloadKey]);
 
-    return { spots, loading, error, lastUpdated };
+    return { spots, loading, error, errorKind, lastUpdated };
 }

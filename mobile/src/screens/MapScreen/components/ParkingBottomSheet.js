@@ -12,6 +12,7 @@ import {
     View,
 } from 'react-native';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
+import { getLoadError } from '../../../constants/loadErrors';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
@@ -57,6 +58,7 @@ const ParkingBottomSheet = memo(forwardRef(({
     onRadiusChange,
     loading = false,
     error = null,
+    errorKind = null,
     onRetry,
     onItemPress,
     onClearPin,
@@ -296,7 +298,9 @@ const ParkingBottomSheet = memo(forwardRef(({
     // no live regions, so announce them explicitly — e.g. the new count
     // after a radius tap, or a failed load. Skipped on first render so it
     // doesn't talk over the screen opening.
-    const announcement = error ? `${headerTitle}. Check your connection and try again.` : headerTitle;
+    // Advice that fits the failure: no connection, too slow, or the server.
+    const loadError = getLoadError(errorKind);
+    const announcement = error ? `${headerTitle}. ${loadError.hint}.` : headerTitle;
     const lastAnnouncementRef = useRef(null);
     useEffect(() => {
         if (Platform.OS !== 'ios') return;
@@ -345,7 +349,7 @@ const ParkingBottomSheet = memo(forwardRef(({
                             count follows the pin as the map moves. */}
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {error
-                                ? 'Check your connection and try again'
+                                ? loadError.hint
                                 : placingPin
                                     ? 'Around the pin'
                                     : selectedSpot?.address
@@ -443,12 +447,10 @@ const ParkingBottomSheet = memo(forwardRef(({
             ) : spots.length === 0 && error ? (
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
-                        <MaterialCommunityIcons name="wifi-off" size={26} color={TOKENS.textMuted} />
+                        <MaterialCommunityIcons name={loadError.icon} size={26} color={TOKENS.textMuted} />
                     </View>
                     {/* Nothing retries on its own, so don't promise it. */}
-                    <Text style={styles.emptyHint}>
-                        Once you're back online, tap Try again.
-                    </Text>
+                    <Text style={styles.emptyHint}>{loadError.instruction}</Text>
                 </View>
             ) : spots.length === 0 ? (
                 <View style={styles.emptyState}>

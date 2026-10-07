@@ -151,6 +151,7 @@ function MapScreen({ route, navigation }) {
         spots: allSpots,
         loading: spotsLoading,
         error: spotsError,
+        errorKind: spotsErrorKind,
     } = useParkingSpots(searchLocation, FETCH_RADIUS, filterType, reloadKey);
 
     const handleRetry = useCallback(() => {
@@ -651,6 +652,7 @@ function MapScreen({ route, navigation }) {
                 onRadiusChange={handleRadiusChange}
                 loading={spotsLoading}
                 error={spotsError}
+                errorKind={spotsErrorKind}
                 onRetry={handleRetry}
                 onPeekHeightChange={setSheetPeekHeight}
                 containerHeight={containerHeight}

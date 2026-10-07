@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { DEFAULT_LOCATION, LOCATION_STORAGE_KEY } from '../constants/parking';
@@ -7,6 +8,8 @@ export const useLocationManager = () => {
     const [location, setLocation] = useState(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(true);
     const [locationError, setLocationError] = useState(null);
+    // Permission was refused — the one case the user can fix, in Settings.
+    const [locationDenied, setLocationDenied] = useState(false);
     const [locationName, setLocationName] = useState('Loading...');
     
     // load location from storage or get current
@@ -32,7 +35,10 @@ export const useLocationManager = () => {
                 setLocation(DEFAULT_LOCATION);
                 setLocationName(DEFAULT_LOCATION.name);
                 setLocationError('Showing downtown Calgary. Turn on location to see spots near you.');
+                setLocationDenied(true);
             } else {
+                setLocationDenied(false);
+                setLocationError(null);
                 // get current location
                 const currentLocation = await Location.getCurrentPositionAsync({
                     accuracy: Location.Accuracy.Balanced
@@ -85,12 +91,29 @@ export const useLocationManager = () => {
     useEffect(() => {
         loadLocation();
     }, [loadLocation]);
+
+    // Back from Settings with location turned on: use it. Checks without
+    // asking, so returning to the app never re-prompts.
+    useEffect(() => {
+        if (!locationDenied) return undefined;
+        const subscription = AppState.addEventListener('change', async (state) => {
+            if (state !== 'active') return;
+            try {
+                const { status } = await Location.getForegroundPermissionsAsync();
+                if (status === 'granted') loadLocation();
+            } catch {
+                // stay on the default location
+            }
+        });
+        return () => subscription?.remove?.();
+    }, [locationDenied, loadLocation]);
     
     return {
         location,
         locationName,
         isLoadingLocation,
         locationError,
+        locationDenied,
         updateLocation,
         refreshLocation: loadLocation
     };

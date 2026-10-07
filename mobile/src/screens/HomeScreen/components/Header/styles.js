@@ -168,4 +168,13 @@ export const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         fontWeight: '400',
     },
+    statusAction: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: TOKENS.primary,
+    },
+    statusActionPressed: {
+        transform: [{ scale: 0.97 }],
+        opacity: 0.9,
+    },
 });
