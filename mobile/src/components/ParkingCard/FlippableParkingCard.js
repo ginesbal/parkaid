@@ -256,7 +256,9 @@ function FlippableParkingCard({
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
                             <MaterialCommunityIcons name={type.icon} size={14} color={TOKENS.onPrimary} />
-                            <Text style={styles.spotTypeText}>{type.label}</Text>
+                            {/* Capped like the Park here pill beside it, so the
+                                header row still fits an SE at the largest text sizes. */}
+                            <Text style={styles.spotTypeText} maxFontSizeMultiplier={1.4}>{type.label}</Text>
                         </View>
                         <View style={styles.headerActions}>
                             {canPark ? (

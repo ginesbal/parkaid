@@ -19,6 +19,10 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
   restrictions, capacity).
 - See a list of nearby spots sorted by distance, with a rough walking time and
   filters by type (street, lot, residential, school, or free).
+- Start a parking timer for a spot ("Park here" on its card). It won't plan
+  past the spot's posted time limit, and it reminds you 10 minutes before
+  time's up, even with the app closed. It's a reminder only: paying still
+  happens at the pay station or in the City's parking app.
 - Keep working when the network drops. Responses are cached on the phone, so
   the app shows the last data it had instead of an error.
 
@@ -29,6 +33,8 @@ Mobile app
 - React Navigation for moving between screens
 - React Native Maps for the map and markers
 - Expo Location for GPS
+- Expo Notifications for the parking reminders (scheduled on the phone, no
+  push server)
 - AsyncStorage for caching data on the phone
 
 Backend
@@ -148,6 +154,10 @@ npx expo start -c        # press i for iOS, a for Android, or scan the QR code
 
 Once the backend is deployed, you can use the Render URL here instead of your
 local IP.
+
+If you run a development build (`npm run ios` or `npm run android`) instead of
+Expo Go, rebuild it after pulling changes that add a native module, such as
+`expo-notifications`.
 
 ## Deploying the backend (Render)
 

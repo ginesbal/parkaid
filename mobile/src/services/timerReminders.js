@@ -21,6 +21,15 @@ const OPEN_PARK = { screen: 'Park' };
 // Scheduling isn't available on web.
 const SUPPORTED = Platform.OS === 'ios' || Platform.OS === 'android';
 
+// Schedules and cancels run one at a time, in order. Callers don't wait for
+// them (a quick "Add time" twice, then "Undo"), and without a queue a slower
+// earlier call could finish last and leave a reminder at the old end time.
+let queue = Promise.resolve();
+const inOrder = (task) => {
+    queue = queue.then(task).catch(() => {});
+    return queue;
+};
+
 /**
  * Call once at startup. Reminders show as banners even with the app open —
  * you may be on the map when time's nearly up.
@@ -74,9 +83,27 @@ export function openNotificationSettings() {
 }
 
 /** Replace the reminders for a running timer. */
-export async function scheduleTimerReminders(session) {
-    if (!SUPPORTED || !session?.scheduledEnd) return;
-    await cancelTimerReminders();
+export function scheduleTimerReminders(session) {
+    if (!SUPPORTED || !session?.scheduledEnd) return Promise.resolve();
+    return inOrder(() => replaceReminders(session));
+}
+
+/** Cancel any pending reminders (timer ended, or time's already up). */
+export function cancelTimerReminders() {
+    if (!SUPPORTED) return Promise.resolve();
+    return inOrder(cancelBoth);
+}
+
+function cancelBoth() {
+    return Promise.all(
+        [WARNING_ID, ENDED_ID].map((id) =>
+            Notifications.cancelScheduledNotificationAsync(id).catch(() => {})
+        )
+    );
+}
+
+async function replaceReminders(session) {
+    await cancelBoth();
 
     const end = new Date(session.scheduledEnd).getTime();
     const now = Date.now();
@@ -125,16 +152,6 @@ export async function scheduleTimerReminders(session) {
     } catch {
         // A reminder that can't be scheduled must never break the timer.
     }
-}
-
-/** Cancel any pending reminders (timer ended, or time's already up). */
-export async function cancelTimerReminders() {
-    if (!SUPPORTED) return;
-    await Promise.all(
-        [WARNING_ID, ENDED_ID].map((id) =>
-            Notifications.cancelScheduledNotificationAsync(id).catch(() => {})
-        )
-    );
 }
 
 /**

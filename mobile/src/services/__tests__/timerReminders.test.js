@@ -121,3 +121,30 @@ describe('getReminderStatus', () => {
         expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
     });
 });
+
+describe('ordering', () => {
+    // Regression: rapid changes (Add time, then Undo) scheduled concurrently,
+    // so a slow earlier call could land last and leave the old end time.
+    it('applies quick successive changes in order, so the latest end time wins', async () => {
+        jest.useRealTimers();
+        let first = true;
+        Notifications.scheduleNotificationAsync.mockImplementation((request) => {
+            if (first) {
+                first = false;
+                return new Promise((resolve) => setTimeout(() => resolve(request.identifier), 30));
+            }
+            return Promise.resolve(request.identifier);
+        });
+
+        const now = Date.now();
+        const older = { id: 't', scheduledEnd: new Date(now + 60 * 60000).toISOString(), spot: null };
+        const newer = { id: 't', scheduledEnd: new Date(now + 75 * 60000).toISOString(), spot: null };
+        scheduleTimerReminders(older); // not awaited, like the hook
+        await scheduleTimerReminders(newer);
+        // Let any straggler from the first call finish before checking.
+        await new Promise((resolve) => setTimeout(resolve, 60));
+
+        const endedCalls = scheduled().filter((r) => r.identifier === 'parking-timer-ended');
+        expect(endedCalls[endedCalls.length - 1].trigger.date).toBe(new Date(newer.scheduledEnd).getTime());
+    });
+});
