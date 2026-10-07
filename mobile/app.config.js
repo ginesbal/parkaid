@@ -5,6 +5,9 @@ export default {
     slug: "parkaid",
     version: "1.0.0",
     orientation: "portrait",
+    // Icon, splash and notification images come from create-assets.js: a
+    // white parking "P" on the app's cerulean. Swap in a designed logo any
+    // time by replacing those files.
     icon: "src/utils/assets/icon.png",
     userInterfaceStyle: "light",
 
@@ -14,7 +17,7 @@ export default {
     splash: {
       image: "src/utils/assets/splash.png",
       resizeMode: "contain",
-      backgroundColor: "#001d4a"
+      backgroundColor: "#1d6d8b"
     },
     assetBundlePatterns: [
       "**/*"
@@ -26,7 +29,7 @@ export default {
     android: {
       adaptiveIcon: {
         foregroundImage: "src/utils/assets/adaptive-icon.png",
-        backgroundColor: "#001d4a"
+        backgroundColor: "#1d6d8b"
       },
       package: "com.parkaid.app"
     },
@@ -35,9 +38,13 @@ export default {
       // Reminders are local, so drop the push entitlement expo-notifications
       // adds. It must come first: plugin changes apply in reverse list order.
       "./plugins/withoutPushEntitlement",
-      // Local parking reminders. The color tints Android notifications once
-      // the committed android/ project is regenerated (npx expo prebuild).
-      ["expo-notifications", { color: "#1d6d8b" }]
+      // Local parking reminders, with the Android status-bar icon and tint.
+      // The committed android/ project already carries both (written by
+      // create-assets.js); these apply if it's ever regenerated.
+      ["expo-notifications", {
+        icon: "./src/utils/assets/notification-icon.png",
+        color: "#1d6d8b"
+      }]
     ],
     web: {
       favicon: "src/utils/assets/favicon.png",
