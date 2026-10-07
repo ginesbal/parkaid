@@ -30,6 +30,9 @@ const ActiveSession = ({
     canExtendBy,
     lastExtension,
     reminderStatus,
+    pendingSpot,
+    onSwitchSpot,
+    onKeepTimer,
     onExtend,
     onUndoExtend,
     onEnd,
@@ -70,6 +73,36 @@ const ActiveSession = ({
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                {/* "Park here" was tapped for another spot while this timer
+                    runs: say what happened, and let the user choose. */}
+                {pendingSpot ? (
+                    <View style={styles.switchCard}>
+                        <Text style={styles.switchTitle} accessibilityRole="header">
+                            Switch to {pendingSpot.address}?
+                        </Text>
+                        <Text style={styles.switchBody}>
+                            This ends the timer that's running now, so you can start one there.
+                        </Text>
+                        <View style={styles.switchActions}>
+                            <Pressable
+                                onPress={onSwitchSpot}
+                                style={({ pressed }) => [styles.switchPrimary, pressed && styles.pressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Switch to ${pendingSpot.address}`}
+                            >
+                                <Text style={styles.switchPrimaryText}>Switch</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={onKeepTimer}
+                                style={({ pressed }) => [styles.switchSecondary, pressed && styles.pressed]}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.switchSecondaryText}>Keep this timer</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                ) : null}
+
                 <TimerCard
                     sessionState={sessionState}
                     timeRemainingMs={timeRemainingMs}

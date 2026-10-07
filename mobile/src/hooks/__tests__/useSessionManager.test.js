@@ -373,3 +373,17 @@ describe('useSessionManager — reminders follow the timer', () => {
         expect(scheduleTimerReminders).toHaveBeenCalledWith(hook.result.current.session);
     });
 });
+
+describe('useSessionManager — switching spots', () => {
+    it('ends without a second confirm when the choice was explicit', async () => {
+        const hook = await renderTimer();
+        await startTimer(hook);
+
+        await act(async () => {
+            hook.result.current.endSession({ confirm: false });
+        });
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(hook.result.current.session).toBeNull();
+        expect(cancelTimerReminders).toHaveBeenCalled();
+    });
+});

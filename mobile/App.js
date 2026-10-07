@@ -1,12 +1,11 @@
 // App.js
 
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,28 +16,17 @@ import MapScreen from './src/screens/MapScreen/index';
 import SessionScreen from './src/screens/SessionScreen/index';
 
 // services
+import TabIcon from './src/navigation/TabIcon';
 import { initTimerReminders, useReminderTaps } from './src/services/timerReminders';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
 
 const Tab = createBottomTabNavigator();
 const navigationRef = createNavigationContainerRef();
-const TAB_CONFIG = {
-    Home: {
-        label: 'Home',
-        activeIcon: 'home',
-        inactiveIcon: 'home-outline',
-    },
-    Map: {
-        label: 'Map',
-        activeIcon: 'map',
-        inactiveIcon: 'map-outline',
-    },
-    Park: {
-        label: 'Park',
-        activeIcon: 'car',
-        inactiveIcon: 'car-outline',
-    },
+const TAB_LABELS = {
+    Home: 'Home',
+    Map: 'Map',
+    Park: 'Park',
 };
 
 function AppNavigation() {
@@ -92,32 +80,20 @@ function AppNavigation() {
                 screenOptions={({ route }) => ({
                     headerShown: false,
                     tabBarShowLabel: true,
-                    tabBarIcon: ({ focused, color, size }) => {
-                        const tabMeta = TAB_CONFIG[route.name];
-                        return (
-                            <View style={navStyles.iconWrap}>
-                                <Ionicons
-                                    name={focused ? tabMeta.activeIcon : tabMeta.inactiveIcon}
-                                    size={size}
-                                    color={color}
-                                />
-                            </View>
-                        );
-                    },
-                    tabBarLabel: ({ focused, color }) => {
-                        const tabMeta = TAB_CONFIG[route.name];
-                        return (
-                            <Text
-                                style={[
-                                    navStyles.label,
-                                    focused ? navStyles.labelActive : navStyles.labelInactive,
-                                    { color },
-                                ]}
-                            >
-                                {tabMeta.label}
-                            </Text>
-                        );
-                    },
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <TabIcon route={route.name} focused={focused} color={color} size={size} />
+                    ),
+                    tabBarLabel: ({ focused, color }) => (
+                        <Text
+                            style={[
+                                navStyles.label,
+                                focused ? navStyles.labelActive : navStyles.labelInactive,
+                                { color },
+                            ]}
+                        >
+                            {TAB_LABELS[route.name]}
+                        </Text>
+                    ),
                     tabBarActiveTintColor: TOKENS.primary,
                     tabBarInactiveTintColor: TOKENS.textMuted,
                     tabBarHideOnKeyboard: true,
@@ -160,7 +136,9 @@ function AppNavigation() {
                 <Tab.Screen
                     name="Park"
                     component={SessionScreen}
-                    options={{ tabBarLabel: 'Park' }}
+                    // Mounted at launch (not on first visit), so a running
+                    // timer's dot shows on the tab right away.
+                    options={{ tabBarLabel: 'Park', lazy: false }}
                 />
             </Tab.Navigator>
         </NavigationContainer>
@@ -178,13 +156,6 @@ export default function App() {
 }
 
 const navStyles = StyleSheet.create({
-    iconWrap: {
-        width: 44,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 2,
-    },
     label: {
         fontSize: 12,
         letterSpacing: 0.1,

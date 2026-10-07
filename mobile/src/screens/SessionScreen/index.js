@@ -2,13 +2,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { STORAGE_KEYS } from '../../constants/session';
+import { TOKENS } from '../../constants/theme';
 import { useSessionManager } from '../../hooks/useSessionManager';
+import TabIcon from '../../navigation/TabIcon';
 import { logger } from '../../utils/loggers';
 import ActiveSession from './components/ActiveSession';
 import EmptyState from './components/EmptyState';
 import { styles } from './SessionScreen.styles';
+
+// The Park tab's dot while a timer runs: what it looks like, and what a
+// screen reader says about it.
+const TIMER_DOT = {
+  active: { color: TOKENS.primary, spoken: 'timer running' },
+  expiring: { color: TOKENS.warning, spoken: 'timer ends soon' },
+  expired: { color: TOKENS.danger, spoken: "time's up" },
+};
+
+const sameSpot = (a, b) =>
+  Boolean(a && b) && (a.id != null ? a.id === b.id : a.address === b.address);
 
 /**
  * SessionScreen — the Park tab's parking timer.
@@ -37,8 +51,27 @@ export default function SessionScreen({ route, navigation }) {
 
   const hasSession = Boolean(session);
 
+  // Keep the Park tab's dot in step with the timer, so it's visible from
+  // Home and the map. Its label keeps the platform's "tab, 3 of 3" shape.
+  React.useEffect(() => {
+    if (!navigation?.setOptions) return;
+    const dot = hasSession ? TIMER_DOT[sessionState] : null;
+    let label;
+    if (dot) {
+      const state = navigation.getState?.();
+      const index = state?.routes?.findIndex((r) => r.key === route?.key) ?? -1;
+      label = Platform.OS === 'ios' && index >= 0
+        ? `Park, ${dot.spoken}, tab, ${index + 1} of ${state.routes.length}`
+        : `Park, ${dot.spoken}`;
+    }
+    navigation.setOptions({
+      tabBarIcon: (props) => <TabIcon route="Park" {...props} dotColor={dot?.color} />,
+      tabBarAccessibilityLabel: label,
+    });
+  }, [navigation, route?.key, hasSession, sessionState]);
+
   // "Park here" on a spot's card hands that spot over. If a timer is already
-  // running, the spot waits in setup for when it ends.
+  // running, the spot waits — and the running timer offers to switch to it.
   const incomingSpot = route?.params?.spot;
   React.useEffect(() => {
     if (!incomingSpot) return;
@@ -91,6 +124,22 @@ export default function SessionScreen({ route, navigation }) {
     navigation?.navigate('Map');
   }, [navigation]);
 
+  // A spot handed over while a timer runs (and still running — once time's
+  // up, "Start a new timer" already leads to it).
+  const pendingSpot = hasSession && sessionState !== 'expired' && timerSpot && !sameSpot(timerSpot, session.spot)
+    ? timerSpot
+    : null;
+
+  // The prompt already says the current timer ends, so no second confirm.
+  const handleSwitchSpot = React.useCallback(() => {
+    logger.log('timer_switch_spot', { from: session?.spot?.id ?? null, to: timerSpot?.id ?? null }, 'UI_EVENT');
+    endSession({ confirm: false });
+  }, [endSession, session, timerSpot]);
+
+  const handleKeepTimer = React.useCallback(() => {
+    setTimerSpot(session?.spot ?? null);
+  }, [session, setTimerSpot]);
+
   // No 'bottom' edge: the tab bar already sits on the home indicator, and
   // bottom tabs hands screens the raw insets — adding it again leaves a gap.
   if (!hasSession) {
@@ -127,6 +176,9 @@ export default function SessionScreen({ route, navigation }) {
         canExtendBy={canExtendBy}
         lastExtension={lastExtension}
         reminderStatus={reminderStatus}
+        pendingSpot={pendingSpot}
+        onSwitchSpot={handleSwitchSpot}
+        onKeepTimer={handleKeepTimer}
         onExtend={handleExtend}
         onUndoExtend={undoExtension}
         onEnd={handleEnd}

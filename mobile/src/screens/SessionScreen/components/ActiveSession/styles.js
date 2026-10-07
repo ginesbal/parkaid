@@ -115,6 +115,62 @@ export const styles = StyleSheet.create({
         marginTop: 16,
     },
 
+    // Switch prompt — a "Park here" spot arrived while this timer runs.
+    switchCard: {
+        marginHorizontal: 20,
+        marginTop: 20,
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: TOKENS.primaryWash,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.primaryBorder,
+    },
+    switchTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.text,
+    },
+    switchBody: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+        marginTop: 4,
+    },
+    switchActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 12,
+    },
+    switchPrimary: {
+        minHeight: 44,
+        paddingHorizontal: 20,
+        borderRadius: RADIUS.pill,
+        backgroundColor: TOKENS.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    switchPrimaryText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.onPrimary,
+    },
+    switchSecondary: {
+        minHeight: 44,
+        paddingHorizontal: 20,
+        borderRadius: RADIUS.pill,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    switchSecondaryText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.text,
+    },
+
     sectionTitle: {
         fontSize: 13,
         fontWeight: '600',

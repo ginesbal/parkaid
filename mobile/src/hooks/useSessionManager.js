@@ -251,11 +251,13 @@ export const useSessionManager = () => {
         setLastExtension(null);
     }, [lastExtension, saveSession]);
 
-    const endSession = useCallback(() => {
+    // `confirm: false` is for when the choice was already explicit — e.g.
+    // "Switch" to a new spot, whose prompt says the current timer ends.
+    const endSession = useCallback(({ confirm = true } = {}) => {
         if (!session) return;
 
         // Once time is up there's nothing to lose — no confirm.
-        if (timeRemaining <= 0) {
+        if (!confirm || timeRemaining <= 0) {
             saveSession(null);
             setLastExtension(null);
             return;
