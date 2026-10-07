@@ -6,10 +6,10 @@ import {
   FlatList,
   Keyboard,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View
 } from 'react-native';
 import { API_URL } from '../../constants/config';
@@ -254,9 +254,9 @@ export default function PlacesSearchBar({
           {loading ? (
             <SearchLoadingDots />
           ) : input.length > 0 ? (
-            <TouchableOpacity
+            <Pressable
               onPress={clearInput}
-              style={styles.clearButton}
+              style={({ pressed }) => [styles.clearButton, pressed && styles.clearButtonPressed]}
               accessibilityRole="button"
               accessibilityLabel="Clear search"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -266,7 +266,7 @@ export default function PlacesSearchBar({
                 size={20}
                 color={TOKENS.textMuted}
               />
-            </TouchableOpacity>
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -283,14 +283,15 @@ export default function PlacesSearchBar({
               const secondaryText = item.structured_formatting?.secondary_text
                 || item.description.split(',').slice(1).join(',').trim();
               return (
-                <TouchableOpacity
-                  style={[
+                <Pressable
+                  // Rows highlight on press, like any list; buttons scale.
+                  style={({ pressed }) => [
                     styles.suggestionItem,
                     index === 0 && styles.suggestionItemFirst,
-                    index === suggestions.length - 1 && styles.suggestionItemLast
+                    index === suggestions.length - 1 && styles.suggestionItemLast,
+                    pressed && styles.suggestionItemPressed,
                   ]}
                   onPress={() => handleSelect(item)}
-                  activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel={
                     secondaryText ? `${mainText}, ${secondaryText}` : mainText
@@ -312,7 +313,7 @@ export default function PlacesSearchBar({
                       {secondaryText}
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </Pressable>
               );
             }}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -404,6 +405,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
   },
 
+  clearButtonPressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.9,
+  },
+
   suggestionsContainer: {
     marginTop: 8,
     borderRadius: RADIUS.xl,
@@ -437,6 +443,10 @@ const styles = StyleSheet.create({
 
   suggestionItemLast: {
     paddingBottom: 16,
+  },
+
+  suggestionItemPressed: {
+    backgroundColor: TOKENS.surfaceMuted,
   },
 
   suggestionIcon: {

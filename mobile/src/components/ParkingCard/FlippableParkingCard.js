@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Linking,
+    Pressable,
     ScrollView,
     Text,
     TouchableOpacity,
@@ -259,10 +260,9 @@ function FlippableParkingCard({
                         </View>
                         <View style={styles.headerActions}>
                             {canPark ? (
-                                <TouchableOpacity
-                                    style={styles.parkBtn}
+                                <Pressable
+                                    style={({ pressed }) => [styles.parkBtn, pressed && styles.pressed]}
                                     onPress={onParkHere}
-                                    activeOpacity={0.7}
                                     hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                                     accessibilityRole="button"
                                     accessibilityLabel="Park here"
@@ -271,17 +271,17 @@ function FlippableParkingCard({
                                     <MaterialCommunityIcons name="timer-outline" size={16} color={TOKENS.primary} />
                                     {/* The header row is narrow; keep the pill from crowding the tag. */}
                                     <Text style={styles.parkBtnText} maxFontSizeMultiplier={1.4}>Park here</Text>
-                                </TouchableOpacity>
+                                </Pressable>
                             ) : null}
-                            <TouchableOpacity
-                                style={styles.closeBtn}
+                            <Pressable
+                                style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
                                 onPress={onClose}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 accessibilityRole="button"
                                 accessibilityLabel="Close details"
                             >
                                 <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
-                            </TouchableOpacity>
+                            </Pressable>
                         </View>
                     </View>
 
@@ -400,20 +400,18 @@ function FlippableParkingCard({
                     </ScrollView>
 
                     <View style={styles.actionsLarge}>
-                        <TouchableOpacity
-                            style={styles.detailsBtnLarge}
+                        <Pressable
+                            style={({ pressed }) => [styles.detailsBtnLarge, pressed && styles.pressed]}
                             onPress={flip}
-                            activeOpacity={0.7}
                             accessibilityRole="button"
                             accessibilityLabel="Show all details"
                         >
                             <MaterialCommunityIcons name="information-outline" size={20} color={TOKENS.text} />
                             <Text style={styles.detailsBtnTextLarge}>Details</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.navBtnLarge}
+                        </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [styles.navBtnLarge, pressed && styles.pressed]}
                             onPress={onNavigate}
-                            activeOpacity={0.85}
                             accessibilityRole="button"
                             accessibilityLabel={eta ? `Navigate, ${eta}` : 'Navigate'}
                             accessibilityHint="Opens walking directions in Google Maps"
@@ -423,7 +421,7 @@ function FlippableParkingCard({
                                 <Text style={styles.navBtnTextLarge}>Navigate</Text>
                                 {eta ? <Text style={styles.navBtnEta}>{eta}</Text> : null}
                             </View>
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
                 </Animated.View>
 

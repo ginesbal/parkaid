@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { RADIUS_OPTIONS } from '../../../../constants/parking';
+import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../../constants/parking';
+import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
 const TYPE_FILTERS = [
@@ -53,7 +54,8 @@ const FilterBar = ({
             </View>
 
             <View style={styles.distanceRow}>
-                <Text style={styles.distanceLabel}>Radius</Text>
+                {/* Same word and spoken labels as the map's radius chips. */}
+                <Text style={styles.distanceLabel}>Within</Text>
                 <View style={styles.distanceOptions}>
                     {RADIUS_OPTIONS.map((option) => {
                         const isActive = searchRadius === option.value;
@@ -67,6 +69,7 @@ const FilterBar = ({
                                 ]}
                                 onPress={() => handleDistancePress(option.value)}
                                 accessibilityRole="button"
+                                accessibilityLabel={`Within ${getDistanceLabel(option.value)}, about a ${metersToWalkMinutes(option.value)} minute walk`}
                                 accessibilityState={{ selected: isActive }}
                             >
                                 <Text style={[

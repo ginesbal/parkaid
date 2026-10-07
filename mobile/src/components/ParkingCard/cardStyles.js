@@ -150,6 +150,12 @@ export const styles = StyleSheet.create({
     color: TOKENS.primary,
   },
 
+  // The app's press feedback (scale + fade) for the front face's buttons.
+  pressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.9,
+  },
+
   // --- Front content ---
   // One spacing rhythm runs the whole face: 20 between sections (address,
   // headline, facts), 16 between fact rows, 8 within the headline, 4 inside a
