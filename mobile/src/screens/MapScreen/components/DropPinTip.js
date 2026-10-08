@@ -42,7 +42,7 @@ function DropPinTip({ onShown, onDismiss }) {
     return (
         <Animated.View style={[styles.wrap, { opacity }]} pointerEvents="box-none">
             <View style={styles.bubble}>
-                <Text style={styles.text} maxFontSizeMultiplier={1.6}>
+                <Text style={styles.text} maxFontSizeMultiplier={2}>
                     Going somewhere else? Drop a pin to find parking there.
                 </Text>
                 <Pressable
@@ -52,7 +52,7 @@ function DropPinTip({ onShown, onDismiss }) {
                     accessibilityRole="button"
                     accessibilityLabel="Got it, dismiss tip"
                 >
-                    <Text style={styles.action} maxFontSizeMultiplier={1.6}>Got it</Text>
+                    <Text style={styles.action} maxFontSizeMultiplier={2}>Got it</Text>
                 </Pressable>
             </View>
             {/* Points down at the Drop pin button. */}
