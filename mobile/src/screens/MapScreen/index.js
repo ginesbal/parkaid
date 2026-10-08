@@ -4,6 +4,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+    AccessibilityInfo,
     Animated,
     Keyboard,
     Linking,
@@ -23,6 +24,7 @@ import { DEFAULT_LOCATION } from '../../constants/config';
 import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS } from '../../constants/parking';
 import { STORAGE_KEYS } from '../../constants/session';
 import { TOKENS } from '../../constants/theme';
+import { getDistanceLabel } from '../../utils/parkingHelpers';
 import { getTimerSpot } from '../../utils/spotInfo';
 
 // logs
@@ -38,6 +40,18 @@ import ParkingBottomSheet from './components/ParkingBottomSheet';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, SHEET_BOTTOM_OFFSET } from './constants';
 import { styles } from './styles';
 import { centerCamera, getMarkerScreenPosition } from './utils/camera';
+
+// Screen readers can't drag the map, so while the pin is being placed the
+// map offers the same move as actions: one search radius per step. Compass
+// directions, since the map can be rotated.
+const PIN_MOVES = [
+    { name: 'north', label: 'Move pin north' },
+    { name: 'south', label: 'Move pin south' },
+    { name: 'east', label: 'Move pin east' },
+    { name: 'west', label: 'Move pin west' },
+];
+const PIN_MOVE_STEPS = { north: [1, 0], south: [-1, 0], east: [0, 1], west: [0, -1] };
+const METERS_PER_DEGREE_LAT = 111320;
 
 function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
@@ -247,6 +261,26 @@ function MapScreen({ route, navigation }) {
             );
         }
     }, [pinnedLocation, retireDropPinTip, searchMode, userLocation]);
+
+    // The screen-reader stand-in for dragging the map under the pin.
+    const handleMapAccessibilityAction = useCallback((event) => {
+        const direction = event.nativeEvent.actionName;
+        const step = PIN_MOVE_STEPS[direction];
+        const current = regionRef.current;
+        if (!step || !current) return;
+        const latStep = searchRadius / METERS_PER_DEGREE_LAT;
+        const lngStep = latStep / Math.cos((current.latitude * Math.PI) / 180);
+        const next = {
+            ...current,
+            latitude: current.latitude + step[0] * latStep,
+            longitude: current.longitude + step[1] * lngStep,
+        };
+        // Ahead of the settle, so a quick second move starts from here.
+        regionRef.current = next;
+        mapRef.current?.animateToRegion(next, 200);
+        AccessibilityInfo.announceForAccessibility(`Pin moved ${getDistanceLabel(searchRadius)} ${direction}`);
+        logger.log('pin_moved_by_action', { direction }, 'UI_EVENT');
+    }, [searchRadius]);
 
     // Lock the current map center as the pinned search location.
     const confirmPlacement = useCallback(() => {
@@ -514,41 +548,56 @@ function MapScreen({ route, navigation }) {
 
             {/* map — rendered FIRST so iOS hitTest routes taps on later siblings
                 (header, FAB, bottom sheet) to those overlays instead of leaking
-                through to the map's onPress. */}
-            <MapView
-                ref={mapRef}
+                through to the map's onPress.
+                To a screen reader it's one element that points to the list:
+                its markers can't be read one by one (a marker's spoken label
+                would also pop its info window), and the list has every spot. */}
+            <View
                 style={styles.map}
-                provider={PROVIDER_GOOGLE}
-                initialRegion={region}
-                onRegionChange={handleRegionChange}
-                onRegionChangeComplete={handleRegionChangeComplete}
-                onMapReady={() => setMapReady(true)}
-                onPanDrag={handleMapPanDrag}
-                onPress={handleMapPress}
-                onLongPress={handleMapLongPress}
-                showsUserLocation
-                showsMyLocationButton={false}
-                showsCompass={false}
-                paddingAdjustmentBehavior="always"
-                mapPadding={{
-                    left: 0,
-                    right: 0,
-                    top: navigationHeight,
-                    bottom: BOTTOM_UI_OFFSET,
-                }}
+                accessible
+                accessibilityLabel={placingPin ? 'Map, placing the search pin' : 'Map of parking spots'}
+                accessibilityHint={placingPin
+                    ? 'Use actions to move the pin, then choose Search here.'
+                    : 'Every spot on the map is also in the spot list below.'}
+                accessibilityActions={placingPin ? PIN_MOVES : undefined}
+                onAccessibilityAction={handleMapAccessibilityAction}
             >
-                <MapOverlays
-                    searchCenter={circleCenter}
-                    placementCenter={placementCenter}
-                    searchRadius={searchRadius}
-                    searchMode={searchMode}
-                    pinnedLocation={pinnedLocation}
-                    placingPin={placingPin}
-                    spots={spots}
-                    selectedSpot={selectedSpot}
-                    onSelectSpot={selectSpot}
-                />
-            </MapView>
+                <MapView
+                    ref={mapRef}
+                    style={styles.map}
+                    importantForAccessibility="no-hide-descendants"
+                    provider={PROVIDER_GOOGLE}
+                    initialRegion={region}
+                    onRegionChange={handleRegionChange}
+                    onRegionChangeComplete={handleRegionChangeComplete}
+                    onMapReady={() => setMapReady(true)}
+                    onPanDrag={handleMapPanDrag}
+                    onPress={handleMapPress}
+                    onLongPress={handleMapLongPress}
+                    showsUserLocation
+                    showsMyLocationButton={false}
+                    showsCompass={false}
+                    paddingAdjustmentBehavior="always"
+                    mapPadding={{
+                        left: 0,
+                        right: 0,
+                        top: navigationHeight,
+                        bottom: BOTTOM_UI_OFFSET,
+                    }}
+                >
+                    <MapOverlays
+                        searchCenter={circleCenter}
+                        placementCenter={placementCenter}
+                        searchRadius={searchRadius}
+                        searchMode={searchMode}
+                        pinnedLocation={pinnedLocation}
+                        placingPin={placingPin}
+                        spots={spots}
+                        selectedSpot={selectedSpot}
+                        onSelectSpot={selectSpot}
+                    />
+                </MapView>
+            </View>
 
             {/* screen-fixed reticle — only while placing */}
             {placingPin && (
