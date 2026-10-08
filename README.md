@@ -15,6 +15,8 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
 - Search for parking near your current location, or drop a pin to search
   somewhere else. There's a radius selector from 250m up to 2km.
+- Search by address or place. Your last three picks show when you tap the
+  empty search box. They're kept only on your phone, and Clear removes them.
 - See spots on a map with markers you can tap for details (price, zone,
   restrictions, capacity).
 - See a list of nearby spots sorted by distance, with a rough walking time and

@@ -7,6 +7,7 @@ import {
   Keyboard,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +16,7 @@ import {
 import { API_URL } from '../../constants/config';
 import { RADIUS, TOKENS, alpha } from '../../constants/theme';
 import usePlacesAutocomplete from '../../hooks/usePlacesAutocomplete';
+import { useRecentPlaces } from '../../hooks/useRecentPlaces';
 
 // Generic, non-leaky message for the error card. We never surface raw
 // fetch/API error text to users — it can expose backend internals.
@@ -28,6 +30,48 @@ const iconForTypes = (types) => {
   if (t.includes('establishment')) return 'domain';
   return 'map-marker';
 };
+
+// A recent place's two lines. Street addresses often repeat their name
+// ("123 4 St SW" / "123 4 St SW, Calgary, …"), so the repeat is dropped.
+const describeRecent = ({ name = '', address = '' }) => {
+  if (!name) {
+    const [first, ...rest] = address.split(',');
+    return { title: first || 'Recent place', detail: rest.join(',').trim() };
+  }
+  if (address.startsWith(`${name}, `)) return { title: name, detail: address.slice(name.length + 2) };
+  return { title: name, detail: address === name ? '' : address };
+};
+
+// One tappable place, used for both suggestions and recent searches.
+function PlaceRow({ icon, title, detail, onPress, first, last }) {
+  return (
+    <Pressable
+      // Rows highlight on press, like any list; buttons scale.
+      style={({ pressed }) => [
+        styles.suggestionItem,
+        first && styles.suggestionItemFirst,
+        last && styles.suggestionItemLast,
+        pressed && styles.suggestionItemPressed,
+      ]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={detail ? `${title}, ${detail}` : title}
+    >
+      <View style={styles.suggestionIcon}>
+        <MaterialCommunityIcons name={icon} size={18} color={TOKENS.primary} />
+      </View>
+
+      <View style={styles.suggestionText}>
+        <Text style={styles.mainText} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.secondaryText} numberOfLines={1}>
+          {detail}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
 
 // dev fetcher: calls google places api directly (exposes api key in bundle)
 // requires "places api" (legacy) enabled in google cloud console
@@ -112,6 +156,8 @@ export default function PlacesSearchBar({
 }) {
   const inputRef = useRef(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const { recentPlaces, rememberPlace, clearRecentPlaces } = useRecentPlaces();
 
   const {
     input,
@@ -142,14 +188,24 @@ export default function PlacesSearchBar({
     onChangeText('');
     inputRef.current?.blur();
 
-    onPlaceSelected({
+    const selected = {
       lat,
       lng,
       name: place.name || item.structured_formatting?.main_text || '',
       address: place.formatted_address || item.description,
       place_id: place.place_id,
       types: place.types
-    });
+    };
+    rememberPlace(selected);
+    onPlaceSelected(selected);
+  };
+
+  // A recent place already has its coordinates, so this works offline too.
+  const handleRecentSelect = (place) => {
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+    rememberPlace(place);
+    onPlaceSelected(place);
   };
 
   const handleChangeText = (text) => {
@@ -162,11 +218,13 @@ export default function PlacesSearchBar({
   // visually static across focus transitions so iOS doesn't resign first
   // responder mid-animation.
   const handleFocus = () => {
+    setFocused(true);
     onFocusChange?.(true);
   };
 
   const handleBlur = () => {
     if (!input) setShowSuggestions(false);
+    setFocused(false);
     onFocusChange?.(false);
   };
 
@@ -186,6 +244,9 @@ export default function PlacesSearchBar({
     setShowSuggestions(false);
     inputRef.current?.focus();
   };
+
+  // Before you type: the places you picked last, to go back in one tap.
+  const showRecent = focused && input.length === 0 && recentPlaces.length > 0;
 
   const showEmptyState =
     showSuggestions &&
@@ -213,7 +274,7 @@ export default function PlacesSearchBar({
   // and hold its layout steady. A layout effect, so the parent hears about it
   // before the new size is measured.
   const resultsVisible =
-    (showSuggestions && suggestions.length > 0) || showEmptyState || showError;
+    showRecent || (showSuggestions && suggestions.length > 0) || showEmptyState || showError;
   useLayoutEffect(() => {
     onResultsVisibleChange?.(resultsVisible);
   }, [resultsVisible, onResultsVisibleChange]);
@@ -271,51 +332,58 @@ export default function PlacesSearchBar({
         </View>
       </View>
 
+      {showRecent && (
+        <View style={styles.suggestionsContainer}>
+          <View style={styles.recentHeader}>
+            <Text style={styles.recentTitle} accessibilityRole="header">Recent</Text>
+            <Pressable
+              onPress={clearRecentPlaces}
+              style={({ pressed }) => [styles.recentClear, pressed && styles.clearButtonPressed]}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear recent searches"
+            >
+              <Text style={styles.recentClearText}>Clear</Text>
+            </Pressable>
+          </View>
+          {/* Three fit without scrolling; it scrolls only at large text sizes. */}
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.suggestionsList}>
+            {recentPlaces.map((place, index) => {
+              const { title, detail } = describeRecent(place);
+              return (
+                <View key={place.place_id || `${place.lat},${place.lng}`}>
+                  {index > 0 && <View style={styles.separator} />}
+                  <PlaceRow
+                    icon="history"
+                    title={title}
+                    detail={detail}
+                    onPress={() => handleRecentSelect(place)}
+                    last={index === recentPlaces.length - 1}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {showSuggestions && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
           <FlatList
             keyboardShouldPersistTaps="handled"
             data={suggestions}
             keyExtractor={(item) => item.place_id}
-            renderItem={({ item, index }) => {
-              const mainText = item.structured_formatting?.main_text
-                || item.description.split(',')[0];
-              const secondaryText = item.structured_formatting?.secondary_text
-                || item.description.split(',').slice(1).join(',').trim();
-              return (
-                <Pressable
-                  // Rows highlight on press, like any list; buttons scale.
-                  style={({ pressed }) => [
-                    styles.suggestionItem,
-                    index === 0 && styles.suggestionItemFirst,
-                    index === suggestions.length - 1 && styles.suggestionItemLast,
-                    pressed && styles.suggestionItemPressed,
-                  ]}
-                  onPress={() => handleSelect(item)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    secondaryText ? `${mainText}, ${secondaryText}` : mainText
-                  }
-                >
-                  <View style={styles.suggestionIcon}>
-                    <MaterialCommunityIcons
-                      name={iconForTypes(item.types)}
-                      size={18}
-                      color={TOKENS.primary}
-                    />
-                  </View>
-
-                  <View style={styles.suggestionText}>
-                    <Text style={styles.mainText} numberOfLines={1}>
-                      {mainText}
-                    </Text>
-                    <Text style={styles.secondaryText} numberOfLines={1}>
-                      {secondaryText}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            }}
+            renderItem={({ item, index }) => (
+              <PlaceRow
+                icon={iconForTypes(item.types)}
+                title={item.structured_formatting?.main_text || item.description.split(',')[0]}
+                detail={item.structured_formatting?.secondary_text
+                  || item.description.split(',').slice(1).join(',').trim()}
+                onPress={() => handleSelect(item)}
+                first={index === 0}
+                last={index === suggestions.length - 1}
+              />
+            )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             style={styles.suggestionsList}
             nestedScrollEnabled
@@ -427,6 +495,34 @@ const styles = StyleSheet.create({
 
   suggestionsList: {
     flexGrow: 0,
+  },
+
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 2,
+  },
+
+  recentTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: TOKENS.textMuted,
+  },
+
+  // Padding plus hitSlop make a 44pt target out of a small word.
+  recentClear: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderRadius: RADIUS.pill,
+  },
+
+  recentClearText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: TOKENS.primary,
   },
 
   suggestionItem: {
