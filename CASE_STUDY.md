@@ -192,6 +192,6 @@ Not everything changed. The things that work well were left alone:
 The token-based design system was built with extensibility in mind:
 
 - **Dark mode**: Swap `TOKENS` values in a single file. Every component that uses `TOKENS.text`, `TOKENS.bg`, `TOKENS.surface` automatically updates. The PALETTE shade ramps (50-900) already have dark-friendly values at both ends.
-- **Push notifications**: Session expiry reminders. The timer logic already exists in ActiveSession — it needs a notification channel, not new timer code.
+- **Push notifications**: Timer reminders are now built as local notifications (expo-notifications), 10 minutes before the end and when time's up. The phone schedules them, so no server is involved. Server push would only be needed for alerts the phone can't schedule itself, like live occupancy changes.
 - **Favorites**: Supabase row-level security for per-user saved spots. The device ID system is already in place.
 - **Real-time occupancy**: Supabase Realtime subscriptions for live spot availability. The PostGIS query infrastructure supports this — it's a data source change, not an architecture change.
