@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { RADIUS, TOKENS } from '../../../constants/theme';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { RADIUS, SPACING, TOKENS } from '../../../constants/theme';
 
 // Remembered on the phone once shown; bump the suffix to show it again.
 export const DROP_PIN_TIP_KEY = 'tip_drop_pin_seen_v1';
@@ -29,7 +29,12 @@ function DropPinTip({ onShown, onDismiss }) {
     useEffect(() => {
         if (!shown) return;
         onShown?.();
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+        Animated.timing(opacity, {
+            toValue: 1,
+            duration: 200,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+        }).start();
     }, [shown, onShown, opacity]);
 
     if (!shown) return null;
@@ -42,7 +47,7 @@ function DropPinTip({ onShown, onDismiss }) {
                 </Text>
                 <Pressable
                     onPress={onDismiss}
-                    hitSlop={12}
+                    hitSlop={14}
                     style={({ pressed }) => pressed && styles.pressed}
                     accessibilityRole="button"
                     accessibilityLabel="Got it, dismiss tip"
@@ -60,22 +65,22 @@ export default memo(DropPinTip);
 
 const styles = StyleSheet.create({
     wrap: {
-        maxWidth: 260,
+        maxWidth: 280, // two lines at default text size, still clear of a 320pt screen's edge
         alignItems: 'flex-end',
     },
     bubble: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
+        gap: SPACING.md,
+        paddingVertical: SPACING.md,
+        paddingHorizontal: SPACING.lg,
         borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.text,
         shadowColor: TOKENS.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0.04,
         shadowRadius: 12,
-        elevation: 4,
+        elevation: 3,
     },
     // flexShrink, not flex: 1 — the bubble hugs its content, and a zero
     // flex basis would let the text collapse to nothing.
@@ -98,7 +103,7 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.text,
         transform: [{ rotate: '45deg' }],
         // Android stacks by elevation; match the bubble so it isn't drawn under it.
-        elevation: 4,
+        elevation: 3,
     },
     pressed: {
         transform: [{ scale: 0.97 }],

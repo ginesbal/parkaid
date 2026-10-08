@@ -506,16 +506,20 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
 
+  // Matches the sheet's "Within" label.
   recentTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: TOKENS.textMuted,
+    letterSpacing: 0.2,
   },
 
-  // Padding plus hitSlop make a 44pt target out of a small word.
+  // Padding plus hitSlop make a 44pt target out of a small word; the
+  // negative margin keeps the word itself on the rows' 16pt edge.
   recentClear: {
     paddingVertical: 4,
     paddingHorizontal: 4,
+    marginRight: -4,
     borderRadius: RADIUS.pill,
   },
 
