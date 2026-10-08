@@ -30,6 +30,7 @@ import { logger } from '../../utils/loggers';
 
 // files specific to this screen
 import { useParkingSpots } from '../../hooks/useParkingSpots';
+import DropPinTip, { DROP_PIN_TIP_KEY } from './components/DropPinTip';
 import MapHeader from './components/MapHeader';
 import MapOverlays from './components/MapOverlays';
 import MapReticle from './components/MapReticle';
@@ -109,9 +110,30 @@ function MapScreen({ route, navigation }) {
     const [flippableCardPosition, setFlippableCardPosition] = useState({ x: 0, y: 0 });
     const [flippableCardSpot, setFlippableCardSpot] = useState(null);
 
+    // The one-time Drop pin tip. Off until storage confirms it hasn't been
+    // shown, so it never flashes for someone who's already seen it.
+    const [dropPinTipPending, setDropPinTipPending] = useState(false);
+
     useEffect(() => {
         placingPinRef.current = placingPin;
     }, [placingPin]);
+
+    useEffect(() => {
+        AsyncStorage.getItem(DROP_PIN_TIP_KEY)
+            .then((seen) => { if (!seen) setDropPinTipPending(true); })
+            .catch(() => {});
+    }, []);
+
+    // Seen once means seen: even if it's ignored, it won't come back on a
+    // later launch. On this visit it stays until it's dismissed or used.
+    const markDropPinTipSeen = useCallback(() => {
+        AsyncStorage.setItem(DROP_PIN_TIP_KEY, '1').catch(() => {});
+    }, []);
+
+    const retireDropPinTip = useCallback(() => {
+        setDropPinTipPending(false);
+        markDropPinTipSeen();
+    }, [markDropPinTipSeen]);
 
     // `region` updates on every map settle. Callbacks that only need it at
     // call time read it from this ref, so their identity stays stable and the
@@ -215,6 +237,7 @@ function MapScreen({ route, navigation }) {
         setFlippableCardVisible(false);
         bottomSheetRef.current?.dismiss();
         setPlacingPin(true);
+        retireDropPinTip();
         logger.log('pin_placement_started', { from: searchMode }, 'UI_EVENT');
 
         if (target) {
@@ -223,7 +246,7 @@ function MapScreen({ route, navigation }) {
                 { duration: 220 }
             );
         }
-    }, [pinnedLocation, searchMode, userLocation]);
+    }, [pinnedLocation, retireDropPinTip, searchMode, userLocation]);
 
     // Lock the current map center as the pinned search location.
     const confirmPlacement = useCallback(() => {
@@ -255,9 +278,10 @@ function MapScreen({ route, navigation }) {
         setFlippableCardVisible(false);
         bottomSheetRef.current?.dismiss();
         setPlacingPin(true);
+        retireDropPinTip();
         mapRef.current?.animateCamera({ center: coordinate }, { duration: 200 });
         logger.log('pin_placement_started', { from: 'long_press' }, 'UI_EVENT');
-    }, []);
+    }, [retireDropPinTip]);
 
     // While placing, lift the reticle as the map starts moving...
     const handleRegionChange = useCallback(() => {
@@ -449,9 +473,11 @@ function MapScreen({ route, navigation }) {
             setPinnedLocation(newRegion);
             setSearchMode('pinned');
             setPlacingPin(false);
+            // Searching a place is looking somewhere else too; no need to teach it.
+            retireDropPinTip();
             logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
         }
-    }, []);
+    }, [retireDropPinTip]);
 
     // Radius preset tapped in the bottom sheet. Filtering is client-side and
     // instant; we also gently zoom so the whole search circle stays visible.
@@ -550,6 +576,12 @@ function MapScreen({ route, navigation }) {
                     style={[styles.fabContainer, { bottom: FLOATING_CONTROLS_BOTTOM }]}
                     pointerEvents="box-none"
                 >
+                    {/* first in the column, so it sits just above Drop pin and
+                        a screen reader reads it right before the button */}
+                    {dropPinTipPending && mapReady && !flippableCardVisible && (
+                        <DropPinTip onShown={markDropPinTipSeen} onDismiss={retireDropPinTip} />
+                    )}
+
                     <Pressable
                         style={({ pressed }) => [styles.pinPill, pressed && styles.fabPressed]}
                         onPress={startPlacing}
