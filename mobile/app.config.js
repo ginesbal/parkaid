@@ -49,18 +49,9 @@ export default {
     web: {
       favicon: "src/utils/assets/favicon.png",
       bundler: "metro",
-      output: "single",
-      config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY
-      },
-      build: {
-        babel: {
-          include: [
-            "react-native-maps",
-            "@react-native-async-storage/async-storage"
-          ]
-        }
-      }
+      // The web map is MapLibre with free OpenStreetMap tiles
+      // (src/components/Map/index.web.js), so the web needs no map key.
+      output: "single"
     },
 
     extra: {

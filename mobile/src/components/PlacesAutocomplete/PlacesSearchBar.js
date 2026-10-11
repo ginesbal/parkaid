@@ -19,8 +19,9 @@ import usePlacesAutocomplete from '../../hooks/usePlacesAutocomplete';
 import { useRecentPlaces } from '../../hooks/useRecentPlaces';
 
 // Generic, non-leaky message for the error card. We never surface raw
-// fetch/API error text to users — it can expose backend internals.
-const USER_ERROR_MESSAGE = 'Search is offline. Check your connection.';
+// fetch/API error text to users — it can expose backend internals. It may be
+// the connection or the search service, so it doesn't guess which.
+const USER_ERROR_MESSAGE = "Search isn't available right now. Try again in a moment.";
 
 // Maps Google Places prediction types to a glyph. Coerces `types` to an array
 // so malformed payloads can't crash the row render.
@@ -73,37 +74,17 @@ function PlaceRow({ icon, title, detail, onPress, first, last }) {
   );
 }
 
-// dev fetcher: calls google places api directly (exposes api key in bundle)
-// requires "places api" (legacy) enabled in google cloud console
-const devDirectFetcher = async ({ url, params }) => {
-  const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
-  if (!API_KEY) throw new Error('Missing EXPO_PUBLIC_GOOGLE_PLACES_KEY');
-
-  // these are legacy places api endpoints - require "places api" not "places api (new)"
-  const base = url === 'autocomplete'
-    ? 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
-    : 'https://maps.googleapis.com/maps/api/place/details/json';
-
-  const qs = new URLSearchParams({ key: API_KEY, ...params }).toString();
-  const resp = await fetch(`${base}?${qs}`);
-  const json = await resp.json();
-
-  // check api errors
-  if (json.status && json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
-    throw new Error(`Google Places: ${json.status} ${json.error_message || ''}`);
-  }
-  return json;
-};
-
-// production fetcher: routes through backend to protect api key
-const productionFetcher = async ({ url, params }) => {
-  const baseUrl = API_URL;
+// Search goes through the backend, which uses free OpenStreetMap search, or
+// Google when the server has a key. That keeps any key off the phone, and
+// works on the web, where browsers can't call Google's search directly.
+const backendFetcher = async ({ url, params }) => {
   const endpoint = url === 'autocomplete' ? '/api/places/autocomplete' : '/api/places/details';
   const queryString = new URLSearchParams(params).toString();
-  const response = await fetch(`${baseUrl}${endpoint}?${queryString}`);
+  const response = await fetch(`${API_URL}${endpoint}?${queryString}`);
 
   if (!response.ok) {
-    const error = await response.json();
+    // A host error page (e.g. while the server wakes up) isn't JSON.
+    const error = await response.json().catch(() => ({}));
     throw new Error(error.error || 'Failed to fetch places');
   }
 
@@ -144,7 +125,7 @@ function SearchLoadingDots() {
 
 export default function PlacesSearchBar({
   onPlaceSelected = () => { },
-  fetcher = __DEV__ ? devDirectFetcher : productionFetcher,
+  fetcher = backendFetcher,
   components = 'country:ca',
   placeholder = 'Search address or place',
   minChars = 2,

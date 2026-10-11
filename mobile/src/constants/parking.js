@@ -1,6 +1,13 @@
 
+import { Platform } from 'react-native';
+
 export const DEFAULT_SEARCH_RADIUS = 500; // meters — matches the backend default
 export const LOCATION_STORAGE_KEY = 'userLocation';
+
+// The web build is a portfolio demo. Most visitors aren't in Calgary, where
+// the parking data is, so it starts downtown instead of asking where they
+// are (which would put them on an empty map).
+export const USE_DEVICE_LOCATION = Platform.OS !== 'web';
 
 // ===== Search radius — single source of truth =====
 // Four familiar presets shared by every radius control in the app. The map

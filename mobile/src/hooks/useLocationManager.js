@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { DEFAULT_LOCATION, LOCATION_STORAGE_KEY } from '../constants/parking';
+import { DEFAULT_LOCATION, LOCATION_STORAGE_KEY, USE_DEVICE_LOCATION } from '../constants/parking';
 
 export const useLocationManager = () => {
     const [location, setLocation] = useState(null);
@@ -16,6 +16,13 @@ export const useLocationManager = () => {
     const loadLocation = useCallback(async () => {
         try {
             setIsLoadingLocation(true);
+
+            // The web demo starts downtown, without a location prompt.
+            if (!USE_DEVICE_LOCATION) {
+                setLocation(DEFAULT_LOCATION);
+                setLocationName(DEFAULT_LOCATION.name);
+                return;
+            }
             
             // first, try to load from storage
             const stored = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);

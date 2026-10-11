@@ -13,15 +13,15 @@ import {
     Text,
     View,
 } from 'react-native';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // shared components
+import MapView, { PROVIDER_GOOGLE } from '../../components/Map';
 import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingCard';
 
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
-import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS } from '../../constants/parking';
+import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS, USE_DEVICE_LOCATION } from '../../constants/parking';
 import { STORAGE_KEYS } from '../../constants/session';
 import { TOKENS } from '../../constants/theme';
 import { getDistanceLabel } from '../../utils/parkingHelpers';
@@ -202,6 +202,11 @@ function MapScreen({ route, navigation }) {
 
     // get initial location and record permission outcome
     useEffect(() => {
+        if (!USE_DEVICE_LOCATION) {
+            setUserLocation(DEFAULT_LOCATION);
+            setRegion(DEFAULT_LOCATION);
+            return;
+        }
         (async () => {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();

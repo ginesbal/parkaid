@@ -532,6 +532,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 12,
         elevation: 3,
+        // Pulled up, the sheet covers the floating map controls (zIndex 500)
+        // rather than having them float over its list. Android already
+        // stacks it that way by elevation; this matches iOS and the web.
+        zIndex: 600,
     },
     header: {
         paddingTop: 12,

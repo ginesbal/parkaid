@@ -33,7 +33,8 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 Mobile app
 - React Native with Expo SDK 54 (one codebase for iOS, Android, and web)
 - React Navigation for moving between screens
-- React Native Maps for the map and markers
+- React Native Maps for the map and markers on phones; on the web, MapLibre
+  with free OpenStreetMap tiles from OpenFreeMap (no key needed)
 - Expo Location for GPS
 - Expo Notifications for the parking reminders (scheduled on the phone, no
   push server)
@@ -177,6 +178,32 @@ can't run this project on an iPhone. It crashes on launch with
 
 Rebuild a development build after pulling changes that add a native module,
 such as `expo-notifications`.
+
+## The web demo
+
+The same app builds for the web, with a live map, real spots and working
+search, so people can try it without a phone. Point it at your deployed backend
+and export it as a static site:
+
+```bash
+cd mobile
+EXPO_PUBLIC_API_URL=https://<your-backend>.onrender.com npm run export:web
+```
+
+Then upload the `mobile/dist` folder to any static host (Netlify, Vercel,
+GitHub Pages, and so on).
+
+How the web version differs:
+- It starts in downtown Calgary without asking for the visitor's location,
+  since most visitors won't be in Calgary, where the parking data is.
+- The map uses free OpenFreeMap tiles: no key or sign-up. OpenFreeMap is
+  donation-funded with no uptime guarantee; to use another provider, change
+  the style URL in `src/components/Map/index.web.js`.
+- Address search works with no setup (free OpenStreetMap search through the
+  backend). Set `GOOGLE_PLACES_API_KEY` on Render to use Google instead.
+- Reminders are phone-only, so the Park tab's timer doesn't notify on the web.
+- Render's free plan sleeps after about 15 minutes without visits, so the
+  first visitor after a quiet spell waits up to a minute for spots to load.
 
 ## Deploying the backend (Render)
 

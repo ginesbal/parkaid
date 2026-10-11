@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-hooks';
 import * as Location from 'expo-location';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useLocationManager } from '../useLocationManager';
 
 const mockStore = {};
@@ -14,6 +14,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 jest.mock('react-native', () => ({
     AppState: { addEventListener: jest.fn(() => ({ remove: jest.fn() })) },
+    Platform: { OS: 'ios' },
 }));
 
 jest.mock('expo-location', () => ({
@@ -73,5 +74,31 @@ describe('useLocationManager — when location is refused', () => {
         });
 
         expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1); // only the first launch
+    });
+});
+
+describe('useLocationManager — the web demo', () => {
+    afterEach(() => {
+        Platform.OS = 'ios';
+    });
+
+    it('starts downtown without asking where you are, and says nothing about it', async () => {
+        // The web check is made when the module loads, so load a fresh copy
+        // as the web, with test helpers that share its copy of React.
+        Platform.OS = 'web';
+        let hooks;
+        let useWebLocationManager;
+        jest.isolateModules(() => {
+            hooks = require('@testing-library/react-hooks/pure');
+            ({ useLocationManager: useWebLocationManager } = require('../useLocationManager'));
+        });
+        const { result, unmount } = hooks.renderHook(() => useWebLocationManager());
+        await hooks.act(async () => {});
+
+        expect(result.current.location.name).toBe('Downtown Calgary');
+        expect(result.current.locationError).toBeNull();
+        expect(result.current.locationDenied).toBe(false);
+        expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+        unmount();
     });
 });

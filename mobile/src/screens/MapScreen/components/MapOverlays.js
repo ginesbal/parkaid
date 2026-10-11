@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { View } from 'react-native';
-import { Circle, Marker } from 'react-native-maps';
+import { Circle, Marker } from '../../../components/Map';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
 
