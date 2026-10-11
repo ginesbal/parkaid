@@ -105,7 +105,8 @@ There are two parts to run: the backend (the API) and the mobile app.
 You'll need:
 - Node.js 18 or newer, and npm
 - A Supabase project (the free tier is fine). This is your database.
-- The Expo Go app on your phone, or an iOS/Android simulator
+- An iOS simulator or Android emulator, or a phone (see "Expo Go and SDK 54"
+  below before using Expo Go on an iPhone)
 
 ### 1. Backend
 
@@ -157,9 +158,24 @@ npx expo start -c        # press i for iOS, a for Android, or scan the QR code
 Once the backend is deployed, you can use the Render URL here instead of your
 local IP.
 
-If you run a development build (`npm run ios` or `npm run android`) instead of
-Expo Go, rebuild it after pulling changes that add a native module, such as
-`expo-notifications`.
+#### Expo Go and SDK 54
+
+The app is on Expo SDK 54, and Expo Go can only open projects on the SDK it was
+built for. The App Store's Expo Go moved to SDK 57 in September 2026, so it
+can't run this project on an iPhone. It crashes on launch with
+"'PlatformConstants' could not be found". Use one of these instead:
+
+- **Simulator or emulator:** run `npx expo start -c`, then press `i` or `a`.
+  Expo installs the matching Expo Go for you.
+- **Android phone:** install Expo Go for SDK 54 from
+  [expo.dev/go](https://expo.dev/go), then scan the QR code.
+- **Any phone, iPhone included:** a development build, which is the app
+  compiled with its own native code, so Expo Go isn't involved. Plug the phone
+  in and run `npm run ios -- --device` (needs a Mac with Xcode; a free Apple ID
+  works) or `npm run android`.
+
+Rebuild a development build after pulling changes that add a native module,
+such as `expo-notifications`.
 
 ## Deploying the backend (Render)
 
