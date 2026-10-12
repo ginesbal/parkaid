@@ -376,7 +376,8 @@ const ParkingBottomSheet = memo(forwardRef(({
                             onPress={onRetry}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel="Try loading parking again"
+                            accessibilityLabel="Try again"
+                            accessibilityHint="Loads parking again"
                         >
                             <MaterialCommunityIcons name="refresh" size={14} color={TOKENS.primary} />
                             <Text style={styles.clearButtonText}>Try again</Text>
@@ -390,7 +391,8 @@ const ParkingBottomSheet = memo(forwardRef(({
                             onPress={onClearPin}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel="Clear the search pin"
+                            accessibilityLabel="Clear pin"
+                            accessibilityHint="Searches near you again"
                         >
                             <MaterialCommunityIcons
                                 name="close-circle"
@@ -423,7 +425,7 @@ const ParkingBottomSheet = memo(forwardRef(({
                                     hitSlop={CHIP_HIT_SLOP}
                                     accessibilityRole="button"
                                     accessibilityState={{ selected: isActive }}
-                                    accessibilityLabel={`Within ${getDistanceLabel(option.value)}, about a ${metersToWalkMinutes(option.value)} minute walk`}
+                                    accessibilityLabel={`Within ${option.label}, about a ${metersToWalkMinutes(option.value)} minute walk`}
                                 >
                                     <Text style={[
                                         styles.radiusChipText,

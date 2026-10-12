@@ -641,8 +641,8 @@ function MapScreen({ route, navigation }) {
                         style={({ pressed }) => [styles.pinPill, pressed && styles.fabPressed]}
                         onPress={startPlacing}
                         accessibilityRole="button"
-                        accessibilityLabel={pinnedLocation ? 'Move the search pin' : 'Drop a pin to search another area'}
-                        accessibilityHint="Move the map under the pin, then confirm"
+                        accessibilityLabel={pinnedLocation ? 'Move pin' : 'Drop pin'}
+                        accessibilityHint="Search somewhere else: move the map under the pin, then confirm"
                     >
                         <MaterialCommunityIcons
                             name={pinnedLocation ? 'map-marker' : 'map-marker-plus'}
@@ -719,7 +719,8 @@ function MapScreen({ route, navigation }) {
                             ]}
                             onPress={confirmPlacement}
                             accessibilityRole="button"
-                            accessibilityLabel="Search this area"
+                            accessibilityLabel="Search here"
+                            accessibilityHint="Finds parking around the pin"
                         >
                             <MaterialCommunityIcons name="map-marker-check" size={18} color={TOKENS.onPrimary} />
                             <Text style={styles.placementBtnPrimaryText}>Search here</Text>

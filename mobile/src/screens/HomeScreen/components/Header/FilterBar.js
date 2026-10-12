@@ -1,7 +1,6 @@
 import React, { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../../constants/parking';
-import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
 const TYPE_FILTERS = [
@@ -69,7 +68,7 @@ const FilterBar = ({
                                 ]}
                                 onPress={() => handleDistancePress(option.value)}
                                 accessibilityRole="button"
-                                accessibilityLabel={`Within ${getDistanceLabel(option.value)}, about a ${metersToWalkMinutes(option.value)} minute walk`}
+                                accessibilityLabel={`Within ${option.label}, about a ${metersToWalkMinutes(option.value)} minute walk`}
                                 accessibilityState={{ selected: isActive }}
                             >
                                 <Text style={[

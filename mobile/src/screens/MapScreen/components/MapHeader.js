@@ -3,11 +3,13 @@ import { Pressable, Text, View } from 'react-native';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
 import { styles } from '../styles';
 
+// Spoken as they read ("Lot"), so voice control can say what it sees; the
+// hint says what the chip does.
 const TYPE_FILTERS = [
-    { type: 'all', label: 'All', spoken: 'Show all parking' },
-    { type: 'on_street', label: 'Street', spoken: 'Show street parking' },
-    { type: 'off_street', label: 'Lot', spoken: 'Show parking lots' },
-    { type: 'residential', label: 'Permit', spoken: 'Show permit parking' },
+    { type: 'all', label: 'All', hint: 'Shows all parking' },
+    { type: 'on_street', label: 'Street', hint: 'Shows street parking only' },
+    { type: 'off_street', label: 'Lot', hint: 'Shows parking lots only' },
+    { type: 'residential', label: 'Permit', hint: 'Shows permit parking only' },
 ];
 
 // The pills render ~29pt tall; extend the touch area to the 44pt minimum
@@ -68,7 +70,8 @@ function MapHeader({
                             onPress={() => setFilterType(f.type)}
                             hitSlop={CHIP_HIT_SLOP}
                             accessibilityRole="button"
-                            accessibilityLabel={f.spoken}
+                            accessibilityLabel={f.label}
+                            accessibilityHint={f.hint}
                             accessibilityState={{ selected: isActive }}
                         >
                             <Text style={[styles.miniChipText, isActive && styles.miniChipTextActive]}>

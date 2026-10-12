@@ -42,7 +42,8 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, hasError, errorKind, t
                         ]}
                         onPress={hasError ? onRetry : onExpandSearch}
                         accessibilityRole="button"
-                        accessibilityLabel={hasError ? 'Try loading parking again' : expandLabel}
+                        accessibilityLabel={hasError ? 'Try again' : expandLabel}
+                        accessibilityHint={hasError ? 'Loads parking again' : undefined}
                     >
                         <MaterialCommunityIcons
                             name={hasError ? 'refresh' : 'radar'}
@@ -63,7 +64,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, hasError, errorKind, t
                     ]}
                     onPress={onViewMap}
                     accessibilityRole="button"
-                    accessibilityLabel="View parking map"
+                    accessibilityLabel="View map"
                 >
                     <MaterialCommunityIcons
                         name="map-search-outline"

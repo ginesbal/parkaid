@@ -82,18 +82,23 @@ function ParkingListItem({
         onPress?.(spot, { stayInList: true });
     };
 
-    const a11yPrice =
-        !isPublic ? access.detail || access.label
-        : price.kind === 'paid' ? `${price.value} per hour`
-        : price.kind === 'free' ? 'free'
-        : 'rate not listed';
+    // The price column as it reads ("$3.00 per hour", "Rate on signs",
+    // "Residents"), plus the reason when it isn't public parking.
+    const accessText = ACCESS_LABEL[access.kind] || access.label;
+    const a11yPrice = !isPublic
+        ? [accessText, access.detail].filter(Boolean).join(', ')
+        : [price.value, price.kind === 'paid' ? price.unit : null].filter(Boolean).join(' ');
 
-    // Spoken in words: "5 minute walk, 400 meters away" — and when the walk
-    // time is missing, say so rather than reading out a dash.
+    // Spoken address first, so voice control can say what it sees ("tap 9 Ave
+    // SW"), then everything else the row shows, in words: "9 Ave SW, 5 minute
+    // walk, 400 meters away, Street, 2 hours max, Rate on signs". When the
+    // walk time is missing, say so rather than reading out a dash.
     const a11yLabel = [
-        `Parking at ${addr.primary}`,
+        addr.primary,
         walk != null ? `${walk} minute walk` : 'walk time unknown',
         Number.isFinite(spot.distance) ? `${getDistanceLabel(spot.distance)} away` : null,
+        type.label,
+        maxStay ? `${maxStay.text} max` : null,
         a11yPrice,
     ].filter(Boolean).join(', ');
 
@@ -134,6 +139,7 @@ function ParkingListItem({
                             size={13}
                             color={TOKENS.textMuted}
                             style={styles.metaIcon}
+                            aria-hidden
                         />
                         <Text style={styles.metaText}>{type.label}</Text>
 
