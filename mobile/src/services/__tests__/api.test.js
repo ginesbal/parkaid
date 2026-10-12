@@ -64,3 +64,58 @@ describe('parkingAPI — what kind of failure', () => {
         expect(error.kind).toBe('server');
     });
 });
+
+// A free Render server sleeps when idle and takes about a minute to wake.
+describe('parkingAPI — waiting out a sleeping server', () => {
+    // A fresh client each time: "has the server answered yet" is per session.
+    const freshAPI = () => {
+        let api;
+        jest.isolateModules(() => {
+            ({ parkingAPI: api } = require('../api'));
+        });
+        return api;
+    };
+    // A request that never answers, until it's given up on.
+    const hangingFetch = () => jest.fn((url, { signal }) => new Promise((resolve, reject) => {
+        signal.addEventListener('abort', () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' })));
+    }));
+    const ok = async () => ({ ok: true, json: async () => ({ success: true, data: [] }) });
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('gives the first request up to 75 seconds, not 8', async () => {
+        const api = freshAPI();
+        global.fetch = hangingFetch();
+        let outcome = null;
+        api.findNearbySpots(51.04, -114.07, 500, {}, { force: true })
+            .then(() => { outcome = 'answered'; }, (error) => { outcome = error.kind; });
+
+        await jest.advanceTimersByTimeAsync(30000);
+        expect(outcome).toBeNull(); // still waiting while the server wakes
+
+        await jest.advanceTimersByTimeAsync(45000);
+        expect(outcome).toBe('slow');
+    });
+
+    it('goes back to 8 seconds once the server has answered', async () => {
+        const api = freshAPI();
+        global.fetch = jest.fn(ok);
+        await api.findNearbySpots(51.04, -114.07, 500, {}, { force: true });
+        expect(api.serverAwake).toBe(true);
+
+        global.fetch = hangingFetch();
+        let outcome = null;
+        api.findNearbySpots(51.05, -114.07, 500, {}, { force: true })
+            .then(() => { outcome = 'answered'; }, (error) => { outcome = error.kind; });
+        await jest.advanceTimersByTimeAsync(8000);
+        expect(outcome).toBe('slow');
+    });
+
+    it('counts an error status as the server being awake', async () => {
+        const api = freshAPI();
+        global.fetch = jest.fn(async () => ({ ok: false, status: 503, json: async () => ({}) }));
+        await expect(api.findNearbySpots(51.04, -114.07, 500, {}, { force: true })).rejects.toMatchObject({ kind: 'server' });
+        expect(api.serverAwake).toBe(true);
+    });
+});

@@ -44,7 +44,7 @@ export default function HomeScreen({ navigation }) {
   const [reloadKey, setReloadKey] = useState(0);
 
   // data fetching hook
-  const { spots, loading, error, errorKind, lastUpdated } = useParkingSpots(
+  const { spots, loading, error, errorKind, lastUpdated, waking } = useParkingSpots(
     location,
     searchRadius,
     activeFilter,
@@ -198,7 +198,7 @@ export default function HomeScreen({ navigation }) {
       refreshing,
       isLoadingLocation
     });
-    return <LoadingState searchRadius={searchRadius} />;
+    return <LoadingState searchRadius={searchRadius} waking={waking} />;
   }
 
   // While new results load, dim the current ones so it's clear they're

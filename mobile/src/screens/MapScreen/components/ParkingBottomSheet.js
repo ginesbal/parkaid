@@ -12,7 +12,7 @@ import {
     View,
 } from 'react-native';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
-import { getLoadError } from '../../../constants/loadErrors';
+import { WAKING_NOTICE, WAKING_NOTICE_SHORT, getLoadError } from '../../../constants/loadErrors';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
@@ -59,6 +59,7 @@ const ParkingBottomSheet = memo(forwardRef(({
     loading = false,
     error = null,
     errorKind = null,
+    waking = false,
     onRetry,
     onItemPress,
     onClearPin,
@@ -300,7 +301,9 @@ const ParkingBottomSheet = memo(forwardRef(({
     // doesn't talk over the screen opening.
     // Advice that fits the failure: no connection, too slow, or the server.
     const loadError = getLoadError(errorKind);
-    const announcement = error ? `${headerTitle}. ${loadError.hint}.` : headerTitle;
+    const announcement = error
+        ? `${headerTitle}. ${loadError.hint}.`
+        : waking ? `${headerTitle} ${WAKING_NOTICE}` : headerTitle;
     const lastAnnouncementRef = useRef(null);
     useEffect(() => {
         if (Platform.OS !== 'ios') return;
@@ -350,13 +353,15 @@ const ParkingBottomSheet = memo(forwardRef(({
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {error
                                 ? loadError.hint
-                                : placingPin
-                                    ? 'Around the pin'
-                                    : selectedSpot?.address
-                                        ? `Selected: ${selectedSpot.address}`
-                                        : searchMode === 'pinned'
-                                            ? 'Around your pin'
-                                            : 'Near you'}
+                                : waking
+                                    ? WAKING_NOTICE_SHORT
+                                    : placingPin
+                                        ? 'Around the pin'
+                                        : selectedSpot?.address
+                                            ? `Selected: ${selectedSpot.address}`
+                                            : searchMode === 'pinned'
+                                                ? 'Around your pin'
+                                                : 'Near you'}
                         </Text>
                     </View>
 

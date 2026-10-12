@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WAKING_NOTICE } from '../../../../constants/loadErrors';
 import { TOKENS } from '../../../../constants/theme';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
@@ -10,8 +11,13 @@ import { styles } from './styles';
 /**
  * LoadingState - Initial loading screen with skeleton placeholders
  */
-const LoadingState = ({ searchRadius }) => {
+const LoadingState = ({ searchRadius, waking = false }) => {
     const pulseAnim = useRef(new Animated.Value(0.45)).current;
+
+    // iOS has no live regions, so say it there too.
+    useEffect(() => {
+        if (waking && Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(WAKING_NOTICE);
+    }, [waking]);
 
     useEffect(() => {
         const loop = Animated.loop(
@@ -46,8 +52,9 @@ const LoadingState = ({ searchRadius }) => {
                 </View>
 
                 <Text style={styles.loadingText}>Looking for spots nearby</Text>
-                <Text style={styles.loadingSubtext}>
-                    Checking within {getDistanceLabel(searchRadius)} of you
+                {/* A long first wait gets explained, not just spun. */}
+                <Text style={styles.loadingSubtext} accessibilityLiveRegion="polite">
+                    {waking ? WAKING_NOTICE : `Checking within ${getDistanceLabel(searchRadius)} of you`}
                 </Text>
 
                 <View style={styles.loadingSkeletonStack}>

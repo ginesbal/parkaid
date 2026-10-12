@@ -7,10 +7,19 @@ const CACHE_PREFIX = '@parkaid:';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const OFFLINE_TTL = 24 * 60 * 60 * 1000; // 24 hours for offline mode
 
+// The backend runs on Render's free plan, which puts the server to sleep
+// after a quiet spell; the first request then waits about a minute while it
+// wakes. So until the server has answered once, wait that long; after that,
+// a few seconds is plenty.
+const REQUEST_TIMEOUT_MS = 8000;
+const WAKE_TIMEOUT_MS = 75000;
+
 class ParkingAPI {
   constructor() {
     this.isOnline = true;
     this.pendingRequests = new Map();
+    // True once the server has answered anything this session.
+    this.serverAwake = false;
   }
 
   // generate cache key
@@ -84,7 +93,10 @@ class ParkingAPI {
 
   async _performRequest(url, options, cacheKey, endpoint) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.serverAwake ? REQUEST_TIMEOUT_MS : WAKE_TIMEOUT_MS
+    );
 
     try {
       if (__DEV__) console.log(`Fetching: ${url}`);
@@ -100,6 +112,8 @@ class ParkingAPI {
       });
 
       clearTimeout(timeout);
+      // Any answer, even an error, means the server is up.
+      this.serverAwake = true;
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);

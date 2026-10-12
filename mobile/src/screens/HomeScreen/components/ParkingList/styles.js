@@ -27,9 +27,13 @@ export const styles = StyleSheet.create({
         marginBottom: 4,
         letterSpacing: -0.1,
     },
+    // Centered under the title; the starting-up notice runs to two lines.
     loadingSubtext: {
         fontSize: 14,
+        lineHeight: 20,
         color: TOKENS.textMuted,
+        textAlign: 'center',
+        maxWidth: 300,
         marginBottom: 24,
     },
     loadingSkeletonStack: {

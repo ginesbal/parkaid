@@ -28,3 +28,8 @@ export const LOAD_ERRORS = {
 };
 
 export const getLoadError = (kind) => LOAD_ERRORS[kind] || LOAD_ERRORS.offline;
+
+// Shown while the first search waits on a server that's still waking up
+// (the free host sleeps when idle). Not an error: it will answer.
+export const WAKING_NOTICE = 'The parking service is starting up. The first search can take up to a minute.';
+export const WAKING_NOTICE_SHORT = 'Starting up, this can take a minute';

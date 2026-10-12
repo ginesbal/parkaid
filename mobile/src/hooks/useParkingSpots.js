@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { parkingAPI } from '../services/api';
 
+// How long the first search of a session waits before saying the server is
+// still starting up (see services/api.js).
+const WAKING_NOTICE_MS = 4000;
+
 // `reloadKey` lets a caller force a fresh fetch for the same inputs (e.g. a
 // "Try again" button or pull-to-refresh) by bumping a number. That fetch
 // bypasses the response cache, so the user actually gets new data.
@@ -14,6 +18,9 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
     // When the most recent fetch finished (success or failure). Lets callers
     // end a pull-to-refresh spinner exactly when fresh data lands.
     const [lastUpdated, setLastUpdated] = useState(null);
+    // True while a search is waiting on a server that hasn't answered yet
+    // this session, past the first few seconds: it's probably waking up.
+    const [waking, setWaking] = useState(false);
 
     // track if component is mounted to prevent state updates after unmount
     const isMountedRef = useRef(true);
@@ -59,6 +66,9 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
             forceNextFetchRef.current = false;
             setError(null);
             setErrorKind(null);
+            const wakingTimer = parkingAPI.serverAwake
+                ? null
+                : setTimeout(() => { if (isCurrent()) setWaking(true); }, WAKING_NOTICE_MS);
 
             try {
                 const params = filterType !== 'all' ? { type: filterType } : {};
@@ -80,7 +90,9 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
                     setSpots([]);
                 }
             } finally {
+                clearTimeout(wakingTimer);
                 if (isCurrent()) {
+                    setWaking(false);
                     setLoading(false);
                     setLastUpdated(Date.now());
                 }
@@ -96,5 +108,5 @@ export function useParkingSpots(location, radius, filterType = 'all', reloadKey 
         };
     }, [location?.latitude, location?.longitude, radius, filterType, reloadKey]);
 
-    return { spots, loading, error, errorKind, lastUpdated };
+    return { spots, loading, error, errorKind, lastUpdated, waking };
 }

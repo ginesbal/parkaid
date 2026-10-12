@@ -161,3 +161,41 @@ describe('useParkingSpots', () => {
         expect(result.current.loading).toBe(false);
     });
 });
+describe('useParkingSpots — while the server wakes up', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+    });
+    afterEach(() => {
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+        parkingAPI.serverAwake = undefined;
+    });
+
+    it('says so after a few seconds on the first search, and stops once spots arrive', async () => {
+        parkingAPI.serverAwake = false;
+        let answer;
+        parkingAPI.findNearbySpots.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+
+        const { result } = renderHook(() => useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500));
+        await act(async () => { jest.advanceTimersByTime(300 + 3900); });
+        expect(result.current.waking).toBe(false); // a normal wait first
+
+        await act(async () => { jest.advanceTimersByTime(200); });
+        expect(result.current.waking).toBe(true);
+        expect(result.current.loading).toBe(true);
+
+        await act(async () => { answer({ data: [{ id: 1 }] }); });
+        expect(result.current.waking).toBe(false);
+        expect(result.current.spots).toEqual([{ id: 1 }]);
+    });
+
+    it("doesn't once the server has answered this session", async () => {
+        parkingAPI.serverAwake = true;
+        parkingAPI.findNearbySpots.mockImplementation(() => new Promise(() => {}));
+
+        const { result } = renderHook(() => useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500));
+        await act(async () => { jest.advanceTimersByTime(300 + 10000); });
+        expect(result.current.waking).toBe(false);
+    });
+});
