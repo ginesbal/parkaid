@@ -193,6 +193,11 @@ EXPO_PUBLIC_API_URL=https://<your-backend>.onrender.com npm run export:web
 Then upload the `mobile/dist` folder to any static host (Netlify, Vercel,
 GitHub Pages, and so on).
 
+Shared links show a preview card (`mobile/public/og-image.png`). LinkedIn and
+some other sites only load it from a full address, so once the demo is
+hosted, put the site's address in front of `og-image.png` in
+`mobile/public/index.html`.
+
 How the web version differs:
 - It starts in downtown Calgary without asking for the visitor's location,
   since most visitors won't be in Calgary, where the parking data is.

@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,15 @@ const navigationRef = createNavigationContainerRef();
 // phone-width column, the layout it was designed for, instead of stretching
 // across the screen.
 const WEB_COLUMN_WIDTH = 480;
+
+// On the web React Navigation draws each tab as a link, which a screen reader
+// announces as a list of links. A plain button keeps the tab role it's given,
+// and says which tab is selected (the web reads aria-selected).
+const WebTabButton = ({ to, children, accessibilityState, ...props }) => (
+    <Pressable {...props} accessibilityState={accessibilityState} aria-selected={accessibilityState?.selected}>
+        {children}
+    </Pressable>
+);
 
 const TAB_LABELS = {
     Home: 'Home',
@@ -105,6 +114,7 @@ function AppNavigation() {
                     tabBarActiveTintColor: TOKENS.primary,
                     tabBarInactiveTintColor: TOKENS.textMuted,
                     tabBarHideOnKeyboard: true,
+                    tabBarButton: Platform.OS === 'web' ? WebTabButton : undefined,
                     tabBarStyle: {
                         backgroundColor: TOKENS.surface,
                         borderTopWidth: StyleSheet.hairlineWidth,

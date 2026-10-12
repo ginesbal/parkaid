@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+
+    <!-- Link previews (Slack, LinkedIn, iMessage…). Some sites need the image
+         as a full URL: once the demo is hosted, put its address in front of
+         og-image.png. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="parkaid · Parking in downtown Calgary" />
+    <meta property="og:description" content="Find street parking and lots near you in downtown Calgary, with walk times, rates and time limits on a live map." />
+    <meta property="og:image" content="og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+        background: #f6f8fa;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+
+    <!-- Shown while the app downloads; React replaces it on first render. -->
+    <style id="boot">
+      .boot {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #0f1a26;
+      }
+      .boot-mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: #1d6d8b;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        font-weight: 700;
+        animation: boot-breathe 1.6s ease-in-out infinite;
+      }
+      .boot-name {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.2px;
+      }
+      .boot-note {
+        font-size: 14px;
+        color: #5b6b7c;
+      }
+      @keyframes boot-breathe {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.55; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-mark { animation: none; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <div id="root">
+      <div class="boot" role="status">
+        <div class="boot-mark" aria-hidden="true">P</div>
+        <div class="boot-name">parkaid</div>
+        <div class="boot-note">Loading parking in downtown Calgary…</div>
+      </div>
+    </div>
+  </body>
+</html>

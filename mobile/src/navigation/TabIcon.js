@@ -1,7 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 import { TOKENS } from '../constants/theme';
 
+// The same icon family as the rest of the app, so the web build downloads one
+// icon font, not two.
 export const TAB_ICONS = {
     Home: { active: 'home', inactive: 'home-outline' },
     Map: { active: 'map', inactive: 'map-outline' },
@@ -16,7 +18,14 @@ export default function TabIcon({ route, focused, color, size, dotColor }) {
     const icons = TAB_ICONS[route];
     return (
         <View style={styles.iconWrap}>
-            <Ionicons name={focused ? icons.active : icons.inactive} size={size} color={color} />
+            {/* The tab's label names it; on the web the glyph would otherwise
+                be read out too. */}
+            <MaterialCommunityIcons
+                name={focused ? icons.active : icons.inactive}
+                size={size}
+                color={color}
+                aria-hidden
+            />
             {dotColor ? <View style={[styles.dot, { backgroundColor: dotColor }]} /> : null}
         </View>
     );

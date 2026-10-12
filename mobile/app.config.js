@@ -47,6 +47,11 @@ export default {
       }]
     ],
     web: {
+      // The browser tab title and search description for the web demo. The
+      // page template, with link-preview tags and a loading screen, is
+      // public/index.html.
+      name: "parkaid · Parking in downtown Calgary",
+      description: "Find street parking and lots near you in downtown Calgary, with walk times, rates and time limits on a live map.",
       favicon: "src/utils/assets/favicon.png",
       bundler: "metro",
       // The web map is MapLibre with free OpenStreetMap tiles

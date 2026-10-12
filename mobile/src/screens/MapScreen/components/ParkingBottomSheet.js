@@ -71,9 +71,18 @@ const ParkingBottomSheet = memo(forwardRef(({
     topInset = 0,
 }, ref) => {
     const listRef = useRef(null);
+    // Below the peek. While the sheet is closed it's hidden from screen
+    // readers (aria-hidden); on the web it's also `inert`, so keyboard focus
+    // can't land on rows that are off screen (focusing one scrolled the whole
+    // map screen to reveal it). One attribute on the container, so opening
+    // and closing never re-renders the rows.
+    const bodyRef = useRef(null);
     // Mirrors the snap state for screen readers: the list below the peek is
     // only exposed to them when it's actually on screen.
     const [isExpanded, setIsExpanded] = useState(false);
+    useEffect(() => {
+        if (Platform.OS === 'web' && bodyRef.current) bodyRef.current.inert = !isExpanded;
+    }, [isExpanded]);
     // Start conservatively low — onLayout will set the real height on first
     // paint. Undershooting is safer than overshooting: a slightly-too-short
     // peek is corrected upward once measured; a too-tall peek would leak the
@@ -437,12 +446,11 @@ const ParkingBottomSheet = memo(forwardRef(({
                 )}
             </View>
 
-            {/* Below the peek: hidden from screen readers while collapsed, so
-                focus never lands on rows that are off screen. */}
+            {/* Below the peek (see bodyRef). */}
             <View
+                ref={bodyRef}
                 style={styles.body}
-                accessibilityElementsHidden={!isExpanded}
-                importantForAccessibility={isExpanded ? 'auto' : 'no-hide-descendants'}
+                aria-hidden={!isExpanded}
             >
             {spots.length === 0 && loading ? (
                 <View style={styles.emptyState}>
