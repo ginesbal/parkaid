@@ -316,7 +316,7 @@ export default function PlacesSearchBar({
       {showRecent && (
         <View style={styles.suggestionsContainer}>
           <View style={styles.recentHeader}>
-            <Text style={styles.recentTitle} accessibilityRole="header">Recent</Text>
+            <Text style={styles.recentTitle} accessibilityRole="header" aria-level={2}>Recent</Text>
             <Pressable
               onPress={clearRecentPlaces}
               style={({ pressed }) => [styles.recentClear, pressed && styles.clearButtonPressed]}

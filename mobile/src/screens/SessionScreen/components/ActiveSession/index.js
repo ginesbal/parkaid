@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import ScreenHeading from '../../../../components/ScreenHeading';
 import { TOKENS } from '../../../../constants/theme';
 import { WARNING_LEAD_MINUTES } from '../../../../services/timerReminders';
 import { formatEndTime } from '../../../../utils/formatters';
@@ -62,6 +63,7 @@ const ActiveSession = ({
 
     return (
         <>
+            <ScreenHeading>Parking timer</ScreenHeading>
             <View style={styles.header}>
                 <StatusBadge state={sessionState} />
                 <Text style={styles.headerSpot} numberOfLines={1}>
@@ -77,7 +79,7 @@ const ActiveSession = ({
                     runs: say what happened, and let the user choose. */}
                 {pendingSpot ? (
                     <View style={styles.switchCard}>
-                        <Text style={styles.switchTitle} accessibilityRole="header">
+                        <Text style={styles.switchTitle} accessibilityRole="header" aria-level={2}>
                             Switch to {pendingSpot.address}?
                         </Text>
                         <Text style={styles.switchBody}>

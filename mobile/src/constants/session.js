@@ -16,6 +16,9 @@ export const STORAGE_KEYS = {
 
 export const DEFAULT_DURATION = 60; // minutes
 
+// The first reminder comes this long before a timer ends.
+export const WARNING_LEAD_MINUTES = 10;
+
 export const DURATION_OPTIONS = [
     { value: 30, label: '30 min' },
     { value: 60, label: '1 hour' },

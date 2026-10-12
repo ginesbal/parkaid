@@ -3,6 +3,7 @@ import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, Animated, Linking, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ScreenHeading from '../../components/ScreenHeading';
 import Header from './components/Header';
 import MapFAB from './components/MapFAB';
 import ParkingList from './components/ParkingList';
@@ -225,7 +226,8 @@ export default function HomeScreen({ navigation }) {
       {/* No 'bottom' edge: the tab bar already covers the home indicator,
           and bottom tabs gives screens the raw insets — adding it again
           left a blank strip above the tab bar. */}
-      <SafeAreaView edges={['left', 'right']} style={styles.container}>
+      <SafeAreaView edges={['left', 'right']} style={styles.container} role="main">
+        <ScreenHeading>Parking near you</ScreenHeading>
         <FlatList
           data={spots}
           renderItem={renderSpot}

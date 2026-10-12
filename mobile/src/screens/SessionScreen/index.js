@@ -144,7 +144,7 @@ export default function SessionScreen({ route, navigation }) {
   // bottom tabs hands screens the raw insets — adding it again leaves a gap.
   if (!hasSession) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container} role="main">
         <StatusBar style="dark" />
         <EmptyState
           timerSpot={timerSpot}
@@ -163,7 +163,7 @@ export default function SessionScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container} role="main">
       <StatusBar style="dark" />
       <ActiveSession
         session={session}

@@ -32,7 +32,7 @@ const EmptyState = ({
                         color={TOKENS.primary}
                     />
                 </View>
-                <Text style={styles.title}>Parking timer</Text>
+                <Text style={styles.title} accessibilityRole="header" aria-level={1}>Parking timer</Text>
                 <Text style={styles.subtitle}>Know exactly when your time is up.</Text>
             </View>
 

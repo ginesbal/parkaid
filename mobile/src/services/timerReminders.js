@@ -4,13 +4,17 @@
 // closed and need no push service or account. Two per timer — ten minutes
 // before it ends, and when time's up — each with a fixed id, so scheduling
 // again (after "Add time" or "Undo") simply replaces them.
+//
+// The web build gets timerReminders.web.js instead: the same API, doing
+// nothing, so expo-notifications never loads there.
 
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { Linking, Platform } from 'react-native';
+import { WARNING_LEAD_MINUTES } from '../constants/session';
 import { formatEndTime } from '../utils/formatters';
 
-export const WARNING_LEAD_MINUTES = 10;
+export { WARNING_LEAD_MINUTES };
 
 const CHANNEL_ID = 'parking-timer';
 const WARNING_ID = 'parking-timer-warning';

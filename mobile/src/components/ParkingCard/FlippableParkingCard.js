@@ -454,7 +454,7 @@ function FlippableParkingCard({
                         >
                             <MaterialCommunityIcons name="arrow-left" size={20} color={TOKENS.text} />
                         </TouchableOpacity>
-                        <Text style={styles.backTitle} numberOfLines={1} accessibilityRole="header">
+                        <Text style={styles.backTitle} numberOfLines={1} accessibilityRole="header" aria-level={2}>
                             {spot.address || spot.address_desc || 'Details'}
                         </Text>
                         <TouchableOpacity

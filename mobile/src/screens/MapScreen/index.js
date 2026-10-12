@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // shared components
 import MapView, { PROVIDER_GOOGLE } from '../../components/Map';
 import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingCard';
+import ScreenHeading from '../../components/ScreenHeading';
 
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
@@ -554,8 +555,9 @@ function MapScreen({ route, navigation }) {
     const reticleY = navigationHeight + (containerHeight - navigationHeight - BOTTOM_UI_OFFSET) / 2;
 
     return (
-        <View style={styles.container} onLayout={handleContainerLayout}>
+        <View style={styles.container} onLayout={handleContainerLayout} role="main">
             <StatusBar barStyle="dark-content" backgroundColor={TOKENS.surface} />
+            <ScreenHeading>Parking map</ScreenHeading>
 
             {/* map — rendered FIRST so iOS hitTest routes taps on later siblings
                 (header, FAB, bottom sheet) to those overlays instead of leaking

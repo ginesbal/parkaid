@@ -1,7 +1,7 @@
 // App.js
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -36,6 +36,14 @@ const WebTabButton = ({ to, children, accessibilityState, ...props }) => (
     <Pressable {...props} accessibilityState={accessibilityState} aria-selected={accessibilityState?.selected}>
         {children}
     </Pressable>
+);
+
+// On the web the tab bar is the page's navigation landmark, so screen reader
+// users can jump straight to it.
+const WebTabBar = (props) => (
+    <View role="navigation" aria-label="Tabs">
+        <BottomTabBar {...props} />
+    </View>
 );
 
 const TAB_LABELS = {
@@ -91,6 +99,7 @@ function AppNavigation() {
     return (
         <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
             <Tab.Navigator
+                tabBar={Platform.OS === 'web' ? WebTabBar : undefined}
                 sceneContainerStyle={{
                     backgroundColor: TOKENS.bg,
                 }}
