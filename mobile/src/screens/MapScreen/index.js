@@ -66,6 +66,9 @@ function MapScreen({ route, navigation }) {
     // bar height only seeds the first estimate.
     const tabBarHeight = useBottomTabBarHeight();
     const [containerHeight, setContainerHeight] = useState(SCREEN_HEIGHT - tabBarHeight);
+    // Measured too: in a wide browser window the app is a column narrower
+    // than the window, and the reticle and card center on the column.
+    const [containerWidth, setContainerWidth] = useState(SCREEN_WIDTH);
 
     const CARD_ESTIMATED_HEIGHT = 220;
     const SURFACE_STACK_GAP = 12;
@@ -393,7 +396,7 @@ function MapScreen({ route, navigation }) {
                         setFlippableCardVisible(true);
                     } else {
                         setFlippableCardPosition({
-                            x: SCREEN_WIDTH / 2,
+                            x: containerWidth / 2,
                             y: Math.min(containerHeight / 3, yCap),
                         });
                         setFlippableCardSpot(spot);
@@ -402,7 +405,7 @@ function MapScreen({ route, navigation }) {
                 }, delay);
             }, 0);
         }
-    }, [detailCardTopBoundary, detailCardBottomBoundary]);
+    }, [containerWidth, detailCardTopBoundary, detailCardBottomBoundary]);
 
     // selectSpot already collapses the sheet.
     const handleListItemPress = useCallback((spot) => {
@@ -454,11 +457,13 @@ function MapScreen({ route, navigation }) {
     }), [insets.top]);
 
     const handleContainerLayout = useCallback((event) => {
-        const measuredHeight = Math.round(event.nativeEvent.layout.height);
+        const { width, height } = event.nativeEvent.layout;
+        const measuredHeight = Math.round(height);
         if (measuredHeight <= 0) return;
         setContainerHeight((currentHeight) => (
             Math.abs(currentHeight - measuredHeight) > 1 ? measuredHeight : currentHeight
         ));
+        setContainerWidth(Math.round(width));
     }, []);
 
     const handleSearchResultsChange = useCallback((open) => {
@@ -545,7 +550,7 @@ function MapScreen({ route, navigation }) {
     // The reticle points at the center of the visible band (between the header
     // and the bottom UI). mapPadding makes the reported region center align
     // with this same point, so map center == reticle target.
-    const reticleX = SCREEN_WIDTH / 2;
+    const reticleX = containerWidth / 2;
     const reticleY = navigationHeight + (containerHeight - navigationHeight - BOTTOM_UI_OFFSET) / 2;
 
     return (
@@ -757,6 +762,7 @@ function MapScreen({ route, navigation }) {
                 position={flippableCardPosition}
                 topBoundary={detailCardTopBoundary}
                 bottomBoundary={detailCardBottomBoundary}
+                areaWidth={containerWidth}
                 onClose={() => {
                     setFlippableCardVisible(false);
                     setSelectedSpot(null);

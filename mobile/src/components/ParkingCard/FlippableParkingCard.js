@@ -43,6 +43,9 @@ function FlippableParkingCard({
     position = { x: 0, y: 0 },
     topBoundary = 60,
     bottomBoundary = SCREEN_HEIGHT - 140,
+    // The map area's width: the screen on a phone, a narrower column in a
+    // wide browser window.
+    areaWidth = SCREEN_WIDTH,
     onClose = () => { },
     onNavigate = () => { },
     onParkHere = null,
@@ -151,10 +154,10 @@ function FlippableParkingCard({
 
     if (!visible || !spot) return null;
 
-    // Center card horizontally, clamp to screen edges
+    // Center card horizontally, clamped to the map area's edges
     const cardX = Math.min(
-        Math.max(10, (SCREEN_WIDTH - CARD_WIDTH) / 2),
-        SCREEN_WIDTH - CARD_WIDTH - 10
+        Math.max(10, (areaWidth - CARD_WIDTH) / 2),
+        areaWidth - CARD_WIDTH - 10
     );
     // Center card vertically in the safe zone between header and bottom sheet
     const safeTop = Math.max(16, topBoundary);

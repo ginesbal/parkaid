@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,10 +19,16 @@ import SessionScreen from './src/screens/SessionScreen/index';
 import TabIcon from './src/navigation/TabIcon';
 import { initTimerReminders, useReminderTaps } from './src/services/timerReminders';
 import { getDeviceId } from './src/utils/device';
+import { USE_DEVICE_LOCATION } from './src/constants/parking';
 import { TOKENS } from './src/constants/theme';
 
 const Tab = createBottomTabNavigator();
 const navigationRef = createNavigationContainerRef();
+// In a wide browser window (the web demo on a laptop) the app sits in a
+// phone-width column, the layout it was designed for, instead of stretching
+// across the screen.
+const WEB_COLUMN_WIDTH = 480;
+
 const TAB_LABELS = {
     Home: 'Home',
     Map: 'Map',
@@ -62,6 +68,8 @@ function AppNavigation() {
             const id = await getDeviceId();
             setDeviceId(id);
 
+            // The web demo never asks (see USE_DEVICE_LOCATION).
+            if (!USE_DEVICE_LOCATION) return;
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status === 'granted') {
                 const loc = await Location.getCurrentPositionAsync({});
@@ -146,14 +154,47 @@ function AppNavigation() {
 }
 
 export default function App() {
+    const { width } = useWindowDimensions();
+    const framed = Platform.OS === 'web' && width > WEB_COLUMN_WIDTH;
+
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-                <AppNavigation />
-            </SafeAreaProvider>
+        <GestureHandlerRootView style={[frameStyles.page, framed && frameStyles.pageFramed]}>
+            <View style={[frameStyles.app, framed && frameStyles.appFramed]}>
+                <SafeAreaProvider>
+                    <AppNavigation />
+                </SafeAreaProvider>
+            </View>
         </GestureHandlerRootView>
     );
 }
+
+const frameStyles = StyleSheet.create({
+    page: {
+        flex: 1,
+    },
+    // A quiet tint around the column, so it reads as the app, not a gap.
+    pageFramed: {
+        alignItems: 'center',
+        backgroundColor: TOKENS.surfaceTint,
+    },
+    app: {
+        flex: 1,
+        width: '100%',
+    },
+    // overflow: hidden keeps the map, sheet and card inside the column.
+    appFramed: {
+        maxWidth: WEB_COLUMN_WIDTH,
+        overflow: 'hidden',
+        backgroundColor: TOKENS.bg,
+        borderLeftWidth: StyleSheet.hairlineWidth,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+        shadowColor: TOKENS.shadow,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.06,
+        shadowRadius: 24,
+    },
+});
 
 const navStyles = StyleSheet.create({
     label: {

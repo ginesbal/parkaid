@@ -328,20 +328,17 @@ const ParkingBottomSheet = memo(forwardRef(({
             ]}
         >
             <View style={styles.header} onLayout={handleHeaderLayout} {...panResponder.panHandlers}>
-                {/* Dragging is the only visual way to open the list, so give
-                    screen readers an equivalent: the handle is a button. */}
-                <View
+                {/* The handle is also a button: tap or click it, press Enter on
+                    it, or activate it with a screen reader, as an alternative
+                    to dragging. A drag that starts on it still moves the sheet. */}
+                <Pressable
                     style={styles.handleHit}
-                    accessible
+                    onPress={toggleExpanded}
                     accessibilityRole="button"
                     accessibilityLabel={isExpanded ? 'Collapse spot list' : 'Expand spot list'}
-                    accessibilityActions={[{ name: 'activate' }]}
-                    onAccessibilityAction={(event) => {
-                        if (event.nativeEvent.actionName === 'activate') toggleExpanded();
-                    }}
                 >
                     <View style={styles.handle} />
-                </View>
+                </Pressable>
 
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
