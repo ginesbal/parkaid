@@ -4,7 +4,8 @@ import Constants from 'expo-constants';
 const { apiUrl, googleMapsApiKey, supabaseUrl, supabaseAnonKey } = Constants.expoConfig.extra || {};
 
 export const API_URL = apiUrl || 'http://localhost:3000';
-export const GOOGLE_MAPS_API_KEY = googleMapsApiKey || '';
+// Blank when unset or still the .env.example placeholder ("your_…").
+export const GOOGLE_MAPS_API_KEY = googleMapsApiKey && !googleMapsApiKey.startsWith('your_') ? googleMapsApiKey : '';
 export const SUPABASE_URL = supabaseUrl || '';
 export const SUPABASE_ANON_KEY = supabaseAnonKey || '';
 

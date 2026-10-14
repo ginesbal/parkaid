@@ -4,6 +4,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { DEFAULT_LOCATION, LOCATION_STORAGE_KEY, USE_DEVICE_LOCATION } from '../constants/parking';
 
+// What Home calls the phone's position when the area's name isn't known.
+const UNNAMED = 'Your location';
+
+// The area's name ("Beltline", "Calgary"), or null if the lookup fails.
+async function placeName({ latitude, longitude }) {
+    try {
+        const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
+        return address?.district || address?.city || null;
+    } catch (error) {
+        if (__DEV__) console.log('Reverse geocoding failed:', error);
+        return null;
+    }
+}
+
 export const useLocationManager = () => {
     const [location, setLocation] = useState(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(true);
@@ -29,8 +43,19 @@ export const useLocationManager = () => {
             if (stored) {
                 const parsedLocation = JSON.parse(stored);
                 setLocation(parsedLocation);
-                setLocationName(parsedLocation.name || 'Downtown Calgary');
+                setLocationName(parsedLocation.name || UNNAMED);
                 setIsLoadingLocation(false);
+                // The map and the app's launch save the phone's position
+                // without a name. Look it up rather than guess "downtown".
+                if (!parsedLocation.name) {
+                    const name = await placeName(parsedLocation);
+                    if (name) {
+                        const named = { ...parsedLocation, name };
+                        setLocation(named);
+                        setLocationName(name);
+                        await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(named));
+                    }
+                }
                 return;
             }
             
@@ -54,23 +79,9 @@ export const useLocationManager = () => {
                 const newLocation = {
                     latitude: currentLocation.coords.latitude,
                     longitude: currentLocation.coords.longitude,
-                    name: 'Current Location'
                 };
-                
-                // try to get address
-                try {
-                    const [address] = await Location.reverseGeocodeAsync({
-                        latitude: newLocation.latitude,
-                        longitude: newLocation.longitude
-                    });
-                    
-                    if (address) {
-                        newLocation.name = address.district || address.city || 'Current Location';
-                    }
-                } catch (error) {
-                    if (__DEV__) console.log('Reverse geocoding failed:', error);
-                }
-                
+                newLocation.name = (await placeName(newLocation)) || UNNAMED;
+
                 setLocation(newLocation);
                 setLocationName(newLocation.name);
 

@@ -77,6 +77,36 @@ describe('useLocationManager — when location is refused', () => {
     });
 });
 
+describe('useLocationManager — a saved position', () => {
+    // The map and the app's launch save the phone's position with no name.
+    it("looks up the area's name instead of calling it downtown", async () => {
+        mockStore.userLocation = JSON.stringify({ latitude: 51.04, longitude: -114.08 });
+        const { result } = await renderLocation();
+
+        expect(result.current.location).toMatchObject({ latitude: 51.04, longitude: -114.08, name: 'Beltline' });
+        expect(result.current.locationName).toBe('Beltline');
+        expect(JSON.parse(mockStore.userLocation).name).toBe('Beltline');
+        expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('says "Your location" when the name lookup fails', async () => {
+        mockStore.userLocation = JSON.stringify({ latitude: 51.04, longitude: -114.08 });
+        Location.reverseGeocodeAsync.mockRejectedValueOnce(new Error('offline'));
+        const { result } = await renderLocation();
+
+        expect(result.current.locationName).toBe('Your location');
+        expect(result.current.location.name).toBeUndefined();
+    });
+
+    it('keeps a saved name as it is', async () => {
+        mockStore.userLocation = JSON.stringify({ latitude: 51.04, longitude: -114.08, name: 'Mission' });
+        const { result } = await renderLocation();
+
+        expect(result.current.locationName).toBe('Mission');
+        expect(Location.reverseGeocodeAsync).not.toHaveBeenCalled();
+    });
+});
+
 describe('useLocationManager — the web demo', () => {
     afterEach(() => {
         Platform.OS = 'ios';

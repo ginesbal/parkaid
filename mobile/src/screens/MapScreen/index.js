@@ -21,7 +21,7 @@ import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingC
 import ScreenHeading from '../../components/ScreenHeading';
 
 // app constants/services
-import { DEFAULT_LOCATION } from '../../constants/config';
+import { DEFAULT_LOCATION, GOOGLE_MAPS_API_KEY } from '../../constants/config';
 import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS, USE_DEVICE_LOCATION } from '../../constants/parking';
 import { STORAGE_KEYS } from '../../constants/session';
 import { NATIVE_DRIVER, TOKENS } from '../../constants/theme';
@@ -579,7 +579,9 @@ function MapScreen({ route, navigation }) {
                     ref={mapRef}
                     style={styles.map}
                     importantForAccessibility="no-hide-descendants"
-                    provider={PROVIDER_GOOGLE}
+                    // Google when there's a key; otherwise the iPhone uses
+                    // Apple Maps (Android always draws Google's map).
+                    provider={GOOGLE_MAPS_API_KEY ? PROVIDER_GOOGLE : undefined}
                     initialRegion={region}
                     onRegionChange={handleRegionChange}
                     onRegionChangeComplete={handleRegionChangeComplete}

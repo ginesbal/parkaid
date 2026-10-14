@@ -22,16 +22,29 @@ export default {
     assetBundlePatterns: [
       "**/*"
     ],
+    // The map's Google key (GOOGLE_MAPS_API_KEY in .env). Expo Go brings its
+    // own; a build of your own needs this. It needs "Maps SDK for iOS" and
+    // "Maps SDK for Android" turned on. Without it the iPhone map falls back
+    // to Apple Maps, but Android has no fallback. The committed android/
+    // project reads the same variable (app/build.gradle).
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.parkaid.app"
+      bundleIdentifier: "com.parkaid.app",
+      config: {
+        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY
+      }
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "src/utils/assets/adaptive-icon.png",
         backgroundColor: "#1d6d8b"
       },
-      package: "com.parkaid.app"
+      package: "com.parkaid.app",
+      config: {
+        googleMaps: {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY
+        }
+      }
     },
 
     plugins: [

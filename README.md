@@ -176,6 +176,11 @@ can't run this project on an iPhone. It crashes on launch with
   in and run `npm run ios -- --device` (needs a Mac with Xcode; a free Apple ID
   works) or `npm run android`.
 
+A build of your own draws the map with your Google key, `GOOGLE_MAPS_API_KEY`
+in `mobile/.env`, since Expo Go isn't there to supply one. Android needs it;
+without it the iPhone shows Apple Maps instead. Setup is in
+[mobile/GOOGLE_MAPS_SETUP.md](mobile/GOOGLE_MAPS_SETUP.md).
+
 Rebuild a development build after pulling changes that add a native module,
 such as `expo-notifications`.
 

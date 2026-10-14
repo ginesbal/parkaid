@@ -36,7 +36,7 @@ const Header = ({
         >
             <View style={styles.mainHeader}>
                 <LocationSection
-                    locationName={location?.name || 'Downtown Calgary'}
+                    locationName={location?.name || 'Your location'}
                     onPress={onLocationPress}
                 />
 
