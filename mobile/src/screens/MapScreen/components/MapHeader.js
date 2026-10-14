@@ -1,5 +1,5 @@
 import { memo, useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
 import { styles } from '../styles';
 
@@ -16,6 +16,9 @@ const TYPE_FILTERS = [
 // without making them visually heavier. Vertical only — horizontally the
 // pills are 8pt apart and already ≥48pt wide, so slop there would overlap.
 const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
+// Browsers ignore hitSlop; on the web, public/index.html extends the tap area
+// of anything tagged hit="chip" by the same 8 above and below.
+const WEB_CHIP_HIT = Platform.OS === 'web' ? { dataSet: { hit: 'chip' } } : null;
 
 /**
  * MapHeader — search first, then the parking-type chips, always in view.
@@ -69,6 +72,7 @@ function MapHeader({
                             ]}
                             onPress={() => setFilterType(f.type)}
                             hitSlop={CHIP_HIT_SLOP}
+                            {...WEB_CHIP_HIT}
                             accessibilityRole="button"
                             accessibilityLabel={f.label}
                             accessibilityHint={f.hint}

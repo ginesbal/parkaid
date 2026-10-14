@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Linking,
+    Platform,
     Pressable,
     ScrollView,
     Text,
@@ -68,6 +69,54 @@ function FlippableParkingCard({
     const resetTimerRef = useRef(null);
 
     useEffect(() => () => clearTimeout(resetTimerRef.current), []);
+
+    // Web: browsers ignore the modal props phones use (accessibilityViewIsModal,
+    // the escape gesture), so the card does that work itself. Focus moves into
+    // the card, Tab stays inside it, Escape closes it, and focus goes back to
+    // what opened it. The face that's turned away is inert.
+    const containerRef = useRef(null);
+    const frontRef = useRef(null);
+    const backRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    const isOpen = visible && Boolean(spot);
+    useEffect(() => {
+        if (Platform.OS !== 'web' || !isOpen) return undefined;
+        const card = containerRef.current;
+        const opener = document.activeElement;
+        card?.focus?.();
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                onCloseRef.current();
+                return;
+            }
+            if (event.key !== 'Tab' || !card) return;
+            const stops = [...card.querySelectorAll('[tabindex="0"], button, a[href], input')]
+                .filter((el) => !el.closest('[inert]'));
+            if (!stops.length) return;
+            const first = stops[0];
+            const last = stops[stops.length - 1];
+            const active = document.activeElement;
+            if (!card.contains(active) || (event.shiftKey && (active === first || active === card))) {
+                event.preventDefault();
+                (event.shiftKey ? last : first).focus();
+            } else if (!event.shiftKey && active === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+            if (opener && document.contains(opener)) opener.focus?.();
+        };
+    }, [isOpen]);
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (frontRef.current) frontRef.current.inert = isFlipped;
+        if (backRef.current) backRef.current.inert = !isFlipped;
+    }, [isFlipped, isOpen]);
 
     useEffect(() => {
         if (visible && spot) {
@@ -226,6 +275,9 @@ function FlippableParkingCard({
                     onPress={onClose}
                     accessibilityRole="button"
                     accessibilityLabel="Close details"
+                    // On the web the backdrop is for the mouse only; the
+                    // card's own close button and Escape cover the keyboard.
+                    {...(Platform.OS === 'web' ? { tabIndex: -1, 'aria-hidden': true } : null)}
                 >
                     <View />
                 </TouchableOpacity>
@@ -241,12 +293,19 @@ function FlippableParkingCard({
                         transform: [{ translateY: translateYAnim }, { scale: scaleAnim }],
                         opacity: fadeAnim,
                     },
+                    // The card itself takes focus on the web, as a dialog: no
+                    // square outline around it; its buttons keep their rings.
+                    Platform.OS === 'web' && { outlineStyle: 'none' },
                 ]}
                 pointerEvents="box-none"
                 // iOS: keep VoiceOver inside the card while it's open, and let
                 // the two-finger "scrub" escape gesture close it.
                 accessibilityViewIsModal
                 onAccessibilityEscape={onClose}
+                ref={containerRef}
+                {...(Platform.OS === 'web'
+                    ? { role: 'dialog', 'aria-modal': true, 'aria-label': addr.primary, tabIndex: -1 }
+                    : null)}
             >
                 {/* front of card — both faces stay mounted for the flip, so the
                     hidden one must also be removed from touch and from the
@@ -263,6 +322,7 @@ function FlippableParkingCard({
                     pointerEvents={isFlipped ? 'none' : 'auto'}
                     accessibilityElementsHidden={isFlipped}
                     importantForAccessibility={isFlipped ? 'no-hide-descendants' : 'auto'}
+                    ref={frontRef}
                 >
                     <View style={styles.cardHeader}>
                         <View style={styles.spotTypeTag}>
@@ -455,6 +515,7 @@ function FlippableParkingCard({
                     pointerEvents={isFlipped ? 'auto' : 'none'}
                     accessibilityElementsHidden={!isFlipped}
                     importantForAccessibility={isFlipped ? 'auto' : 'no-hide-descendants'}
+                    ref={backRef}
                 >
                     <View style={styles.cardHeaderBack}>
                         <TouchableOpacity

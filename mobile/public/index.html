@@ -108,6 +108,29 @@
         }
       }
     </style>
+
+    <!-- Touch details the app can't style itself on the web. The search box
+         shows focus as a ring around the whole pill (the app's blue), not the
+         browser's box around the text: the app keeps the pill's own style
+         fixed while focused, which iOS needs. -->
+    <style id="touch">
+      [data-search="pill"] { cursor: text; }
+      /* The map's small chips: phones extend their tap area with hitSlop,
+         which browsers ignore, so this adds the same 8px above and below. */
+      [data-hit="chip"]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -8px;
+        bottom: -8px;
+      }
+      [data-search="pill"] input:focus { outline: none; }
+      [data-search="pill"]:focus-within {
+        border-color: #1d6d8b !important;
+        box-shadow: 0 0 0 3px rgba(29, 109, 139, 0.28);
+      }
+    </style>
   </head>
 
   <body>

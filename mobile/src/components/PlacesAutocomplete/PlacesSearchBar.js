@@ -43,8 +43,13 @@ const describeRecent = ({ name = '', address = '' }) => {
   return { title: name, detail: address === name ? '' : address };
 };
 
+// The web reads the search box as a combobox and these rows as its options,
+// so arrow keys and screen readers move through them like a native picker.
+const OPTION_ID = (index) => `search-option-${index}`;
+const IS_WEB = Platform.OS === 'web';
+
 // One tappable place, used for both suggestions and recent searches.
-function PlaceRow({ icon, title, detail, onPress, first, last }) {
+function PlaceRow({ icon, title, detail, onPress, first, last, index, active }) {
   return (
     <Pressable
       // Rows highlight on press, like any list; buttons scale.
@@ -52,11 +57,12 @@ function PlaceRow({ icon, title, detail, onPress, first, last }) {
         styles.suggestionItem,
         first && styles.suggestionItemFirst,
         last && styles.suggestionItemLast,
-        pressed && styles.suggestionItemPressed,
+        (pressed || active) && styles.suggestionItemPressed,
       ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={detail ? `${title}, ${detail}` : title}
+      {...(IS_WEB ? { role: 'option', nativeID: OPTION_ID(index), 'aria-selected': Boolean(active), tabIndex: -1 } : null)}
     >
       <View style={styles.suggestionIcon}>
         <MaterialCommunityIcons name={icon} size={18} color={TOKENS.primary} />
@@ -138,6 +144,8 @@ export default function PlacesSearchBar({
   const inputRef = useRef(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focused, setFocused] = useState(false);
+  // The option the arrow keys are on (web), or -1.
+  const [activeIndex, setActiveIndex] = useState(-1);
   const { recentPlaces, rememberPlace, clearRecentPlaces } = useRecentPlaces();
 
   const {
@@ -192,6 +200,7 @@ export default function PlacesSearchBar({
   const handleChangeText = (text) => {
     onChangeText(text);
     setShowSuggestions(text.length >= minChars);
+    setActiveIndex(-1);
   };
 
   // Hide the suggestions list when the user dismisses the keyboard on an
@@ -206,6 +215,7 @@ export default function PlacesSearchBar({
   const handleBlur = () => {
     if (!input) setShowSuggestions(false);
     setFocused(false);
+    setActiveIndex(-1);
     onFocusChange?.(false);
   };
 
@@ -213,11 +223,30 @@ export default function PlacesSearchBar({
   // dismiss the keyboard. `blurOnSubmit={false}` on the input means we
   // control the blur explicitly via handleSelect / Keyboard.dismiss.
   const handleSubmit = () => {
+    if (showRecent && activeIndex >= 0) {
+      handleRecentSelect(recentPlaces[activeIndex]);
+      return;
+    }
     if (suggestions.length > 0) {
-      handleSelect(suggestions[0]);
+      handleSelect(suggestions[Math.max(0, activeIndex)]);
       return;
     }
     Keyboard.dismiss();
+  };
+
+  // Web keyboard: arrows move through the options, Escape closes them.
+  const handleKeyPress = (event) => {
+    const { key } = event.nativeEvent;
+    const options = showRecent ? recentPlaces : showSuggestions ? suggestions : [];
+    if ((key === 'ArrowDown' || key === 'ArrowUp') && options.length) {
+      event.preventDefault?.();
+      const step = key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex((i) => (i + step + options.length) % options.length);
+    } else if (key === 'Escape') {
+      setActiveIndex(-1);
+      if (showSuggestions) setShowSuggestions(false);
+      else inputRef.current?.blur();
+    }
   };
 
   const clearInput = () => {
@@ -254,15 +283,20 @@ export default function PlacesSearchBar({
   // Tell the parent when a results panel opens or closes, so it can make room
   // and hold its layout steady. A layout effect, so the parent hears about it
   // before the new size is measured.
-  const resultsVisible =
-    showRecent || (showSuggestions && suggestions.length > 0) || showEmptyState || showError;
+  const listVisible = showRecent || (showSuggestions && suggestions.length > 0);
+  const resultsVisible = listVisible || showEmptyState || showError;
   useLayoutEffect(() => {
     onResultsVisibleChange?.(resultsVisible);
   }, [resultsVisible, onResultsVisibleChange]);
 
   return (
     <View style={[styles.container, containerStyle, style]}>
-      <View style={styles.inputContainer}>
+      <View
+        style={styles.inputContainer}
+        // Web: the whole pill focuses the field, not just its line of text,
+        // and public/index.html draws the pill's focus ring from this tag.
+        {...(IS_WEB ? { onClick: () => inputRef.current?.focus(), dataSet: { search: 'pill' } } : null)}
+      >
         <MaterialCommunityIcons
           name="magnify"
           size={20}
@@ -289,6 +323,14 @@ export default function PlacesSearchBar({
           autoComplete="street-address"
           accessibilityLabel="Search address or place"
           accessibilityHint="Shows matching addresses as you type"
+          onKeyPress={IS_WEB ? handleKeyPress : undefined}
+          {...(IS_WEB ? {
+            role: 'combobox',
+            'aria-expanded': listVisible,
+            'aria-controls': listVisible ? 'search-options' : undefined,
+            'aria-autocomplete': 'list',
+            'aria-activedescendant': listVisible && activeIndex >= 0 ? OPTION_ID(activeIndex) : undefined,
+          } : null)}
         />
 
         {/* fixed search container prevents layout shift when loading/clear appears */}
@@ -328,7 +370,11 @@ export default function PlacesSearchBar({
             </Pressable>
           </View>
           {/* Three fit without scrolling; it scrolls only at large text sizes. */}
-          <ScrollView keyboardShouldPersistTaps="handled" style={styles.suggestionsList}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={styles.suggestionsList}
+            {...(IS_WEB ? { role: 'listbox', nativeID: 'search-options', 'aria-label': 'Recent places' } : null)}
+          >
             {recentPlaces.map((place, index) => {
               const { title, detail } = describeRecent(place);
               return (
@@ -340,6 +386,8 @@ export default function PlacesSearchBar({
                     detail={detail}
                     onPress={() => handleRecentSelect(place)}
                     last={index === recentPlaces.length - 1}
+                    index={index}
+                    active={index === activeIndex}
                   />
                 </View>
               );
@@ -352,6 +400,7 @@ export default function PlacesSearchBar({
         <View style={styles.suggestionsContainer}>
           <FlatList
             keyboardShouldPersistTaps="handled"
+            {...(IS_WEB ? { role: 'listbox', nativeID: 'search-options', 'aria-label': 'Places' } : null)}
             data={suggestions}
             keyExtractor={(item) => item.place_id}
             renderItem={({ item, index }) => (
@@ -363,6 +412,8 @@ export default function PlacesSearchBar({
                 onPress={() => handleSelect(item)}
                 first={index === 0}
                 last={index === suggestions.length - 1}
+                index={index}
+                active={index === activeIndex}
               />
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}

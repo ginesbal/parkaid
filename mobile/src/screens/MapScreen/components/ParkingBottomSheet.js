@@ -46,6 +46,9 @@ const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
 // for one-handed use without enlarging them. Vertical only — the pills sit
 // 8pt apart, so horizontal slop would overlap the neighbouring pill.
 const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
+// Browsers ignore hitSlop; on the web, public/index.html extends the tap area
+// of anything tagged hit="chip" by the same 8 above and below.
+const WEB_CHIP_HIT = Platform.OS === 'web' ? { dataSet: { hit: 'chip' } } : null;
 
 // Memoized: the map screen re-renders on every pan settle, and none of the
 // sheet's props change then — so the sheet and its list skip that work.
@@ -105,26 +108,27 @@ const ParkingBottomSheet = memo(forwardRef(({
     const translateY = useRef(new Animated.Value(PEEK_Y)).current;
     const dragStartY = useRef(PEEK_Y);
 
-    // Tighter spring for expand (user is waiting to see content)
+    // Expand and collapse settle without overshoot (friction 12 damps these
+    // springs fully), so the sheet lands instead of bouncing.
     const expandTo = useCallback((velocity = 0) => {
         setIsExpanded(true);
         Animated.spring(translateY, {
             toValue: EXPANDED_Y,
             velocity,
             tension: 68,
-            friction: 9,
+            friction: 12,
             useNativeDriver: NATIVE_DRIVER,
         }).start();
     }, [translateY]);
 
-    // Slightly faster spring for collapse — exit should feel snappier than enter
+    // A stiffer spring for collapse: exit should feel snappier than enter.
     const collapseTo = useCallback((velocity = 0) => {
         setIsExpanded(false);
         Animated.spring(translateY, {
             toValue: PEEK_Y,
             velocity,
             tension: 76,
-            friction: 10,
+            friction: 12,
             useNativeDriver: NATIVE_DRIVER,
         }).start();
 
@@ -429,6 +433,7 @@ const ParkingBottomSheet = memo(forwardRef(({
                                     ]}
                                     onPress={() => onRadiusChange(option.value)}
                                     hitSlop={CHIP_HIT_SLOP}
+                                    {...WEB_CHIP_HIT}
                                     accessibilityRole="button"
                                     accessibilityState={{ selected: isActive }}
                                     accessibilityLabel={`Within ${option.label}, about a ${metersToWalkMinutes(option.value)} minute walk`}
@@ -559,14 +564,15 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: TOKENS.divider,
     },
-    // Padding gives the accessibility focus frame some size; the negative
-    // top margin cancels it so the handle sits exactly where it did.
+    // The tap target fills the strip from the sheet's top edge down to the
+    // title (28 tall, 160 wide); the negative margin cancels its padding, so
+    // the handle and the title sit exactly where they did.
     handleHit: {
         alignSelf: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 6,
-        marginTop: -6,
-        marginBottom: 6,
+        paddingHorizontal: 62,
+        paddingTop: 13,
+        paddingBottom: 12,
+        marginTop: -13,
     },
     handle: {
         backgroundColor: alpha(TOKENS.text, 0.12),
