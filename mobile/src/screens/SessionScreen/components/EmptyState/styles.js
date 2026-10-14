@@ -9,26 +9,20 @@ export const styles = StyleSheet.create({
     },
 
     header: {
-        alignItems: 'center',
-        marginBottom: 28,
-    },
-    iconContainer: {
-        width: 64,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 24,
     },
     title: {
-        fontSize: 22,
+        fontSize: 26,
+        lineHeight: 32,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: -0.3,
+        letterSpacing: -0.4,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 15,
+        lineHeight: 21,
         color: TOKENS.textMuted,
-        marginTop: 6,
+        marginTop: 4,
     },
 
     setupCard: {

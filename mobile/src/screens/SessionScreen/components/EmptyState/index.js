@@ -1,6 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScrollView, Text, View } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
 import InfoCard from '../shared/InfoCard';
 import SetupCard from './SetupCard';
 import { styles } from './styles';
@@ -24,14 +22,9 @@ const EmptyState = ({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
         >
+            {/* Left-aligned, like Home and a running timer: the title leads,
+                with no decorative icon above it. */}
             <View style={styles.header}>
-                <View style={styles.iconContainer}>
-                    <MaterialCommunityIcons
-                        name="car-clock"
-                        size={32}
-                        color={TOKENS.primary}
-                    />
-                </View>
                 <Text style={styles.title} accessibilityRole="header" aria-level={1}>Parking timer</Text>
                 <Text style={styles.subtitle}>Know exactly when your time is up.</Text>
             </View>
