@@ -31,6 +31,24 @@ const MapContext = createContext(null);
 
 const toLngLat = ({ latitude, longitude }) => [longitude, latitude];
 
+// OpenFreeMap's highway-shield layers compare each road's ref_length to 6, but
+// most roads have no route number, so MapLibre logs a warning per tile and
+// skips them. Treat a missing number as too long for a shield: the same roads
+// are skipped, without the warnings.
+function withQuietShields(previousStyle, style) {
+    const fix = (expr) => {
+        if (!Array.isArray(expr)) return expr;
+        if (expr.length === 2 && expr[0] === 'get' && expr[1] === 'ref_length') {
+            return ['coalesce', expr, 99];
+        }
+        return expr.map(fix);
+    };
+    return {
+        ...style,
+        layers: style.layers.map((layer) => (layer.filter ? { ...layer, filter: fix(layer.filter) } : layer)),
+    };
+}
+
 // react-native-maps describes the view as a center plus a span in degrees.
 function regionOf(map) {
     const center = map.getCenter();
@@ -79,7 +97,6 @@ const MapView = forwardRef(function MapView({
         // Like react-native-maps, only the first initialRegion counts.
         const map = new maplibregl.Map({
             container,
-            style: STYLE_URL,
             center: initialRegion ? toLngLat(initialRegion) : [0, 0],
             zoom: zoomForRegion(width, initialRegion, 2),
             // Added below, bottom-left: the right side has the map buttons.
@@ -90,23 +107,34 @@ const MapView = forwardRef(function MapView({
             touchPitch: false,
         });
         map.touchZoomRotate.disableRotation();
+        map.setStyle(STYLE_URL, { transformStyle: withQuietShields });
         // The map credits (OpenStreetMap's license requires them): the full
-        // line on wide screens, an ⓘ button on phones. MapLibre opens the ⓘ on
-        // load, over the map buttons, so close it once the credits are in; a
-        // tap on ⓘ still shows them.
-        map.addControl(new maplibregl.AttributionControl({ compact: width <= 640 }), 'bottom-left');
-        map.once('idle', () => {
-            const credits = container.querySelector('.maplibregl-ctrl-attrib.maplibregl-compact');
-            credits?.classList.remove('maplibregl-compact-show');
-            credits?.removeAttribute('open');
-        });
+        // line on wide screens, an ⓘ button on phones. MapLibre opens the ⓘ as
+        // soon as the credits arrive, over the map buttons, so close it right
+        // after (this listener runs after the control's own); a tap on ⓘ still
+        // shows them. It only opens once, so this stops after closing it.
+        const compactCredits = width <= 640;
+        map.addControl(new maplibregl.AttributionControl({ compact: compactCredits }), 'bottom-left');
+        if (compactCredits) {
+            const closeCredits = () => {
+                const credits = container.querySelector('.maplibregl-ctrl-attrib.maplibregl-compact');
+                if (!credits) return;
+                credits.classList.remove('maplibregl-compact-show');
+                credits.removeAttribute('open');
+                map.off('sourcedata', closeCredits);
+            };
+            map.on('sourcedata', closeCredits);
+        }
         mapRef.current = map;
 
         const handlers = handlersRef;
         const tapAt = (event) => ({
             nativeEvent: { coordinate: { latitude: event.lngLat.lat, longitude: event.lngLat.lng } },
         });
-        map.on('load', () => {
+        // Ready once the style is in: markers and shapes need nothing more.
+        // Not 'load', which waits for every tile, so one slow or failed tile
+        // would keep the spots off the map.
+        map.once('style.load', () => {
             setReadyMap(map);
             handlers.current.onMapReady?.();
         });

@@ -18,7 +18,7 @@ import {
     Text,
     View,
 } from 'react-native';
-import { TOKENS, alpha } from '../../constants/theme';
+import { NATIVE_DRIVER, TOKENS, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
 import { getDistanceLabel } from '../../utils/parkingHelpers';
 import { getAccess, getMaxStay, getPriceInfo, getSpotType, parseAddress } from '../../utils/spotInfo';
@@ -56,14 +56,14 @@ function ParkingListItem({
         Animated.timing(scaleAnim, {
             toValue: 0.985,
             duration: 120,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     };
     const handlePressOut = () => {
         Animated.timing(scaleAnim, {
             toValue: 1,
             duration: 200,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     };
 

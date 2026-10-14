@@ -79,6 +79,35 @@
         .boot-mark { animation: none; }
       }
     </style>
+
+    <!-- Hover feedback for mouse users. React Native has no hover state, so
+         the web adds one here: a faint ink wash over any button, tab or link,
+         the same on white rows, grey chips and blue buttons. Touch screens
+         never see it, and map pins keep their own look. -->
+    <style id="hover">
+      @media (hover: hover) and (pointer: fine) {
+        [role="button"]:not([aria-disabled="true"])::after,
+        [role="tab"]::after,
+        [role="link"]::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: #0f1a26;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 120ms ease-out;
+        }
+        [role="button"]:not([aria-disabled="true"]):hover::after,
+        [role="tab"]:hover::after,
+        [role="link"]:hover::after {
+          opacity: 0.06;
+        }
+        .maplibregl-marker [role="button"]::after {
+          content: none;
+        }
+      }
+    </style>
   </head>
 
   <body>

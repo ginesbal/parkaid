@@ -7,6 +7,8 @@
 //   - 3 weights total: 400 body, 500 numerics, 600 titles
 //   - Tokens kept backward-compatible by name; values simplified
 
+import { Platform } from 'react-native';
+
 export function alpha(hex, a) {
     const h = hex.replace('#', '');
     const n = parseInt(h, 16);
@@ -241,3 +243,8 @@ export const TYPOGRAPHY = {
         color: TOKENS.text,
     },
 };
+
+// Animations run on the native thread on phones. The web has no native
+// animation module (React Native Web warns, then falls back to JavaScript),
+// so it asks for the JavaScript driver up front.
+export const NATIVE_DRIVER = Platform.OS !== 'web';

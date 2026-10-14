@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { TOKENS } from '../../constants/theme';
+import { NATIVE_DRIVER, TOKENS } from '../../constants/theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { logger } from '../../utils/loggers';
 import {
@@ -82,7 +82,7 @@ function FlippableParkingCard({
             const fadeIn = Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 220,
-                useNativeDriver: true,
+                useNativeDriver: NATIVE_DRIVER,
             });
 
             if (reduceMotion) {
@@ -95,13 +95,13 @@ function FlippableParkingCard({
                         toValue: 1,
                         tension: 60,
                         friction: 8,
-                        useNativeDriver: true,
+                        useNativeDriver: NATIVE_DRIVER,
                     }),
                     Animated.spring(translateYAnim, {
                         toValue: 0,
                         tension: 70,
                         friction: 9,
-                        useNativeDriver: true,
+                        useNativeDriver: NATIVE_DRIVER,
                     }),
                     fadeIn,
                 ]).start();
@@ -110,7 +110,7 @@ function FlippableParkingCard({
             const fadeOut = Animated.timing(fadeAnim, {
                 toValue: 0,
                 duration: 180,
-                useNativeDriver: true,
+                useNativeDriver: NATIVE_DRIVER,
             });
 
             if (reduceMotion) {
@@ -120,12 +120,12 @@ function FlippableParkingCard({
                     Animated.timing(scaleAnim, {
                         toValue: 0.98,
                         duration: 180,
-                        useNativeDriver: true,
+                        useNativeDriver: NATIVE_DRIVER,
                     }),
                     Animated.timing(translateYAnim, {
                         toValue: 14,
                         duration: 180,
-                        useNativeDriver: true,
+                        useNativeDriver: NATIVE_DRIVER,
                     }),
                     fadeOut,
                 ]).start();
@@ -146,8 +146,8 @@ function FlippableParkingCard({
         // Reduced motion: a short crossfade (the face opacities already key
         // off flipAnim) with no rotation applied — see the face transforms.
         const animation = reduceMotion
-            ? Animated.timing(flipAnim, { toValue, duration: 200, useNativeDriver: true })
-            : Animated.spring(flipAnim, { toValue, tension: 65, friction: 9, useNativeDriver: true });
+            ? Animated.timing(flipAnim, { toValue, duration: 200, useNativeDriver: NATIVE_DRIVER })
+            : Animated.spring(flipAnim, { toValue, tension: 65, friction: 9, useNativeDriver: NATIVE_DRIVER });
         animation.start();
         setIsFlipped(!isFlipped);
     };

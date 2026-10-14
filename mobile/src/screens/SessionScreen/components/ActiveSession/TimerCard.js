@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { Animated, Text, View } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
+import { NATIVE_DRIVER, TOKENS } from '../../../../constants/theme';
 import { useReducedMotion } from '../../../../hooks/useReducedMotion';
 import { formatEndTime, formatMoney } from '../../../../utils/formatters';
 import { formatDuration } from '../../../../utils/spotInfo';
@@ -41,8 +41,8 @@ export default function TimerCard({
         }
         const anim = Animated.loop(
             Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 1.02, duration: 900, useNativeDriver: true }),
-                Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1.02, duration: 900, useNativeDriver: NATIVE_DRIVER }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: NATIVE_DRIVER }),
             ])
         );
         anim.start();

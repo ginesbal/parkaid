@@ -14,7 +14,7 @@ import {
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { WAKING_NOTICE, WAKING_NOTICE_SHORT, getLoadError } from '../../../constants/loadErrors';
 import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
-import { TOKENS, alpha } from '../../../constants/theme';
+import { NATIVE_DRIVER, TOKENS, alpha } from '../../../constants/theme';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import { SCREEN_HEIGHT, SHEET_BOTTOM_OFFSET } from '../constants';
 
@@ -113,7 +113,7 @@ const ParkingBottomSheet = memo(forwardRef(({
             velocity,
             tension: 68,
             friction: 9,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     }, [translateY]);
 
@@ -125,7 +125,7 @@ const ParkingBottomSheet = memo(forwardRef(({
             velocity,
             tension: 76,
             friction: 10,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
 
         // Coordinate scroll-to-top with collapse — slight delay so both

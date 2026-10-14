@@ -281,7 +281,7 @@ export default function HomeScreen({ navigation }) {
               />
             )
           }
-          contentContainerStyle={Array.isArray(spots) && spots.length === 0 ? styles.emptyList : null}
+          contentContainerStyle={Array.isArray(spots) && spots.length === 0 ? styles.emptyList : listStyles.listEnd}
         />
 
         <MapFAB onPress={handleMapPress} />
@@ -291,6 +291,11 @@ export default function HomeScreen({ navigation }) {
 }
 
 const listStyles = StyleSheet.create({
+  // Room under the last row, so it can scroll clear of the floating Map
+  // button (24 from the bottom + 48 tall + 16 breathing room).
+  listEnd: {
+    paddingBottom: 88,
+  },
   rowSeparator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: TOKENS.divider,

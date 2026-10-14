@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { RADIUS, SPACING, TOKENS } from '../../../constants/theme';
+import { NATIVE_DRIVER, RADIUS, SPACING, TOKENS } from '../../../constants/theme';
 
 // Remembered on the phone once shown; bump the suffix to show it again.
 export const DROP_PIN_TIP_KEY = 'tip_drop_pin_seen_v1';
@@ -33,7 +33,7 @@ function DropPinTip({ onShown, onDismiss }) {
             toValue: 1,
             duration: 200,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     }, [shown, onShown, opacity]);
 

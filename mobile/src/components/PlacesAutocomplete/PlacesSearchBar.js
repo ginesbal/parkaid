@@ -14,7 +14,7 @@ import {
   View
 } from 'react-native';
 import { API_URL } from '../../constants/config';
-import { RADIUS, TOKENS, alpha } from '../../constants/theme';
+import { NATIVE_DRIVER, RADIUS, TOKENS, alpha } from '../../constants/theme';
 import usePlacesAutocomplete from '../../hooks/usePlacesAutocomplete';
 import { useRecentPlaces } from '../../hooks/useRecentPlaces';
 
@@ -100,12 +100,12 @@ function SearchLoadingDots() {
         Animated.timing(fade, {
           toValue: 1,
           duration: 700,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
         Animated.timing(fade, {
           toValue: 0.35,
           duration: 700,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
       ])
     );

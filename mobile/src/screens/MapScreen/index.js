@@ -24,7 +24,7 @@ import ScreenHeading from '../../components/ScreenHeading';
 import { DEFAULT_LOCATION } from '../../constants/config';
 import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS, USE_DEVICE_LOCATION } from '../../constants/parking';
 import { STORAGE_KEYS } from '../../constants/session';
-import { TOKENS } from '../../constants/theme';
+import { NATIVE_DRIVER, TOKENS } from '../../constants/theme';
 import { getDistanceLabel } from '../../utils/parkingHelpers';
 import { getTimerSpot } from '../../utils/spotInfo';
 
@@ -336,7 +336,7 @@ function MapScreen({ route, navigation }) {
             toValue: 1,
             tension: 120,
             friction: 12,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     }, [reticleLift]);
 
@@ -350,7 +350,7 @@ function MapScreen({ route, navigation }) {
                 toValue: 0,
                 tension: 120,
                 friction: 10,
-                useNativeDriver: true,
+                useNativeDriver: NATIVE_DRIVER,
             }).start();
         }
     }, [reticleLift]);

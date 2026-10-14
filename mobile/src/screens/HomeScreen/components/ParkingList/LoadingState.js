@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Animated, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WAKING_NOTICE } from '../../../../constants/loadErrors';
-import { TOKENS } from '../../../../constants/theme';
+import { NATIVE_DRIVER, TOKENS } from '../../../../constants/theme';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
@@ -25,12 +25,12 @@ const LoadingState = ({ searchRadius, waking = false }) => {
                 Animated.timing(pulseAnim, {
                     toValue: 1,
                     duration: 950,
-                    useNativeDriver: true,
+                    useNativeDriver: NATIVE_DRIVER,
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 0.45,
                     duration: 950,
-                    useNativeDriver: true,
+                    useNativeDriver: NATIVE_DRIVER,
                 }),
             ])
         );

@@ -56,7 +56,7 @@ function AppNavigation() {
     const insets = useSafeAreaInsets();
     const [, setDeviceId] = useState(null);
     const [, setLocation] = useState(null);
-    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
+    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10, default: 10 }));
     const tabBarHeight = 66 + tabBarBottomPadding;
 
     // Parking reminders: show them even while the app is open, and open the
@@ -143,6 +143,7 @@ function AppNavigation() {
                     },
                     tabBarItemStyle: {
                         minHeight: 52,
+                        borderRadius: 12,
                         marginHorizontal: 3,
                         marginTop: 1,
                         paddingTop: 2,
