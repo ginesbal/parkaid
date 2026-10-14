@@ -253,6 +253,12 @@ npm run migrate     # create the table
 npm run setup       # load the parking data
 ```
 
+Prices come from each street block's rate schedule, which `npm run setup`
+takes from the City's "On-Street Parking Zones with Rates" data. A database
+loaded before that was added has no schedules, so street spots read "Rate on
+signs": run `npm run setup` again to fill them in. It updates the rows it
+loaded before rather than adding copies.
+
 ### Step 4: check it's live
 
 Open these in a browser. On the free tier the first request can take 30 to 60
