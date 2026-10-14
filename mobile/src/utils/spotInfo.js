@@ -93,6 +93,23 @@ export const parseAddress = (spot) => {
     return { primary: tidyStreet(raw), secondary: null };
 };
 
+// ---- lots ------------------------------------------------------------------
+
+/**
+ * A lot's own name and kind from the city's data: "CENTENNIAL PARKADE" and
+ * "PARKADE" become "Centennial Parkade" and "Parkade". A bare number name
+ * ("LOT 07") says no more than "CPA Lot 7" already does, so it's dropped.
+ */
+export const getLotInfo = (spot) => {
+    if (spot?.spot_type !== 'off_street') return null;
+    const rawName = String(pick(spot, 'lot_name') || '').trim();
+    const rawKind = String(pick(spot, 'parking_type') || '').trim();
+    const name = rawName && !/^lot\s*\d+$/i.test(rawName) ? tidyStreet(rawName) : null;
+    const lower = rawKind.toLowerCase();
+    const kind = lower ? lower[0].toUpperCase() + lower.slice(1) : null;
+    return name || kind ? { name, kind } : null;
+};
+
 // ---- duration formatting ---------------------------------------------------
 
 // Spell numbers with units in full words, pluralized: "1 hour", "2 hours".
@@ -274,6 +291,24 @@ const parsePaidWindow = (str) => {
     return { days, start, end, allDay };
 };
 
+// Many blocks list more than one window: "0710-1750 MON-FRI, 0910-1750 SAT".
+// Each comma-separated part is read on its own when every part is a whole
+// window; otherwise ("Mon-Fri, 9am-6pm") the string is one window.
+const parsePaidWindows = (str) => {
+    if (typeof str !== 'string' || !str.trim()) return [];
+    const parts = str.split(/[,;]/).map((part) => part.trim()).filter(Boolean);
+    if (parts.length > 1) {
+        const windows = parts.map(parsePaidWindow);
+        if (windows.every(Boolean)) return windows;
+    }
+    const one = parsePaidWindow(str);
+    return one ? [one] : [];
+};
+
+const fmtWindow = (win) => (win.allDay
+    ? `${fmtDays(win.days)}, all day`
+    : `${fmtDays(win.days)}, ${fmtHour(win.start)} – ${fmtHour(win.end)}`);
+
 /**
  * The "when" story: the schedule, the max stay, and — when the schedule parses
  * to a real metered window — whether it's paid or free at this exact moment.
@@ -282,22 +317,28 @@ const parsePaidWindow = (str) => {
 export const getHours = (spot) => {
     const enforceable = pick(spot, 'enforceable_time');
     const maxStay = getMaxStay(spot);
-    const win = parsePaidWindow(enforceable);
+    const windows = parsePaidWindows(enforceable);
 
     let schedule = null;
     let status = null;
 
-    if (win) {
-        schedule = win.allDay
-            ? `${fmtDays(win.days)}, all day`
-            : `${fmtDays(win.days)}, ${fmtHour(win.start)} – ${fmtHour(win.end)}`;
+    if (windows.length) {
+        // One window per line.
+        schedule = windows.map(fmtWindow).join('\n');
 
-        if (!win.allDay) {
+        if (!windows.some((win) => win.allDay)) {
             const now = calgaryNow();
-            const paidNow = win.days.has(now.day) && now.hour >= win.start && now.hour < win.end;
-            status = paidNow
-                ? { state: 'paid', label: 'Paid right now', detail: `until ${fmtHour(win.end)}` }
-                : { state: 'free', label: 'Free right now', detail: `paid ${fmtHour(win.start)}–${fmtHour(win.end)}` };
+            const current = windows.find((win) => win.days.has(now.day) && now.hour >= win.start && now.hour < win.end);
+            const today = windows.find((win) => win.days.has(now.day));
+            if (current) {
+                status = { state: 'paid', label: 'Paid right now', detail: `until ${fmtHour(current.end)}` };
+            } else {
+                status = {
+                    state: 'free',
+                    label: 'Free right now',
+                    detail: today ? `paid ${fmtHour(today.start)}–${fmtHour(today.end)}` : 'no charge today',
+                };
+            }
         }
     } else if (typeof enforceable === 'string' && enforceable.trim()) {
         schedule = enforceable.trim();

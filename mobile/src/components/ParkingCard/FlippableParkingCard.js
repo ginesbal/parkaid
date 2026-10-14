@@ -18,9 +18,9 @@ import { logger } from '../../utils/loggers';
 import {
     getAccess,
     getHours,
+    getLotInfo,
     getPriceInfo,
     getRushRestriction,
-    getSpotType,
     parseAddress,
 } from '../../utils/spotInfo';
 import {
@@ -57,6 +57,10 @@ function FlippableParkingCard({
     onParkHere = null,
 }) {
     const [isFlipped, setIsFlipped] = useState(false);
+    // When the middle of the front has to scroll (small phones), a hairline
+    // above the buttons shows there's more beneath.
+    const [frontFit, setFrontFit] = useState({ box: 0, content: 0 });
+    const frontOverflows = frontFit.content > frontFit.box + 1;
     // With Reduce Motion on, the 180° 3D flip becomes a crossfade and the
     // entrance/exit drop their scale and slide — fades only.
     const reduceMotion = useReducedMotion();
@@ -213,7 +217,9 @@ function FlippableParkingCard({
         Math.max(10, (areaWidth - CARD_WIDTH) / 2),
         areaWidth - CARD_WIDTH - 10
     );
-    // Center card vertically in the safe zone between header and bottom sheet
+    // The card is as tall as its front needs, up to CARD_HEIGHT. Its top sits
+    // where a full-height card would be centred between header and sheet, so
+    // a short card just ends sooner instead of jumping once it's measured.
     const safeTop = Math.max(16, topBoundary);
     const safeBottom = Math.max(safeTop + CARD_HEIGHT, bottomBoundary);
     const availableHeight = safeBottom - safeTop;
@@ -225,7 +231,6 @@ function FlippableParkingCard({
     const backOpacity = flipAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
 
     // Everything the front shows comes from one shared source of truth.
-    const type = getSpotType(spot);
     const access = getAccess(spot);
     const price = getPriceInfo(spot);
     const hours = getHours(spot);
@@ -239,29 +244,32 @@ function FlippableParkingCard({
     // A timer only makes sense where a visitor can actually park.
     const canPark = isPublic && typeof onParkHere === 'function';
 
-    // The walk-time ETA rides on the Navigate button. Minutes is the metric a
-    // driver actually decides on; exact distance would just restate the same
-    // fact, so it's left off the button.
-    const eta = walk != null
-        ? `${walk} ${walk === 1 ? 'minute' : 'minutes'} walk`
-        : null;
+    // Where it is, then how far: "From 2 St SW to 4 St SW · 1-minute walk".
+    const eta = walk != null ? `${walk}-minute walk` : null;
+    const subtitle = [addr.secondary, eta].filter(Boolean).join(' · ');
 
-    // Front shows the decision facts (pricing / hours); convenience is on the button.
+    // The rules under the answer, as label/value rows in the same language as
+    // the back. "Paid hours" only where it's actually paid parking.
     const facts = [];
     if (isPublic) {
         if (price.kind !== 'free' && hours.schedule) {
-            facts.push({ key: 'hours', icon: 'clock-outline', label: 'Paid hours', value: hours.schedule });
+            const paid = price.kind === 'paid' || price.kind === 'unknown';
+            facts.push({ key: 'hours', label: paid ? 'Paid hours' : 'Hours', value: hours.schedule });
         }
         // A tow-away window outranks the max stay — you'd get towed, not ticketed.
         if (rush) {
-            facts.push({ key: 'rush', icon: 'tow-truck', tone: 'danger', label: rush.label, value: rush.value });
+            facts.push({ key: 'rush', tone: 'danger', label: rush.label, value: rush.value });
         } else if (hours.maxStay) {
-            facts.push({ key: 'max', icon: 'timer-sand', label: 'Max stay', value: hours.maxStay.text });
+            facts.push({ key: 'max', label: 'Max stay', value: hours.maxStay.text });
         }
     } else if (hours.schedule) {
         // Residents / no-parking: when the permit is in effect.
-        facts.push({ key: 'permit', icon: 'clock-outline', label: 'In effect', value: hours.schedule });
+        facts.push({ key: 'permit', label: 'In effect', value: hours.schedule });
     }
+    // Lots: the name drivers know it by, and whether it's covered.
+    const lot = getLotInfo(spot);
+    if (lot?.name) facts.push({ key: 'lot-name', label: 'Name', value: lot.name });
+    if (lot?.kind) facts.push({ key: 'lot-kind', label: 'Type', value: lot.kind });
 
     // Back-of-card detail sections, rendered as one vertical spec sheet.
     const sections = getDetailsPages(spot).filter((s) => s.items.length > 0);
@@ -324,62 +332,50 @@ function FlippableParkingCard({
                     importantForAccessibility={isFlipped ? 'no-hide-descendants' : 'auto'}
                     ref={frontRef}
                 >
-                    <View style={styles.cardHeader}>
-                        <View style={styles.spotTypeTag}>
-                            <MaterialCommunityIcons name={type.icon} size={14} color={TOKENS.onPrimary} />
-                            {/* Capped like the Park here pill beside it, so the
-                                header row still fits an SE at the largest text sizes. */}
-                            <Text style={styles.spotTypeText} maxFontSizeMultiplier={1.4}>{type.label}</Text>
-                        </View>
-                        <View style={styles.headerActions}>
-                            {canPark ? (
-                                <Pressable
-                                    style={({ pressed }) => [styles.parkBtn, pressed && styles.pressed]}
-                                    onPress={onParkHere}
-                                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Park here"
-                                    accessibilityHint="Starts a parking timer for this spot"
-                                >
-                                    <MaterialCommunityIcons name="timer-outline" size={16} color={TOKENS.primary} />
-                                    {/* The header row is narrow; keep the pill from crowding the tag. */}
-                                    <Text style={styles.parkBtnText} maxFontSizeMultiplier={1.4}>Park here</Text>
-                                </Pressable>
-                            ) : null}
-                            <Pressable
-                                style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
-                                onPress={onClose}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                accessibilityRole="button"
-                                accessibilityLabel="Close details"
+                    {/* Where: the street, then the block and the walk. */}
+                    <View style={styles.frontHeader}>
+                        <View style={styles.titleBlock}>
+                            <Text
+                                style={styles.addressPrimary}
+                                numberOfLines={2}
+                                accessibilityRole="header"
+                                aria-level={2}
                             >
-                                <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
-                            </Pressable>
+                                {addr.primary}
+                            </Text>
+                            {subtitle ? (
+                                <Text style={styles.addressSecondary} numberOfLines={2}>
+                                    {subtitle}
+                                </Text>
+                            ) : null}
                         </View>
+                        <Pressable
+                            style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
+                            onPress={onClose}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close details"
+                        >
+                            <MaterialCommunityIcons name="close" size={20} color={TOKENS.textMuted} />
+                        </Pressable>
                     </View>
 
-                    {/* Centered when it fits. On small phones (SE, mini) the
-                        fixed-height face can't hold it all, so it scrolls
-                        instead of spilling over the header and buttons. */}
+                    {/* Scrolls only when a small phone can't fit it all. */}
                     <ScrollView
                         style={styles.frontScroll}
                         contentContainerStyle={styles.frontBody}
                         showsVerticalScrollIndicator={false}
                         bounces={false}
+                        onLayout={(e) => {
+                            const box = e.nativeEvent.layout.height;
+                            setFrontFit((fit) => (fit.box === box ? fit : { ...fit, box }));
+                        }}
+                        onContentSizeChange={(w, content) => {
+                            setFrontFit((fit) => (fit.content === content ? fit : { ...fit, content }));
+                        }}
                     >
-                        <View style={styles.addressBlock}>
-                            <Text style={styles.addressPrimary} numberOfLines={2}>
-                                {addr.primary}
-                            </Text>
-                            {addr.secondary ? (
-                                <Text style={styles.addressSecondary} numberOfLines={1}>
-                                    {addr.secondary}
-                                </Text>
-                            ) : null}
-                        </View>
-
+                        {/* The answer: what it costs, and whether you pay right now. */}
                         {isPublic ? (
-                            // Headline: what it costs + whether it's free right now.
                             <View style={styles.headline}>
                                 <View style={styles.priceRow}>
                                     <Text
@@ -396,108 +392,84 @@ function FlippableParkingCard({
                                         <Text style={styles.priceUnit}>{price.unit}</Text>
                                     ) : null}
                                 </View>
-
                                 {status ? (
-                                    <View style={styles.statusRow}>
-                                        <View
-                                            style={[
-                                                styles.statusDot,
-                                                status.state === 'free' ? styles.dotFree : styles.dotPaid,
-                                            ]}
-                                        />
-                                        <Text
-                                            style={[
-                                                styles.statusLabel,
-                                                status.state === 'free' ? styles.statusLabelFree : styles.statusLabelPaid,
-                                            ]}
-                                        >
+                                    <Text style={styles.statusLine}>
+                                        <Text style={status.state === 'free' ? styles.statusFree : styles.statusPaid}>
                                             {status.label}
                                         </Text>
-                                        <Text style={styles.statusDetail}>· {status.detail}</Text>
-                                    </View>
+                                        {status.detail ? ` · ${status.detail}` : ''}
+                                    </Text>
                                 ) : price.kind === 'free' ? (
-                                    <View style={styles.statusRow}>
-                                        <View style={[styles.statusDot, styles.dotFree]} />
-                                        <Text style={[styles.statusLabel, styles.statusLabelFree]}>Free to park</Text>
-                                    </View>
+                                    <Text style={[styles.statusLine, styles.statusFree]}>Free to park</Text>
                                 ) : price.note ? (
-                                    <Text style={styles.statusDetail}>{price.note}</Text>
+                                    <Text style={styles.statusLine}>{price.note}</Text>
                                 ) : null}
                             </View>
                         ) : (
-                            // Not public — say so in plain language, not permit jargon.
-                            <View
-                                style={[
-                                    styles.accessBanner,
-                                    access.tone === 'danger' ? styles.bannerDanger : styles.bannerWarning,
-                                ]}
-                            >
-                                <MaterialCommunityIcons
-                                    name={access.icon}
-                                    size={24}
-                                    color={access.tone === 'danger' ? TOKENS.dangerInk : TOKENS.warningInk}
-                                />
-                                <View style={styles.accessTextWrap}>
-                                    <Text
-                                        style={[
-                                            styles.accessLabel,
-                                            // Ink tones: the base hues fail AA on the soft banner.
-                                            { color: access.tone === 'danger' ? TOKENS.dangerInk : TOKENS.warningInk },
-                                        ]}
-                                    >
-                                        {access.label}
-                                    </Text>
-                                    {access.detail ? (
-                                        <Text style={styles.accessDetail}>{access.detail}</Text>
-                                    ) : null}
-                                </View>
+                            // Not public: say so in plain words, in the same place a price goes.
+                            <View style={styles.headline}>
+                                <Text
+                                    style={[
+                                        styles.accessLabel,
+                                        // Ink tones: the base hues are too light for text.
+                                        { color: access.tone === 'danger' ? TOKENS.dangerInk : TOKENS.warningInk },
+                                    ]}
+                                >
+                                    {access.label}
+                                </Text>
+                                {access.detail ? (
+                                    <Text style={styles.statusLine}>{access.detail}</Text>
+                                ) : null}
                             </View>
                         )}
 
-                        {/* Pricing / hours — skimmable icon rows */}
-                        {facts.length > 0 && (
-                            <View style={styles.facts}>
-                                {facts.map((f) => (
-                                    <View key={f.key} style={styles.factRow}>
-                                        <View style={[styles.factIcon, f.tone === 'danger' && styles.factIconDanger]}>
-                                            <MaterialCommunityIcons
-                                                name={f.icon}
-                                                size={19}
-                                                color={f.tone === 'danger' ? TOKENS.danger : TOKENS.primary}
-                                            />
-                                        </View>
-                                        <View style={styles.factText}>
-                                            <Text style={styles.factLabel}>{f.label}</Text>
-                                            <Text style={styles.factValue} numberOfLines={2}>{f.value}</Text>
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
+                        {/* The rules, as rows like the back's, ending in the way there. */}
+                        <View style={styles.factList}>
+                            {facts.map((f) => (
+                                <View key={f.key} style={[styles.detailRow, styles.detailRowDivider]}>
+                                    <Text style={styles.detailLabel} numberOfLines={2}>{f.label}</Text>
+                                    <Text
+                                        style={[styles.detailValue, f.tone === 'danger' && styles.factValueDanger]}
+                                        numberOfLines={3}
+                                    >
+                                        {f.value}
+                                    </Text>
+                                </View>
+                            ))}
+                            <Pressable
+                                style={({ pressed }) => [styles.moreRow, pressed && styles.moreRowPressed]}
+                                onPress={flip}
+                                accessibilityRole="button"
+                                accessibilityLabel="Show all details"
+                            >
+                                <Text style={styles.moreText}>All details</Text>
+                                <MaterialCommunityIcons name="chevron-right" size={20} color={TOKENS.primary} />
+                            </Pressable>
+                        </View>
                     </ScrollView>
 
-                    <View style={styles.actionsLarge}>
+                    {/* One filled button. Park here sits beside it, outlined,
+                        only where a visitor can actually park. */}
+                    <View style={[styles.actions, frontOverflows && styles.actionsDivided]}>
+                        {canPark ? (
+                            <Pressable
+                                style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+                                onPress={onParkHere}
+                                accessibilityRole="button"
+                                accessibilityLabel="Park here"
+                                accessibilityHint="Starts a parking timer for this spot"
+                            >
+                                <Text style={styles.secondaryBtnText} numberOfLines={1}>Park here</Text>
+                            </Pressable>
+                        ) : null}
                         <Pressable
-                            style={({ pressed }) => [styles.detailsBtnLarge, pressed && styles.pressed]}
-                            onPress={flip}
-                            accessibilityRole="button"
-                            accessibilityLabel="Show all details"
-                        >
-                            <MaterialCommunityIcons name="information-outline" size={20} color={TOKENS.text} />
-                            <Text style={styles.detailsBtnTextLarge}>Details</Text>
-                        </Pressable>
-                        <Pressable
-                            style={({ pressed }) => [styles.navBtnLarge, pressed && styles.pressed]}
+                            style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
                             onPress={onNavigate}
                             accessibilityRole="button"
                             accessibilityLabel={eta ? `Navigate, ${eta}` : 'Navigate'}
                             accessibilityHint="Opens walking directions in Google Maps"
                         >
-                            <MaterialCommunityIcons name="navigation-variant" size={22} color={TOKENS.onPrimary} />
-                            <View style={styles.navBtnTextWrap}>
-                                <Text style={styles.navBtnTextLarge}>Navigate</Text>
-                                {eta ? <Text style={styles.navBtnEta}>{eta}</Text> : null}
-                            </View>
+                            <Text style={styles.primaryBtnText} numberOfLines={1}>Navigate</Text>
                         </Pressable>
                     </View>
                 </Animated.View>
@@ -528,7 +500,7 @@ function FlippableParkingCard({
                             <MaterialCommunityIcons name="arrow-left" size={20} color={TOKENS.text} />
                         </TouchableOpacity>
                         <Text style={styles.backTitle} numberOfLines={1} accessibilityRole="header" aria-level={2}>
-                            {spot.address || spot.address_desc || 'Details'}
+                            {addr.primary}
                         </Text>
                         <TouchableOpacity
                             style={styles.closeBtn}

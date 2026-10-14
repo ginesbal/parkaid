@@ -1,4 +1,4 @@
-import { calgaryNow, getPriceInfo, parseRates } from '../spotInfo';
+import { calgaryNow, getHours, getLotInfo, getPriceInfo, parseRates } from '../spotInfo';
 
 // Real rate text from the City's "On-Street Parking Zones with Rates" data.
 const DOWNTOWN = '<b>Mon-Fri 9:00 AM to 11:00 AM</b><br><br>$4.00 per Hour<br><br><b>Mon-Fri 11:00 AM to 1:30 PM</b><br><br>$4.25 per Hour<br><br><b>Mon-Fri 1:30 PM to 3:30 PM</b><br><br>$3.25 per Hour<br><br><b>Mon-Fri 3:30 PM to 6:00 PM</b><br><br>$2.25 per Hour<br><br><b>Saturday: 9:00 AM to 6:00 PM</b><br><br>$1.00 per Hour<br><br><b>Sunday/Holidays:</b><br><br>Free parking<br><br><b>Free parking to 9 AM</b><br><br>See Signs /Parking Restrictions<br><br>';
@@ -83,5 +83,52 @@ describe('getPriceInfo', () => {
         // Zone "5" is a name; its real rate is $4.00–$4.25, not $5.00.
         expect(getPriceInfo({ zone_info: { price_zone: '5' }, price: 5, price_per_hour: 5 }, WED_NOON))
             .toMatchObject({ kind: 'unknown', value: 'Rate on signs' });
+    });
+});
+
+describe('getHours', () => {
+    afterEach(() => jest.useRealTimers());
+    const hoursAt = (iso, enforceable) => {
+        jest.useFakeTimers().setSystemTime(at(iso));
+        return getHours({ zone_info: { enforceable_time: enforceable } });
+    };
+
+    it('lists every paid window, one per line', () => {
+        expect(hoursAt('2026-10-14T18:00:00Z', '0710-1750 MON-FRI, 0910-1750 SAT').schedule)
+            .toBe('Mon–Fri, 7:10 AM – 5:50 PM\nSat, 9:10 AM – 5:50 PM');
+    });
+
+    it("uses Saturday's own window on a Saturday", () => {
+        // Sat Oct 17, 8:30 AM: paid from 9:10 today, not "Mon–Fri only".
+        expect(hoursAt('2026-10-17T14:30:00Z', '0710-1750 MON-FRI, 0910-1750 SAT').status)
+            .toEqual({ state: 'free', label: 'Free right now', detail: 'paid 9:10 AM–5:50 PM' });
+        expect(hoursAt('2026-10-17T18:00:00Z', '0710-1750 MON-FRI, 0910-1750 SAT').status)
+            .toEqual({ state: 'paid', label: 'Paid right now', detail: 'until 5:50 PM' });
+    });
+
+    it('says when a day has no paid window at all', () => {
+        expect(hoursAt('2026-10-18T18:00:00Z', '0710-1750 MON-FRI, 0910-1750 SAT').status)
+            .toEqual({ state: 'free', label: 'Free right now', detail: 'no charge today' });
+    });
+
+    it('still reads a single window, and days split from times by a comma', () => {
+        expect(hoursAt('2026-10-14T18:00:00Z', '0910-1750 MON-SAT').schedule).toBe('Mon–Sat, 9:10 AM – 5:50 PM');
+        expect(hoursAt('2026-10-14T18:00:00Z', 'Mon-Fri, 9am-6pm').schedule).toBe('Mon–Fri, 9 AM – 6 PM');
+    });
+});
+
+describe('getLotInfo', () => {
+    const lot = (metadata) => ({ spot_type: 'off_street', metadata });
+
+    it("reads a lot's name and kind out of the city's capitals", () => {
+        expect(getLotInfo(lot({ lot_name: 'CENTENNIAL PARKADE', parking_type: 'PARKADE' })))
+            .toEqual({ name: 'Centennial Parkade', kind: 'Parkade' });
+        expect(getLotInfo(lot({ lot_name: 'LOT 07', parking_type: 'SURFACE LOT' })))
+            .toEqual({ name: null, kind: 'Surface lot' });
+    });
+
+    it('is only for lots', () => {
+        expect(getLotInfo({ spot_type: 'on_street', metadata: { lot_name: 'X' } })).toBeNull();
+        expect(getLotInfo(lot({}))).toBeNull();
     });
 });
