@@ -207,8 +207,9 @@ How the web version differs:
 - It starts in downtown Calgary without asking for the visitor's location,
   since most visitors won't be in Calgary, where the parking data is.
 - The map uses free OpenFreeMap tiles: no key or sign-up. OpenFreeMap is
-  donation-funded with no uptime guarantee; to use another provider, change
-  the style URL in `src/components/Map/index.web.js`.
+  donation-funded with no uptime guarantee; to use another provider or a
+  copy you host yourself, set `EXPO_PUBLIC_MAP_STYLE_URL` to its style. A
+  self-hosted style can give its tiles, sprite and fonts as relative paths.
 - Address search works with no setup (free OpenStreetMap search through the
   backend). Set `GOOGLE_PLACES_API_KEY` on Render to use Google instead.
 - Reminders are phone-only, so the Park tab's timer doesn't notify on the web.

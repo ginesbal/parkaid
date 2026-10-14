@@ -18,7 +18,8 @@ import { View } from 'react-native';
 // (provider, tracksViewChanges, showsUserLocation…) are accepted and ignored.
 
 // A light, low-contrast basemap, so the parking dots and the ring stand out.
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+// EXPO_PUBLIC_MAP_STYLE_URL can point at a self-hosted copy instead.
+const STYLE_URL = process.env.EXPO_PUBLIC_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron';
 const TILE_SIZE = 512;
 const MIN_ZOOM = 3;
 const MAX_ZOOM = 19;
@@ -35,7 +36,7 @@ const toLngLat = ({ latitude, longitude }) => [longitude, latitude];
 // most roads have no route number, so MapLibre logs a warning per tile and
 // skips them. Treat a missing number as too long for a shield: the same roads
 // are skipped, without the warnings.
-function withQuietShields(previousStyle, style) {
+function withQuietShields(style) {
     const fix = (expr) => {
         if (!Array.isArray(expr)) return expr;
         if (expr.length === 2 && expr[0] === 'get' && expr[1] === 'ref_length') {
@@ -47,6 +48,34 @@ function withQuietShields(previousStyle, style) {
         ...style,
         layers: style.layers.map((layer) => (layer.filter ? { ...layer, filter: fix(layer.filter) } : layer)),
     };
+}
+
+// A self-hosted style may give its tiles, sprite and fonts as relative
+// paths; MapLibre needs full URLs, so resolve them against the style's own
+// address. Plain joining keeps the {z}/{x}/{y} and {fontstack} placeholders
+// intact, where URL() would escape them.
+function withFullUrls(style, styleUrl) {
+    const resolve = (url) => {
+        if (typeof url !== 'string' || /^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
+        if (url.startsWith('/')) return new URL(styleUrl).origin + url;
+        return styleUrl.slice(0, styleUrl.lastIndexOf('/') + 1) + url;
+    };
+    // Only rewrite what's there: a source with `tiles: undefined` breaks MapLibre.
+    const sources = Object.fromEntries(Object.entries(style.sources || {}).map(([id, source]) => {
+        const next = { ...source };
+        if (source.url) next.url = resolve(source.url);
+        if (source.tiles) next.tiles = source.tiles.map(resolve);
+        return [id, next];
+    }));
+    const next = { ...style, sources };
+    if (style.glyphs) next.glyphs = resolve(style.glyphs);
+    if (Array.isArray(style.sprite)) next.sprite = style.sprite.map((entry) => ({ ...entry, url: resolve(entry.url) }));
+    else if (style.sprite) next.sprite = resolve(style.sprite);
+    return next;
+}
+
+function prepareStyle(previousStyle, style) {
+    return withQuietShields(withFullUrls(style, new URL(STYLE_URL, window.location.href).href));
 }
 
 // react-native-maps describes the view as a center plus a span in degrees.
@@ -107,7 +136,7 @@ const MapView = forwardRef(function MapView({
             touchPitch: false,
         });
         map.touchZoomRotate.disableRotation();
-        map.setStyle(STYLE_URL, { transformStyle: withQuietShields });
+        map.setStyle(STYLE_URL, { transformStyle: prepareStyle });
         // The map credits (OpenStreetMap's license requires them): the full
         // line on wide screens, an ⓘ button on phones. MapLibre opens the ⓘ as
         // soon as the credits arrive, over the map buttons, so close it right
