@@ -2,6 +2,26 @@ require('dotenv').config();
 const axios = require('axios');
 const { Pool } = require('pg');
 
+// Street blocks' rates are in a second dataset, "On-Street Parking Zones with
+// Rates", which lists the same blocks with each one's rate schedule
+// (html_zone_rate). It has no parking_zone, which the row ids below are built
+// from, so its fields are merged into the on-street records, matched by each
+// block's first point: re-running this updates rows instead of adding copies.
+const STREET_RATES_ENDPOINT = '45az-7kh9.json';
+const RATE_FIELDS = ['html_zone_rate', 'zone_cap', 'zone_length', 'seg_cap', 'seg_length', 'camera', 'dot'];
+
+const firstPoint = (geometry) => {
+    const point = geometry?.coordinates?.[0]?.[0];
+    return point ? `${point[0].toFixed(6)},${point[1].toFixed(6)}` : null;
+};
+
+async function loadStreetRates() {
+    const response = await axios.get(`https://data.calgary.ca/resource/${STREET_RATES_ENDPOINT}`, {
+        params: { $limit: 5000, $$app_token: process.env.CALGARY_API_TOKEN }
+    });
+    return new Map(response.data.map((record) => [firstPoint(record.the_geom), record]));
+}
+
 async function loadParkingData() {
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
@@ -36,9 +56,19 @@ async function loadParkingData() {
 
             let loaded = 0;
             let skipped = 0;
+            let rated = 0;
+            const streetRates = dataset.type === 'on_street' ? await loadStreetRates() : null;
 
             for (const record of response.data) {
                 try {
+                    const rates = streetRates?.get(firstPoint(record.line));
+                    if (rates) {
+                        for (const field of RATE_FIELDS) {
+                            if (record[field] == null && rates[field] != null) record[field] = rates[field];
+                        }
+                        if (record.html_zone_rate) rated++;
+                    }
+
                     let lng, lat;
 
                     // Extract coordinates based on geometry type
@@ -163,6 +193,7 @@ async function loadParkingData() {
             }
 
             console.log(`  Loaded ${loaded} ${dataset.type} spots (skipped ${skipped} without coordinates)`);
+            if (streetRates) console.log(`  ${rated} of them have the City's rate schedule`);
             totalLoaded += loaded;
 
         } catch (error) {

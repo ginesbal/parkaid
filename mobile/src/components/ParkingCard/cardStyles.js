@@ -204,6 +204,12 @@ export const styles = StyleSheet.create({
     letterSpacing: -1.1,
     fontVariant: ['tabular-nums'],
   },
+  priceValueQuiet: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+  },
   priceUnit: {
     fontSize: 17,
     fontWeight: '500',

@@ -121,8 +121,8 @@ export const getDetailsPages = (spot) => {
         pricing.push({ label: 'Access', value: access.label, highlight: true });
     } else if (price.kind === 'paid') {
         pricing.push({ label: 'Rate', value: `${price.value}${price.unit ? ` ${price.unit}` : ''}`, highlight: true });
-    } else if (price.kind === 'free') {
-        pricing.push({ label: 'Rate', value: 'Free', highlight: true });
+    } else if (price.kind === 'free' || price.kind === 'no_parking' || price.kind === 'zone') {
+        pricing.push({ label: 'Rate', value: price.value, highlight: true });
     } else {
         pricing.push({ label: 'Rate', value: 'Posted on signs' });
     }

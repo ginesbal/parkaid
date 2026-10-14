@@ -34,8 +34,13 @@ import { styles } from './cardStyles';
 const HERO_COLOR = {
     paid: TOKENS.text,
     free: TOKENS.success,
+    no_parking: TOKENS.danger,
+    zone: TOKENS.textMuted,
     unknown: TOKENS.textMuted,
 };
+// A price or a clear yes/no leads the card; "Rate on signs" or "Loading zone"
+// isn't an answer, so it sits a size down.
+const QUIET_HERO = new Set(['zone', 'unknown']);
 
 function FlippableParkingCard({
     visible = false,
@@ -175,6 +180,9 @@ function FlippableParkingCard({
     const access = getAccess(spot);
     const price = getPriceInfo(spot);
     const hours = getHours(spot);
+    // The rate schedule's own "right now" line when there is one, so the
+    // status never disagrees with the price above it.
+    const status = price.status || hours.status;
     const rush = getRushRestriction(spot);
     const addr = parseAddress(spot);
     const walk = Number.isFinite(spot.walkingTime) ? spot.walkingTime : null;
@@ -315,7 +323,11 @@ function FlippableParkingCard({
                             <View style={styles.headline}>
                                 <View style={styles.priceRow}>
                                     <Text
-                                        style={[styles.priceValue, { color: HERO_COLOR[price.kind] }]}
+                                        style={[
+                                            styles.priceValue,
+                                            QUIET_HERO.has(price.kind) && styles.priceValueQuiet,
+                                            { color: HERO_COLOR[price.kind] || TOKENS.textMuted },
+                                        ]}
                                         numberOfLines={1}
                                     >
                                         {price.value}
@@ -325,23 +337,23 @@ function FlippableParkingCard({
                                     ) : null}
                                 </View>
 
-                                {hours.status ? (
+                                {status ? (
                                     <View style={styles.statusRow}>
                                         <View
                                             style={[
                                                 styles.statusDot,
-                                                hours.status.state === 'free' ? styles.dotFree : styles.dotPaid,
+                                                status.state === 'free' ? styles.dotFree : styles.dotPaid,
                                             ]}
                                         />
                                         <Text
                                             style={[
                                                 styles.statusLabel,
-                                                hours.status.state === 'free' ? styles.statusLabelFree : styles.statusLabelPaid,
+                                                status.state === 'free' ? styles.statusLabelFree : styles.statusLabelPaid,
                                             ]}
                                         >
-                                            {hours.status.label}
+                                            {status.label}
                                         </Text>
-                                        <Text style={styles.statusDetail}>· {hours.status.detail}</Text>
+                                        <Text style={styles.statusDetail}>· {status.detail}</Text>
                                     </View>
                                 ) : price.kind === 'free' ? (
                                     <View style={styles.statusRow}>

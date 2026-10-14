@@ -8,8 +8,6 @@
 // backend/routes/parking.js), with a few promoted to the top level. Every
 // reader below checks both, so it works whether a field was promoted or not.
 
-const PRICE_BY_ZONE = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6 };
-
 // Values that look present but actually mean "no restriction here".
 const NEGATIVE_FLAGS = new Set(['', 'n', 'no', 'none', '0', 'false', 'null', 'na', 'n/a']);
 
@@ -295,9 +293,8 @@ export const getHours = (spot) => {
             : `${fmtDays(win.days)}, ${fmtHour(win.start)} – ${fmtHour(win.end)}`;
 
         if (!win.allDay) {
-            const now = new Date();
-            const hour = now.getHours() + now.getMinutes() / 60;
-            const paidNow = win.days.has(now.getDay()) && hour >= win.start && hour < win.end;
+            const now = calgaryNow();
+            const paidNow = win.days.has(now.day) && now.hour >= win.start && now.hour < win.end;
             status = paidNow
                 ? { state: 'paid', label: 'Paid right now', detail: `until ${fmtHour(win.end)}` }
                 : { state: 'free', label: 'Free right now', detail: `paid ${fmtHour(win.start)}–${fmtHour(win.end)}` };
@@ -320,6 +317,169 @@ export const getRushRestriction = (spot) => {
 };
 
 // ---- price -----------------------------------------------------------------
+//
+// Prices come from the City's own rate text for each block (html_zone_rate),
+// a list of windows such as
+//   <b>Mon-Fri 9:00 AM to 11:00 AM</b><br><br>$4.00 per Hour<br><br>
+//   <b>Saturday: 9:00 AM to 6:00 PM</b><br><br>$1.00 per Hour<br><br>
+//   <b>Sunday/Holidays:</b><br><br>Free parking
+// Rates change through the day, so the price shown is the one in effect now,
+// on Calgary's clock. price_zone is only the zone's name ("4a", "14"), not a
+// dollar amount.
+
+const WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/**
+ * Calgary's day (0 = Sunday) and hour (13.5 = 1:30 PM), wherever the phone or
+ * browser is: a web visitor may be elsewhere. Falls back to the device clock.
+ */
+export const calgaryNow = (date = new Date()) => {
+    try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Edmonton',
+            weekday: 'short',
+            hour: 'numeric',
+            minute: 'numeric',
+            hourCycle: 'h23',
+        }).formatToParts(date);
+        const part = (type) => parts.find((p) => p.type === type)?.value;
+        const day = WEEKDAY_INDEX[part('weekday')];
+        const hour = (Number(part('hour')) % 24) + Number(part('minute')) / 60;
+        if (day != null && Number.isFinite(hour)) return { day, hour };
+    } catch {
+        // No time zone support: use the device's clock.
+    }
+    return { day: date.getDay(), hour: date.getHours() + date.getMinutes() / 60 };
+};
+
+const RATE_DAYS = [
+    [/^(mon\s*-\s*fri|weekdays)\b/, [1, 2, 3, 4, 5]],
+    [/^mon\s*-\s*sat\b/, [1, 2, 3, 4, 5, 6]],
+    [/^mon\s*-\s*thu\b/, [1, 2, 3, 4]],
+    [/^fri/, [5]],
+    [/^sat/, [6]],
+    [/^sun/, [0]],
+];
+
+// Blocks that aren't general parking, by the label the City gives them.
+const SPECIAL_ZONES = [
+    [/loading|transit access/i, 'Loading zone'],
+    [/taxi/i, 'Taxi zone'],
+    [/motorcycle/i, 'Motorcycles only'],
+    [/vip/i, 'Reserved'],
+    [/^no parking$/i, 'No parking'],
+];
+
+const plainText = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+// "9:00 AM" or "09:00" (the City writes both) -> hours.
+const clockTime = (h, m, ap) => (ap ? to24h(h, m, ap) : parseInt(h, 10) + (m ? parseInt(m, 10) / 60 : 0));
+
+// What one window's text says: a rate, free, or no parking.
+const rateTerm = (text) => {
+    const dollars = text.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
+    if (dollars) return { kind: 'paid', amount: parseFloat(dollars[1]), perHour: /hour|\/\s*hr/i.test(text) };
+    if (/no parking/i.test(text)) return { kind: 'no_parking' };
+    if (/free/i.test(text)) return { kind: 'free' };
+    return null;
+};
+
+/**
+ * The City's rate text as data: `windows` ({ days, start, end, kind, amount,
+ * perHour }) and, for blocks that aren't general parking, `special`
+ * ({ label, note }). Anything it can't read is left out, never guessed.
+ */
+export const parseRates = (html) => {
+    const windows = [];
+    let special = null;
+    if (typeof html !== 'string') return { windows, special };
+    for (const [, rawHead, rawBody] of html.matchAll(/<b>([\s\S]*?)<\/b>([\s\S]*?)(?=<b>|$)/gi)) {
+        const head = plainText(rawHead);
+        const body = plainText(rawBody);
+        const term = rateTerm(body);
+        const days = RATE_DAYS.find(([re]) => re.test(head.toLowerCase()))?.[1];
+        if (days) {
+            if (!term) continue;
+            const t = head.toLowerCase().match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*to\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+            // No times ("Sunday/Holidays:") means the whole day.
+            const start = t ? clockTime(t[1], t[2], t[3]) : 0;
+            const end = t ? clockTime(t[4], t[5], t[6]) : 24;
+            if (end > start) windows.push({ days: new Set(days), start, end, ...term });
+        } else if (!special && !windows.length) {
+            const zone = SPECIAL_ZONES.find(([re]) => re.test(head));
+            if (zone) {
+                const minutes = body.match(/free\s+(\d+)\s*min/i);
+                special = { label: zone[1], note: minutes ? `Free for ${minutes[1]} minutes` : body || null };
+            }
+        }
+    }
+    return { windows, special };
+};
+
+// Rush-hour tow-away windows ("07:00 - 08:30 , 15:30 - 18:00"), weekdays.
+const rushWindowNow = (spot, now) => {
+    const rush = getRushRestriction(spot);
+    if (!rush || now.day === 0 || now.day === 6) return null;
+    for (const [, h1, m1, h2, m2] of String(pick(spot, 'parking_restrict_time')).matchAll(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/g)) {
+        const start = clockTime(h1, m1);
+        const end = clockTime(h2, m2);
+        if (now.hour >= start && now.hour < end) return { end };
+    }
+    return null;
+};
+
+// When the next paid window starts: "9 AM", "9 AM tomorrow", "Mon 9 AM".
+const nextPaidStart = (windows, now) => {
+    for (let offset = 0; offset < 7; offset++) {
+        const day = (now.day + offset) % 7;
+        const starts = windows
+            .filter((w) => w.kind === 'paid' && w.days.has(day) && (offset > 0 || w.start > now.hour))
+            .map((w) => w.start);
+        if (starts.length) {
+            const at = fmtHour(Math.min(...starts));
+            return offset === 0 ? at : offset === 1 ? `${at} tomorrow` : `${DAY_ABBR[day]} ${at}`;
+        }
+    }
+    return null;
+};
+
+// The price right now from a parsed schedule, with a status line for the card.
+const priceFromSchedule = (spot, windows, date) => {
+    const now = calgaryNow(date);
+    const rush = rushWindowNow(spot, now);
+    const current = windows.find((w) => w.days.has(now.day) && now.hour >= w.start && now.hour < w.end);
+
+    if (rush || current?.kind === 'no_parking') {
+        const until = rush ? rush.end : current.end;
+        return {
+            kind: 'no_parking', tone: 'danger', value: 'No parking', amount: null, unit: null, perHour: false,
+            note: until < 24 ? `until ${fmtHour(until)}` : null,
+            status: null,
+        };
+    }
+    if (current?.kind === 'paid') {
+        // What happens when this window ends: a different rate, or free.
+        const following = windows.find((w) => w.days.has(now.day) && w.start === current.end);
+        const detail = following?.kind === 'paid' && following.amount !== current.amount
+            ? `$${following.amount.toFixed(2)} from ${fmtHour(current.end)}`
+            : following?.kind === 'paid'
+                ? `until ${fmtHour(following.end)}`
+                : `until ${fmtHour(current.end)}`;
+        return {
+            kind: 'paid', tone: 'text', value: `$${current.amount.toFixed(2)}`, amount: current.amount,
+            unit: current.perHour ? 'per hour' : null, perHour: current.perHour,
+            note: detail,
+            status: { state: 'paid', label: 'Paid right now', detail },
+        };
+    }
+    // Inside a free window, or outside the paid hours.
+    const next = nextPaidStart(windows, now);
+    return {
+        kind: 'free', tone: 'success', value: 'Free now', amount: 0, unit: null, perHour: false,
+        note: next ? `paid from ${next}` : null,
+        status: { state: 'free', label: 'Free right now', detail: next ? `paid from ${next}` : 'no charge today' },
+    };
+};
 
 // Pull the first dollar figure out of the city's HTML rate blob.
 const firstDollarFromHtml = (html) => {
@@ -338,40 +498,30 @@ const paidWindow = (spot) => {
 };
 
 /**
- * Resolve what a spot costs, honestly.
+ * Resolve what a spot costs right now, honestly.
  *
- *   kind 'paid'    -> a dollar rate applies (value: "$3.00", unit: "per hour")
- *   kind 'free'    -> genuinely free (value: "Free")
- *   kind 'permit'  -> permit holders only; not free to the public (value: "Permit")
- *   kind 'unknown' -> data is incomplete; tell the user to check signs
+ *   kind 'paid'       -> a dollar rate applies (value: "$3.00", unit: "per hour")
+ *   kind 'free'       -> free at the moment (value: "Free now"), or always
+ *   kind 'no_parking' -> parking isn't allowed right now (rush hour, signs)
+ *   kind 'zone'       -> not general parking (value: "Loading zone")
+ *   kind 'unknown'    -> data is incomplete; tell the user to check signs
  *
- * `tone` maps to the theme's semantic colors so callers don't re-derive it.
+ * `tone` maps to the theme's semantic colors so callers don't re-derive it,
+ * and `status` (when the schedule is known) is the card's "right now" line.
+ * `date` is for tests; the clock is Calgary's.
  */
-export const getPriceInfo = (spot) => {
-    const priceZone = pick(spot, 'price_zone');
+export const getPriceInfo = (spot, date = new Date()) => {
     const html = pick(spot, 'html_zone_rate');
+    const { windows, special } = parseRates(html);
 
-    // Prefer the dollar amount the backend already computed from the price zone.
-    const numeric =
-        typeof spot?.price_per_hour === 'number' ? spot.price_per_hour :
-        typeof spot?.price === 'number' ? spot.price :
-        priceZone ? (PRICE_BY_ZONE[String(priceZone)] || 0) : 0;
-
-    if (priceZone && numeric > 0) {
-        return {
-            kind: 'paid',
-            tone: 'text',
-            value: `$${numeric.toFixed(2)}`,
-            amount: numeric,
-            unit: 'per hour',
-            perHour: true,
-            note: paidWindow(spot) || `Zone ${priceZone}`,
-        };
+    if (special) {
+        const tone = special.label === 'No parking' ? 'danger' : 'muted';
+        return { kind: 'zone', tone, value: special.label, amount: null, unit: null, perHour: false, note: special.note, status: null };
     }
+    if (windows.length) return priceFromSchedule(spot, windows, date);
 
-    // Some blocks only carry the rate inside the HTML blob. Only call it an
-    // hourly rate when the text actually says so — a lot's "$12 daily max"
-    // is not a per-hour rate.
+    // Rate text in a shape we don't know: show its first figure, and only
+    // call it hourly when the text says so (a lot's "$12 daily max" isn't).
     const fromHtml = firstDollarFromHtml(html);
     if (fromHtml) {
         const hourly = /hour|\/\s*hr|per\s*hr/i.test(String(html));
@@ -383,14 +533,15 @@ export const getPriceInfo = (spot) => {
             unit: hourly ? 'per hour' : null,
             perHour: hourly,
             note: paidWindow(spot),
+            status: null,
         };
     }
 
     if (htmlSaysFree(html)) {
-        return { kind: 'free', tone: 'success', value: 'Free', amount: 0, unit: null, perHour: false, note: paidWindow(spot) };
+        return { kind: 'free', tone: 'success', value: 'Free', amount: 0, unit: null, perHour: false, note: paidWindow(spot), status: null };
     }
 
-    return { kind: 'unknown', tone: 'muted', value: 'Rate on signs', amount: null, unit: null, perHour: false, note: null };
+    return { kind: 'unknown', tone: 'muted', value: 'Rate on signs', amount: null, unit: null, perHour: false, note: null, status: null };
 };
 
 // ---- restrictions ----------------------------------------------------------
