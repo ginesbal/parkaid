@@ -22,7 +22,7 @@ import ScreenHeading from '../../components/ScreenHeading';
 
 // app constants/services
 import { DEFAULT_LOCATION, GOOGLE_MAPS_API_KEY } from '../../constants/config';
-import { DEFAULT_SEARCH_RADIUS, FETCH_RADIUS, USE_DEVICE_LOCATION } from '../../constants/parking';
+import { FETCH_RADIUS, USE_DEVICE_LOCATION, minutesToMeters } from '../../constants/parking';
 import { STORAGE_KEYS } from '../../constants/session';
 import { NATIVE_DRIVER, TOKENS } from '../../constants/theme';
 import { getDistanceLabel } from '../../utils/parkingHelpers';
@@ -33,6 +33,7 @@ import { logger } from '../../utils/loggers';
 
 // files specific to this screen
 import { useParkingSpots } from '../../hooks/useParkingSpots';
+import { useWalkMinutes } from '../../hooks/useWalkMinutes';
 import DropPinTip, { DROP_PIN_TIP_KEY } from './components/DropPinTip';
 import MapHeader from './components/MapHeader';
 import MapOverlays from './components/MapOverlays';
@@ -108,7 +109,9 @@ function MapScreen({ route, navigation }) {
     const [region, setRegion] = useState(DEFAULT_LOCATION);
     const [userLocation, setUserLocation] = useState(null);
     const [filterType, setFilterType] = useState('all');
-    const [searchRadius, setSearchRadius] = useState(DEFAULT_SEARCH_RADIUS);
+    // How far you'll walk: shared with Home, remembered between visits.
+    const [walkMinutes, setWalkMinutes] = useWalkMinutes();
+    const searchRadius = minutesToMeters(walkMinutes);
     const [selectedSpot, setSelectedSpot] = useState(null);
     // Bumped by "Try again" to refetch the same search after a failed load.
     const [reloadKey, setReloadKey] = useState(0);
@@ -185,8 +188,8 @@ function MapScreen({ route, navigation }) {
             : null
     ), [placingPin, reticleMoving, region.latitude, region.longitude]);
 
-    // Fetch once at the largest preset, then narrow client-side as the user
-    // switches presets. Changing the radius is instant and never refetches.
+    // Fetch once at the longest walk, then narrow client-side as the walk
+    // slider moves. Changing it is instant and never refetches.
     const {
         spots: allSpots,
         loading: spotsLoading,
@@ -525,12 +528,17 @@ function MapScreen({ route, navigation }) {
         }
     }, [retireDropPinTip]);
 
-    // Radius preset tapped in the bottom sheet. Filtering is client-side and
-    // instant; we also gently zoom so the whole search circle stays visible.
-    // Skipped while placing the pin so the reticle target never moves.
-    const handleRadiusChange = useCallback((nextRadius) => {
-        setSearchRadius(nextRadius);
-        logger.log('radius_changed', { radius: nextRadius }, 'UI_EVENT');
+    // The walk slider in the bottom sheet. While dragging, the ring and the
+    // count follow the finger (filtering is client-side and instant); on
+    // release the map zooms so the whole ring is in view. The zoom is skipped
+    // while placing the pin, so the reticle's target never moves.
+    const handleWalkChange = useCallback((minutes) => {
+        setWalkMinutes(minutes);
+    }, [setWalkMinutes]);
+
+    const handleWalkChangeEnd = useCallback((minutes) => {
+        setWalkMinutes(minutes);
+        logger.log('walk_changed', { minutes }, 'UI_EVENT');
 
         if (placingPinRef.current) return;
         const center = (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
@@ -538,7 +546,7 @@ function MapScreen({ route, navigation }) {
 
         // Fit the circle's diameter with ~30% breathing room; longitude
         // degrees shrink with latitude, so widen accordingly.
-        const latitudeDelta = Math.max(0.005, (nextRadius * 2.6) / 111320);
+        const latitudeDelta = Math.max(0.005, (minutesToMeters(minutes) * 2.6) / 111320);
         const longitudeDelta = latitudeDelta / Math.cos((center.latitude * Math.PI) / 180);
         mapRef.current?.animateToRegion({
             latitude: center.latitude,
@@ -546,7 +554,7 @@ function MapScreen({ route, navigation }) {
             latitudeDelta,
             longitudeDelta,
         }, 250);
-    }, [searchMode, pinnedLocation, userLocation]);
+    }, [searchMode, pinnedLocation, userLocation, setWalkMinutes]);
 
     // The reticle points at the center of the visible band (between the header
     // and the bottom UI). mapPadding makes the reported region center align
@@ -745,8 +753,9 @@ function MapScreen({ route, navigation }) {
                 selectedSpot={selectedSpot}
                 searchMode={searchMode}
                 placingPin={placingPin}
-                searchRadius={searchRadius}
-                onRadiusChange={handleRadiusChange}
+                walkMinutes={walkMinutes}
+                onWalkChange={handleWalkChange}
+                onWalkChangeEnd={handleWalkChangeEnd}
                 loading={spotsLoading}
                 error={spotsError}
                 errorKind={spotsErrorKind}

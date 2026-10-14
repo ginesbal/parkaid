@@ -5,13 +5,13 @@ import { AccessibilityInfo, Animated, Platform, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WAKING_NOTICE } from '../../../../constants/loadErrors';
 import { NATIVE_DRIVER, TOKENS } from '../../../../constants/theme';
-import { getDistanceLabel } from '../../../../utils/parkingHelpers';
+import { walkPhrase } from '../../../../constants/parking';
 import { styles } from './styles';
 
 /**
  * LoadingState - Initial loading screen with skeleton placeholders
  */
-const LoadingState = ({ searchRadius, waking = false }) => {
+const LoadingState = ({ walkMinutes, waking = false }) => {
     const pulseAnim = useRef(new Animated.Value(0.45)).current;
 
     // iOS has no live regions, so say it there too.
@@ -54,7 +54,7 @@ const LoadingState = ({ searchRadius, waking = false }) => {
                 <Text style={styles.loadingText}>Looking for spots nearby</Text>
                 {/* A long first wait gets explained, not just spun. */}
                 <Text style={styles.loadingSubtext} accessibilityLiveRegion="polite">
-                    {waking ? WAKING_NOTICE : `Checking within ${getDistanceLabel(searchRadius)} of you`}
+                    {waking ? WAKING_NOTICE : `Looking within ${walkPhrase(walkMinutes)} of you`}
                 </Text>
 
                 <View style={styles.loadingSkeletonStack}>

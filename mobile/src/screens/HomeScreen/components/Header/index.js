@@ -15,8 +15,8 @@ const Header = ({
     quickInfo,
     activeFilter,
     setActiveFilter,
-    searchRadius,
-    setSearchRadius,
+    walkMinutes,
+    setWalkMinutes,
     fadeAnim,
     slideAnim,
     onLocationPress,
@@ -74,8 +74,8 @@ const Header = ({
             <FilterBar
                 activeFilter={activeFilter}
                 setActiveFilter={setActiveFilter}
-                searchRadius={searchRadius}
-                setSearchRadius={setSearchRadius}
+                walkMinutes={walkMinutes}
+                setWalkMinutes={setWalkMinutes}
             />
         </Animated.View>
     );

@@ -11,17 +11,17 @@ import EmptyState from './components/ParkingList/EmptyState';
 import LoadingState from './components/ParkingList/LoadingState';
 
 import { useFilterState } from '../../hooks/useFilterState';
+import { useWalkMinutes } from '../../hooks/useWalkMinutes';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 
 import { logger } from '../../utils/loggers';
-import { calculateQuickInfo, getDistanceLabel } from '../../utils/parkingHelpers';
+import { calculateQuickInfo } from '../../utils/parkingHelpers';
 
-import { RADIUS_OPTIONS } from '../../constants/parking';
+import { FETCH_RADIUS, WALK_MINUTES, minutesToMeters, walkPhrase } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
 import { styles } from './HomeScreen.styles';
 
-const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
 // Never leave the pull-to-refresh spinner up if a refetch can't complete
 // (the API itself gives up after 8s).
 const REFRESH_TIMEOUT_MS = 10000;
@@ -34,23 +34,29 @@ export default function HomeScreen({ navigation }) {
     Linking.openSettings().catch(() => {});
   }, []);
 
-  const {
-    activeFilter,
-    setActiveFilter,
-    searchRadius,
-    setSearchRadius,
-  } = useFilterState();
+  const { activeFilter, setActiveFilter } = useFilterState();
+  // How far you'll walk: shared with the map, remembered between visits.
+  const [walkMinutes, setWalkMinutes] = useWalkMinutes();
+  const searchRadius = minutesToMeters(walkMinutes);
 
   // Bumped by pull-to-refresh and "Retry" to refetch, bypassing the cache.
   const [reloadKey, setReloadKey] = useState(0);
 
   // data fetching hook
-  const { spots, loading, error, errorKind, lastUpdated, waking } = useParkingSpots(
+  // Fetched once at the longest walk, then narrowed here, so moving the walk
+  // slider is instant. The server returns the closest 100 either way, so the
+  // narrowed list is exactly what a narrower request would return.
+  const { spots: allSpots, loading, error, errorKind, lastUpdated, waking } = useParkingSpots(
     location,
-    searchRadius,
+    FETCH_RADIUS,
     activeFilter,
     reloadKey
   );
+  const spots = useMemo(() => (
+    Array.isArray(allSpots)
+      ? allSpots.filter((s) => (typeof s.distance === 'number' ? s.distance : Infinity) <= searchRadius)
+      : allSpots
+  ), [allSpots, searchRadius]);
 
   // local UI state
   const [refreshing, setRefreshing] = useState(false);
@@ -122,24 +128,23 @@ export default function HomeScreen({ navigation }) {
     });
   }, [navigation]);
 
-  // The empty state's next step. Widen first — keeping the user's type
-  // filter — and only once at the widest radius offer to clear the filter.
-  // It never shrinks the radius (it used to jump to 1 km, even from 2 km).
-  const canWiden = searchRadius < WIDEST_RADIUS;
+  // The empty state's next step. Walk farther first — keeping the user's
+  // type filter — and only at the longest walk offer to clear the filter.
+  const canWiden = walkMinutes < WALK_MINUTES.max;
   const canShowAllTypes = activeFilter !== 'all';
   const expandLabel = canWiden
-    ? `Search within ${getDistanceLabel(WIDEST_RADIUS)}`
+    ? `Widen to ${walkPhrase(WALK_MINUTES.max)}`
     : canShowAllTypes
       ? 'Show all parking types'
       : null;
   const emptyHint = expandLabel
-    ? 'Try a wider search, or switch to the map to look around the next block.'
-    : `Nothing within ${getDistanceLabel(WIDEST_RADIUS)}. Switch to the map to search somewhere else.`;
+    ? 'Walk a little farther, or switch to the map to look around the next block.'
+    : `Nothing within ${walkPhrase(WALK_MINUTES.max)}. Switch to the map to search somewhere else.`;
 
   const handleExpandSearch = () => {
     if (canWiden) {
-      logger.log('expand_search', { oldRadius: searchRadius, newRadius: WIDEST_RADIUS });
-      setSearchRadius(WIDEST_RADIUS);
+      logger.log('expand_search', { oldMinutes: walkMinutes, newMinutes: WALK_MINUTES.max });
+      setWalkMinutes(WALK_MINUTES.max);
       return;
     }
     if (canShowAllTypes) {
@@ -182,14 +187,12 @@ export default function HomeScreen({ navigation }) {
   }, [activeFilter]);
 
   React.useEffect(() => {
-    if (searchRadius) {
-      logger.log('radius_changed', { radius: searchRadius });
-    }
-  }, [searchRadius]);
+    logger.log('walk_changed', { minutes: walkMinutes });
+  }, [walkMinutes]);
 
   // Full-screen loading only for the very first load. After that, changing
-  // a filter or the radius keeps the header (and the chip just tapped) on
-  // screen and shows progress in place instead of blanking everything.
+  // the parking type keeps the header (and the control just used) on screen
+  // and shows progress in place instead of blanking everything.
   const isFirstLoad = isLoadingLocation || (loading && lastUpdated === null);
   const isUpdating = loading && !refreshing && !isFirstLoad;
 
@@ -199,7 +202,7 @@ export default function HomeScreen({ navigation }) {
       refreshing,
       isLoadingLocation
     });
-    return <LoadingState searchRadius={searchRadius} waking={waking} />;
+    return <LoadingState walkMinutes={walkMinutes} waking={waking} />;
   }
 
   // While new results load, dim the current ones so it's clear they're
@@ -242,8 +245,8 @@ export default function HomeScreen({ navigation }) {
               quickInfo={quickInfo}
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
-              searchRadius={searchRadius}
-              setSearchRadius={setSearchRadius}
+              walkMinutes={walkMinutes}
+              setWalkMinutes={setWalkMinutes}
               fadeAnim={fadeAnim}
               slideAnim={slideAnim}
               onLocationPress={handleMapPress}
@@ -275,7 +278,7 @@ export default function HomeScreen({ navigation }) {
                 onRetry={handleRefresh}
                 hasError={Boolean(error)}
                 errorKind={errorKind}
-                title={`No spots within ${getDistanceLabel(searchRadius)}`}
+                title={`No spots within ${walkPhrase(walkMinutes)}`}
                 expandLabel={expandLabel}
                 hint={emptyHint}
               />

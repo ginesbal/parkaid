@@ -88,6 +88,7 @@
       @media (hover: hover) and (pointer: fine) {
         [role="button"]:not([aria-disabled="true"])::after,
         [role="tab"]::after,
+        [role="radio"]::after,
         [role="link"]::after {
           content: "";
           position: absolute;
@@ -100,6 +101,7 @@
         }
         [role="button"]:not([aria-disabled="true"]):hover::after,
         [role="tab"]:hover::after,
+        [role="radio"]:not([aria-checked="true"]):hover::after,
         [role="link"]:hover::after {
           opacity: 0.06;
         }
@@ -115,15 +117,22 @@
          fixed while focused, which iOS needs. -->
     <style id="touch">
       [data-search="pill"] { cursor: text; }
-      /* The map's small chips: phones extend their tap area with hitSlop,
-         which browsers ignore, so this adds the same 8px above and below. */
-      [data-hit="chip"]::before {
+      /* The walk slider: a ring around the whole slider for the keyboard. */
+      [data-slider="walk"]:focus-visible {
+        outline: 2px solid rgba(29, 109, 139, 0.55);
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+      /* The type switch's segments: phones extend their tap area with
+         hitSlop, which browsers ignore, so this adds the same 5px above and
+         below. */
+      [data-hit="segment"]::before {
         content: "";
         position: absolute;
         left: 0;
         right: 0;
-        top: -8px;
-        bottom: -8px;
+        top: -5px;
+        bottom: -5px;
       }
       [data-search="pill"] input:focus { outline: none; }
       [data-search="pill"]:focus-within {

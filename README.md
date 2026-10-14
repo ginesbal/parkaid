@@ -14,13 +14,14 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 ## What it does
 
 - Search for parking near your current location, or drop a pin to search
-  somewhere else. There's a radius selector from 250m up to 2km.
+  somewhere else. A slider sets how far you'll walk, anywhere from 1 to 25
+  minutes (about 2km), and both screens remember it.
 - Search by address or place. Your last three picks show when you tap the
   empty search box. They're kept only on your phone, and Clear removes them.
 - See spots on a map with markers you can tap for details (price, zone,
   restrictions, capacity).
 - See a list of nearby spots sorted by distance, with a rough walking time and
-  filters by type (street, lot, residential, school, or free).
+  a switch to show only street parking, lots or permit parking.
 - Start a parking timer for a spot ("Park here" on its card). It won't plan
   past the spot's posted time limit, and it reminds you 10 minutes before
   time's up, even with the app closed. It's a reminder only: paying still

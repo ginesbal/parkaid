@@ -1,27 +1,11 @@
-import { memo, useCallback, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, View } from 'react-native';
+import TypeSwitch from '../../../components/Filters/TypeSwitch';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
 import { styles } from '../styles';
 
-// Spoken as they read ("Lot"), so voice control can say what it sees; the
-// hint says what the chip does.
-const TYPE_FILTERS = [
-    { type: 'all', label: 'All', hint: 'Shows all parking' },
-    { type: 'on_street', label: 'Street', hint: 'Shows street parking only' },
-    { type: 'off_street', label: 'Lot', hint: 'Shows parking lots only' },
-    { type: 'residential', label: 'Permit', hint: 'Shows permit parking only' },
-];
-
-// The pills render ~29pt tall; extend the touch area to the 44pt minimum
-// without making them visually heavier. Vertical only — horizontally the
-// pills are 8pt apart and already ≥48pt wide, so slop there would overlap.
-const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
-// Browsers ignore hitSlop; on the web, public/index.html extends the tap area
-// of anything tagged hit="chip" by the same 8 above and below.
-const WEB_CHIP_HIT = Platform.OS === 'web' ? { dataSet: { hit: 'chip' } } : null;
-
 /**
- * MapHeader — search first, then the parking-type chips, always in view.
+ * MapHeader — search first, then the parking-type switch, always in view.
  * Dropping a search pin lives with the floating controls, in thumb reach.
  */
 function MapHeader({
@@ -40,10 +24,15 @@ function MapHeader({
         onSearchResultsChange?.(open);
     }, [onSearchResultsChange]);
 
-    // The chips step aside while a card is open, the pin is being placed, or
-    // search results are showing. They fade but keep their space, so the
-    // header — and the map padding measured from it — never reflows.
-    const chipsMuted = isDetailActive || placingPin || resultsOpen;
+    // The switch steps aside while a card is open, the pin is being placed,
+    // or search results are showing. It fades but keeps its space, so the
+    // header — and the map padding measured from it — never reflows. On the
+    // web it's also made inert, so Tab can't land on it while it's hidden.
+    const filtersMuted = isDetailActive || placingPin || resultsOpen;
+    const filtersRef = useRef(null);
+    useEffect(() => {
+        if (Platform.OS === 'web' && filtersRef.current) filtersRef.current.inert = filtersMuted;
+    }, [filtersMuted]);
 
     return (
         <View style={styles.headerBar}>
@@ -55,35 +44,13 @@ function MapHeader({
             />
 
             <View
-                style={[styles.typeChips, chipsMuted && styles.typeChipsMuted]}
-                pointerEvents={chipsMuted ? 'none' : 'auto'}
-                accessibilityElementsHidden={chipsMuted}
-                importantForAccessibility={chipsMuted ? 'no-hide-descendants' : 'auto'}
+                ref={filtersRef}
+                style={[styles.typeFilters, filtersMuted && styles.typeFiltersMuted]}
+                pointerEvents={filtersMuted ? 'none' : 'auto'}
+                accessibilityElementsHidden={filtersMuted}
+                importantForAccessibility={filtersMuted ? 'no-hide-descendants' : 'auto'}
             >
-                {TYPE_FILTERS.map((f) => {
-                    const isActive = filterType === f.type;
-                    return (
-                        <Pressable
-                            key={f.type}
-                            style={({ pressed }) => [
-                                styles.miniChip,
-                                isActive && styles.miniChipActive,
-                                pressed && styles.filterChipPressed,
-                            ]}
-                            onPress={() => setFilterType(f.type)}
-                            hitSlop={CHIP_HIT_SLOP}
-                            {...WEB_CHIP_HIT}
-                            accessibilityRole="button"
-                            accessibilityLabel={f.label}
-                            accessibilityHint={f.hint}
-                            accessibilityState={{ selected: isActive }}
-                        >
-                            <Text style={[styles.miniChipText, isActive && styles.miniChipTextActive]}>
-                                {f.label}
-                            </Text>
-                        </Pressable>
-                    );
-                })}
+                <TypeSwitch value={filterType} onChange={setFilterType} floating />
             </View>
         </View>
     );

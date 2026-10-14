@@ -62,91 +62,14 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
 
+    // Type, then walk: no labels or boxes around them, the controls speak
+    // for themselves.
     filterBar: {
         paddingHorizontal: 20,
-        paddingTop: 4,
-        paddingBottom: 14,
-        backgroundColor: TOKENS.surface,
-    },
-    filterRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 6,
-        flexWrap: 'wrap',
-    },
-    filterChip: {
-        minHeight: 44,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 999,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        justifyContent: 'center',
-    },
-    filterChipActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
-    filterChipPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
-    },
-    filterChipText: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: TOKENS.text,
-    },
-    filterChipTextActive: {
-        color: TOKENS.onPrimary,
-        fontWeight: '600',
-    },
-    distanceRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginTop: 2,
-        flexWrap: 'wrap',
-    },
-    distanceLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: TOKENS.textMuted,
-        letterSpacing: 0.2,
-    },
-    distanceOptions: {
-        flex: 1,
-        flexDirection: 'row',
+        paddingTop: 6,
+        paddingBottom: 8,
         gap: 6,
-        flexWrap: 'wrap',
-    },
-    distanceOption: {
-        minHeight: 44,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 999,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        justifyContent: 'center',
-    },
-    distanceOptionActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
-    distanceOptionPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
-    },
-    distanceOptionText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.text,
-    },
-    distanceOptionTextActive: {
-        color: TOKENS.onPrimary,
-        fontWeight: '600',
+        backgroundColor: TOKENS.surface,
     },
     statusBanner: {
         flexDirection: 'row',

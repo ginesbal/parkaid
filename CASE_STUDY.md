@@ -116,7 +116,7 @@ The new palette:
 ### Design Hierarchy
 
 - **Reading**: Prussian Blue on white. Not black (#1a1a1a) — the navy carries more personality while maintaining the same contrast ratio.
-- **Interaction**: Cerulean for everything tappable. Buttons, links, active filter chips, map markers. One color = one meaning.
+- **Interaction**: Cerulean for everything tappable. Buttons, links, the walk slider, map markers. One color = one meaning.
 - **Attention**: Amber for things that need a second look. Permit badges, time-limit warnings, the pinned-location marker on the map. Amber reads as "notice" without reading as "danger."
 - **Structure**: Yale Blue for the in-between — labels, dividers, inactive icons, borders. It's the color of "supporting cast."
 - **Surfaces**: White primary. Cream only as subtle tints (card backgrounds, progress bars). Using cream as a full-screen background would be overwhelming.

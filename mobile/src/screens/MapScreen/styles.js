@@ -41,50 +41,13 @@ export const styles = StyleSheet.create({
 
     // Parking-type chips: always in view, left-aligned under the search
     // text so the two read as one column.
-    typeChips: {
+    typeFilters: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
     },
 
     // Faded, not removed, so the header never reflows.
-    typeChipsMuted: {
+    typeFiltersMuted: {
         opacity: 0,
-    },
-
-    miniChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 999,
-        backgroundColor: TOKENS.surfaceOverlay,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-
-    miniChipActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
-
-    miniChipText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.text,
-    },
-
-    miniChipTextActive: {
-        color: TOKENS.onPrimary,
-        fontWeight: '600',
-    },
-
-    filterChipPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
     },
 
     // ===== Markers =====

@@ -11,11 +11,11 @@ import {
     Text,
     View,
 } from 'react-native';
+import WalkSlider from '../../../components/Filters/WalkSlider';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { WAKING_NOTICE, WAKING_NOTICE_SHORT, getLoadError } from '../../../constants/loadErrors';
-import { RADIUS_OPTIONS, metersToWalkMinutes } from '../../../constants/parking';
+import { WALK_MINUTES, walkPhrase } from '../../../constants/parking';
 import { NATIVE_DRIVER, TOKENS, alpha } from '../../../constants/theme';
-import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import { SCREEN_HEIGHT, SHEET_BOTTOM_OFFSET } from '../constants';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -39,17 +39,6 @@ const RUBBER_BAND_FACTOR = 0.35;
 // that depends on expandTo from re-running on every parent re-render.
 const EXPANDED_Y = 0;
 
-// The widest preset — what the empty state offers when nothing is in range.
-const WIDEST_RADIUS = RADIUS_OPTIONS[RADIUS_OPTIONS.length - 1].value;
-
-// Radius pills render ~29pt tall; extend the touch area to the 44pt minimum
-// for one-handed use without enlarging them. Vertical only — the pills sit
-// 8pt apart, so horizontal slop would overlap the neighbouring pill.
-const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
-// Browsers ignore hitSlop; on the web, public/index.html extends the tap area
-// of anything tagged hit="chip" by the same 8 above and below.
-const WEB_CHIP_HIT = Platform.OS === 'web' ? { dataSet: { hit: 'chip' } } : null;
-
 // Memoized: the map screen re-renders on every pan settle, and none of the
 // sheet's props change then — so the sheet and its list skip that work.
 const ParkingBottomSheet = memo(forwardRef(({
@@ -57,8 +46,9 @@ const ParkingBottomSheet = memo(forwardRef(({
     selectedSpot,
     searchMode,
     placingPin = false,
-    searchRadius,
-    onRadiusChange,
+    walkMinutes,
+    onWalkChange,
+    onWalkChangeEnd,
     loading = false,
     error = null,
     errorKind = null,
@@ -310,7 +300,7 @@ const ParkingBottomSheet = memo(forwardRef(({
 
     // Android reads title changes through accessibilityLiveRegion; iOS has
     // no live regions, so announce them explicitly — e.g. the new count
-    // after a radius tap, or a failed load. Skipped on first render so it
+    // as the walk slider changes it, or a failed load. Skipped on first render so it
     // doesn't talk over the screen opening.
     // Advice that fits the failure: no connection, too slow, or the server.
     const loadError = getLoadError(errorKind);
@@ -415,39 +405,16 @@ const ParkingBottomSheet = memo(forwardRef(({
                     )}
                 </View>
 
-                {/* Search radius — four familiar presets, right beside the
-                    count they change. Switching filters already-fetched spots
-                    client-side, so it responds instantly. */}
-                {onRadiusChange && (
-                    <View style={styles.radiusRow}>
-                        <Text style={styles.radiusLabel}>Within</Text>
-                        {RADIUS_OPTIONS.map((option) => {
-                            const isActive = searchRadius === option.value;
-                            return (
-                                <Pressable
-                                    key={option.value}
-                                    style={({ pressed }) => [
-                                        styles.radiusChip,
-                                        isActive && styles.radiusChipActive,
-                                        pressed && styles.radiusChipPressed,
-                                    ]}
-                                    onPress={() => onRadiusChange(option.value)}
-                                    hitSlop={CHIP_HIT_SLOP}
-                                    {...WEB_CHIP_HIT}
-                                    accessibilityRole="button"
-                                    accessibilityState={{ selected: isActive }}
-                                    accessibilityLabel={`Within ${option.label}, about a ${metersToWalkMinutes(option.value)} minute walk`}
-                                >
-                                    <Text style={[
-                                        styles.radiusChipText,
-                                        isActive && styles.radiusChipTextActive,
-                                    ]}>
-                                        {option.label}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-                    </View>
+                {/* How far you'll walk, right beside the count it changes. The
+                    count and the ring follow the finger; the map refits once
+                    on release. */}
+                {onWalkChange && (
+                    <WalkSlider
+                        minutes={walkMinutes}
+                        onChange={onWalkChange}
+                        onChangeEnd={onWalkChangeEnd}
+                        style={styles.walkSlider}
+                    />
                 )}
             </View>
 
@@ -479,24 +446,24 @@ const ParkingBottomSheet = memo(forwardRef(({
                         />
                     </View>
                     <Text style={styles.emptyTitle}>
-                        No spots within {getDistanceLabel(searchRadius)}
+                        No spots within {walkPhrase(walkMinutes)}
                     </Text>
                     <Text style={styles.emptyHint}>
                         {searchMode === 'pinned' || placingPin
-                            ? 'Try a wider radius, or move your pin.'
-                            : 'Try a wider radius, or drop a pin to search somewhere else.'}
+                            ? 'Walk a little farther, or move your pin.'
+                            : 'Walk a little farther, or drop a pin to search somewhere else.'}
                     </Text>
-                    {onRadiusChange && searchRadius < WIDEST_RADIUS ? (
+                    {onWalkChange && walkMinutes < WALK_MINUTES.max ? (
                         <Pressable
                             style={({ pressed }) => [
                                 styles.emptyAction,
                                 pressed && styles.clearButtonPressed,
                             ]}
-                            onPress={() => onRadiusChange(WIDEST_RADIUS)}
+                            onPress={() => onWalkChangeEnd?.(WALK_MINUTES.max)}
                             accessibilityRole="button"
                         >
                             <Text style={styles.emptyActionText}>
-                                Search within {getDistanceLabel(WIDEST_RADIUS)}
+                                Widen to {walkPhrase(WALK_MINUTES.max)}
                             </Text>
                         </Pressable>
                     ) : null}
@@ -594,45 +561,8 @@ const styles = StyleSheet.create({
         gap: 4,
         flex: 1,
     },
-    // Radius presets — same pill recipe as the map header's filter chips.
-    radiusRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        flexWrap: 'wrap',
-        paddingHorizontal: 20,
-        marginTop: 12,
-    },
-    radiusLabel: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.textMuted,
-        marginRight: 2,
-    },
-    radiusChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 999,
-        backgroundColor: TOKENS.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-    },
-    radiusChipActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
-    radiusChipPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
-    },
-    radiusChipText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.text,
-    },
-    radiusChipTextActive: {
-        color: TOKENS.onPrimary,
-        fontWeight: '600',
+    walkSlider: {
+        marginTop: 2,
     },
     clearButton: {
         flexDirection: 'row',
