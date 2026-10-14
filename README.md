@@ -317,6 +317,15 @@ The main things I did:
 - The server fails loudly at startup if a required setting is missing, but
   handles a temporary database outage per request instead of crashing.
 
+## Design skills
+
+The design passes (audit, critique, polish and the rest) use the
+[impeccable](https://github.com/pbakaus/impeccable) skills. They're in
+`.claude/skills`, where Claude Code picks them up, so `/audit` or `/critique`
+works in any session on this repo. `.agents/skills` holds the same skills for
+other AI tools. The project's design brief, which every skill reads first, is
+`.impeccable.md`.
+
 ## Credits
 
 This was a capstone project for SAIT, built with a team of five.
