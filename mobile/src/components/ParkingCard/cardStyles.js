@@ -1,17 +1,17 @@
 // src/components/ParkingCard/cardStyles.js
 //
-// Card design language:
-//   - One thing dominates the front: the price. It gets a tinted slab and the
-//     largest type so a glance answers "what will this cost me".
-//   - The back is a calm, vertically-scrolling spec sheet: uppercase section
-//     headers (Pricing / Rules / About) over a clean two-column definition
-//     list. No swiping between fragmented pages.
-//   - Hairline borders, near-invisible shadows, one cerulean accent.
-//   - 16px rhythm on the front; touch targets >= 54px.
+// Card design language: one set of parts for both faces.
+//   - Type does the structure: street name, then the answer (price or "who
+//     can park"), then the rules as plain label/value rows split by hairlines.
+//     No badges, icon circles or small-caps labels on the front.
+//   - Cerulean only on what you can tap: Navigate, Park here, All details.
+//   - The front is only as tall as it needs to be; the back is a scrolling
+//     spec sheet of the same rows under section headers.
+//   - Touch targets >= 44px; the bottom buttons are 52px.
 
 import { StyleSheet } from 'react-native';
 import { TOKENS, alpha } from '../../constants/theme';
-import { CARD_HEIGHT, CARD_WIDTH } from './cardConstants';
+import { CARD_HEIGHT, CARD_MIN_HEIGHT, CARD_WIDTH } from './cardConstants';
 
 export const styles = StyleSheet.create({
   overlay: {
@@ -25,17 +25,16 @@ export const styles = StyleSheet.create({
     elevation: 15,
   },
 
+  // No height of its own: the front sets it (see cardFront), and the back
+  // fills whatever that is.
   container: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
     zIndex: 2000,
     elevation: 20,
   },
 
   card: {
-    position: 'absolute',
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
     backgroundColor: TOKENS.surface,
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
@@ -48,22 +47,36 @@ export const styles = StyleSheet.create({
     elevation: 5,
   },
 
+  // In the flow, so its content decides the card's height; capped so the
+  // middle scrolls on small phones, with a floor that leaves the back room.
   cardFront: {
+    minHeight: Math.min(CARD_MIN_HEIGHT, CARD_HEIGHT),
+    maxHeight: CARD_HEIGHT,
     padding: 20,
     zIndex: 2,
   },
 
   cardBack: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     padding: 20,
     zIndex: 1,
   },
 
   // --- Header rows (front + back) ---
-  cardHeader: {
+  // Title block on the left, close on the right, tops aligned.
+  frontHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  titleBlock: {
+    flex: 1,
+    gap: 4,
+    paddingTop: 2,
   },
 
   cardHeaderBack: {
@@ -71,26 +84,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
     gap: 12,
-  },
-
-  // Type chip — solid accent pill so the spot category reads instantly and adds
-  // a confident shot of brand color at the top of the card.
-  spotTypeTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 13,
-    borderRadius: 9999,
-    backgroundColor: TOKENS.primary,
-  },
-
-  spotTypeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
   },
 
   // Back header title — the address, so you keep your bearings after the flip.
@@ -126,22 +119,26 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  // The app's press feedback (scale + fade) for the front face's buttons.
+  pressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.9,
+  },
+
   // --- Front content ---
-  // One spacing rhythm runs the whole face: 20 between sections (address,
-  // headline, facts), 16 between fact rows, 8 within the headline, 4 inside a
-  // label/value pair. No mixed values, no padding that stacks with the gaps.
-  // The group is centered so whitespace stays balanced on shorter cards.
+  // Spacing groups the face: 4 inside the title block, 6 between a price and
+  // its status, 20 between the groups (title, answer, rules, buttons).
+  // Grows into any room the card's minimum height leaves, so the buttons stay
+  // at the bottom; shrinks (and scrolls) when the content outgrows the card.
+  frontScroll: {
+    flexGrow: 1,
+    flexShrink: 1,
+    marginTop: 20,
+  },
   frontBody: {
-    flex: 1,
-    justifyContent: 'center',
     gap: 20,
   },
 
-  // Address — the actual street in bold, the block/cross-street location in
-  // accent color beneath it.
-  addressBlock: {
-    gap: 4,
-  },
   addressPrimary: {
     fontSize: 24,
     lineHeight: 29,
@@ -151,180 +148,131 @@ export const styles = StyleSheet.create({
   },
   addressSecondary: {
     fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '500',
-    color: TOKENS.primaryAlt,
+    lineHeight: 19,
+    color: TOKENS.textMuted,
   },
 
-  // Headline — price carried by size + color, with a live paid/free status dot.
+  // The answer: the price at the largest size on the card, or who can park.
   headline: {
-    gap: 8,
+    gap: 6,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   priceValue: {
-    fontSize: 36,
+    fontSize: 34,
     lineHeight: 40,
     fontWeight: '700',
-    letterSpacing: -1.1,
+    letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
+  priceValueQuiet: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+  },
   priceUnit: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '500',
     color: TOKENS.textMuted,
     marginLeft: 6,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  statusDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-  },
-  dotFree: { backgroundColor: TOKENS.success },
-  dotPaid: { backgroundColor: TOKENS.warning },
-  statusLabel: {
+  // "Paid right now · until 5:50 PM": the state in its colour, the rest muted.
+  statusLine: {
     fontSize: 15,
-    fontWeight: '700',
-  },
-  statusLabelFree: { color: TOKENS.success },
-  statusLabelPaid: { color: TOKENS.warning },
-  statusDetail: {
-    fontSize: 15,
-    fontWeight: '400',
+    lineHeight: 20,
     color: TOKENS.textMuted,
   },
-
-  // Access banner — plain-language "Residents only" / "No stopping" for the
-  // spots a visiting driver can't actually use. Replaces permit jargon.
-  accessBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
+  statusPaid: {
+    fontWeight: '600',
+    color: TOKENS.warningInk,
   },
-  bannerWarning: {
-    backgroundColor: TOKENS.warningSoft,
-    borderColor: alpha(TOKENS.warning, 0.22),
-  },
-  bannerDanger: {
-    backgroundColor: TOKENS.dangerSoft,
-    borderColor: alpha(TOKENS.danger, 0.22),
-  },
-  accessTextWrap: {
-    flex: 1,
-    gap: 4,
+  statusFree: {
+    fontWeight: '600',
+    color: TOKENS.success,
   },
   accessLabel: {
-    fontSize: 18,
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: '700',
-  },
-  accessDetail: {
-    fontSize: 14,
-    lineHeight: 18,
-    color: TOKENS.textMuted,
+    letterSpacing: -0.4,
   },
 
-  // Facts — icon-anchored rows answering pricing / hours / convenience. The
-  // icon flags the category, the label names it, the value answers it. Rows are
-  // separated by one even gap (no padding/dividers stacking against it), so the
-  // icons land on a clean vertical rhythm.
-  facts: {
-    gap: 16,
+  // The rules: the back's label/value rows, with a hairline above the first.
+  factList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: TOKENS.divider,
   },
-  factRow: {
+  factValueDanger: {
+    color: TOKENS.dangerInk,
+    fontWeight: '600',
+  },
+  // The last row opens the back: a link, so it's the accent colour.
+  moreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingVertical: 11,
   },
-  factIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: TOKENS.primaryWash,
-    alignItems: 'center',
-    justifyContent: 'center',
+  moreRowPressed: {
+    opacity: 0.6,
   },
-  factIconDanger: {
-    backgroundColor: TOKENS.dangerSoft,
-  },
-  factText: {
-    flex: 1,
-    gap: 4,
-  },
-  factLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: TOKENS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  factValue: {
-    fontSize: 16,
+  moreText: {
+    fontSize: 15,
     lineHeight: 20,
-    fontWeight: '500',
-    color: TOKENS.text,
+    fontWeight: '600',
+    color: TOKENS.primary,
   },
 
-  // Action buttons — 54px touch targets.
-  // Actions sit in their own zone with a guaranteed 24px breathing gap above
-  // them, so the last fact never crowds the buttons.
-  actionsLarge: {
+  // Buttons: one filled, one outlined, same size and shape.
+  actions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
+    gap: 10,
+    marginTop: 20,
   },
-  detailsBtnLarge: {
+  actionsDivided: {
+    marginTop: 0,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: TOKENS.divider,
+  },
+  primaryBtn: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 58,
-    backgroundColor: 'transparent',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: TOKENS.hairlineStrong,
-    borderRadius: 14,
-    gap: 7,
+    minHeight: 52,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: TOKENS.primary,
   },
-  detailsBtnTextLarge: {
+  primaryBtnText: {
     fontSize: 16,
     fontWeight: '600',
-    color: TOKENS.text,
+    color: TOKENS.onPrimary,
   },
-  navBtnLarge: {
-    flex: 1.6,
-    flexDirection: 'row',
+  secondaryBtn: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 58,
-    backgroundColor: TOKENS.primary,
-    borderRadius: 14,
-    gap: 10,
+    minHeight: 52,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TOKENS.hairlineStrong,
   },
-  // Navigate stacks its label over the walk ETA, like a maps directions button.
-  navBtnTextWrap: {
-    alignItems: 'flex-start',
+  secondaryBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: TOKENS.primary,
   },
   navBtnTextLarge: {
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 20,
-    color: '#ffffff',
-  },
-  navBtnEta: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 15,
-    color: 'rgba(255, 255, 255, 0.82)',
+    color: TOKENS.onPrimary,
   },
 
   // --- Back: vertical spec sheet ---

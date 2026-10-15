@@ -1,22 +1,27 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   FlatList,
   Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View
 } from 'react-native';
 import { API_URL } from '../../constants/config';
-import { RADIUS, TOKENS, alpha } from '../../constants/theme';
+import { NATIVE_DRIVER, RADIUS, TOKENS, alpha } from '../../constants/theme';
 import usePlacesAutocomplete from '../../hooks/usePlacesAutocomplete';
+import { useRecentPlaces } from '../../hooks/useRecentPlaces';
 
 // Generic, non-leaky message for the error card. We never surface raw
-// fetch/API error text to users — it can expose backend internals.
-const USER_ERROR_MESSAGE = 'Search is offline. Check your connection.';
+// fetch/API error text to users — it can expose backend internals. It may be
+// the connection or the search service, so it doesn't guess which.
+const USER_ERROR_MESSAGE = "Search isn't available right now. Try again in a moment.";
 
 // Maps Google Places prediction types to a glyph. Coerces `types` to an array
 // so malformed payloads can't crash the row render.
@@ -27,37 +32,65 @@ const iconForTypes = (types) => {
   return 'map-marker';
 };
 
-// dev fetcher: calls google places api directly (exposes api key in bundle)
-// requires "places api" (legacy) enabled in google cloud console
-const devDirectFetcher = async ({ url, params }) => {
-  const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
-  if (!API_KEY) throw new Error('Missing EXPO_PUBLIC_GOOGLE_PLACES_KEY');
-
-  // these are legacy places api endpoints - require "places api" not "places api (new)"
-  const base = url === 'autocomplete'
-    ? 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
-    : 'https://maps.googleapis.com/maps/api/place/details/json';
-
-  const qs = new URLSearchParams({ key: API_KEY, ...params }).toString();
-  const resp = await fetch(`${base}?${qs}`);
-  const json = await resp.json();
-
-  // check api errors
-  if (json.status && json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
-    throw new Error(`Google Places: ${json.status} ${json.error_message || ''}`);
+// A recent place's two lines. Street addresses often repeat their name
+// ("123 4 St SW" / "123 4 St SW, Calgary, …"), so the repeat is dropped.
+const describeRecent = ({ name = '', address = '' }) => {
+  if (!name) {
+    const [first, ...rest] = address.split(',');
+    return { title: first || 'Recent place', detail: rest.join(',').trim() };
   }
-  return json;
+  if (address.startsWith(`${name}, `)) return { title: name, detail: address.slice(name.length + 2) };
+  return { title: name, detail: address === name ? '' : address };
 };
 
-// production fetcher: routes through backend to protect api key
-const productionFetcher = async ({ url, params }) => {
-  const baseUrl = API_URL;
+// The web reads the search box as a combobox and these rows as its options,
+// so arrow keys and screen readers move through them like a native picker.
+const OPTION_ID = (index) => `search-option-${index}`;
+const IS_WEB = Platform.OS === 'web';
+
+// One tappable place, used for both suggestions and recent searches.
+function PlaceRow({ icon, title, detail, onPress, first, last, index, active }) {
+  return (
+    <Pressable
+      // Rows highlight on press, like any list; buttons scale.
+      style={({ pressed }) => [
+        styles.suggestionItem,
+        first && styles.suggestionItemFirst,
+        last && styles.suggestionItemLast,
+        (pressed || active) && styles.suggestionItemPressed,
+      ]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={detail ? `${title}, ${detail}` : title}
+      {...(IS_WEB ? { role: 'option', nativeID: OPTION_ID(index), 'aria-selected': Boolean(active), tabIndex: -1 } : null)}
+    >
+      <View style={styles.suggestionIcon}>
+        <MaterialCommunityIcons name={icon} size={18} color={TOKENS.primary} />
+      </View>
+
+      <View style={styles.suggestionText}>
+        <Text style={styles.mainText} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.secondaryText} numberOfLines={1}>
+          {detail}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+// Search goes through the backend, which uses free OpenStreetMap search, or
+// Google when the server has a key. That keeps any key off the phone, and
+// works on the web, where browsers can't call Google's search directly.
+const backendFetcher = async ({ url, params }) => {
   const endpoint = url === 'autocomplete' ? '/api/places/autocomplete' : '/api/places/details';
   const queryString = new URLSearchParams(params).toString();
-  const response = await fetch(`${baseUrl}${endpoint}?${queryString}`);
+  const response = await fetch(`${API_URL}${endpoint}?${queryString}`);
 
   if (!response.ok) {
-    const error = await response.json();
+    // A host error page (e.g. while the server wakes up) isn't JSON.
+    const error = await response.json().catch(() => ({}));
     throw new Error(error.error || 'Failed to fetch places');
   }
 
@@ -73,12 +106,12 @@ function SearchLoadingDots() {
         Animated.timing(fade, {
           toValue: 1,
           duration: 700,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
         Animated.timing(fade, {
           toValue: 0.35,
           duration: 700,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
       ])
     );
@@ -98,16 +131,22 @@ function SearchLoadingDots() {
 
 export default function PlacesSearchBar({
   onPlaceSelected = () => { },
-  fetcher = __DEV__ ? devDirectFetcher : productionFetcher,
+  fetcher = backendFetcher,
   components = 'country:ca',
   placeholder = 'Search address or place',
   minChars = 2,
   debounceMs = 250,
   containerStyle,
   style,
+  onResultsVisibleChange,
+  onFocusChange,
 }) {
   const inputRef = useRef(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [focused, setFocused] = useState(false);
+  // The option the arrow keys are on (web), or -1.
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const { recentPlaces, rememberPlace, clearRecentPlaces } = useRecentPlaces();
 
   const {
     input,
@@ -138,38 +177,76 @@ export default function PlacesSearchBar({
     onChangeText('');
     inputRef.current?.blur();
 
-    onPlaceSelected({
+    const selected = {
       lat,
       lng,
       name: place.name || item.structured_formatting?.main_text || '',
       address: place.formatted_address || item.description,
       place_id: place.place_id,
       types: place.types
-    });
+    };
+    rememberPlace(selected);
+    onPlaceSelected(selected);
+  };
+
+  // A recent place already has its coordinates, so this works offline too.
+  const handleRecentSelect = (place) => {
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+    rememberPlace(place);
+    onPlaceSelected(place);
   };
 
   const handleChangeText = (text) => {
     onChangeText(text);
     setShowSuggestions(text.length >= minChars);
+    setActiveIndex(-1);
   };
 
   // Hide the suggestions list when the user dismisses the keyboard on an
-  // empty field. No other focus-state tracking — we deliberately keep the
-  // TextInput visually static across focus transitions so iOS doesn't
-  // resign first responder mid-animation.
+  // empty field. Focus is only reported to the parent — the TextInput stays
+  // visually static across focus transitions so iOS doesn't resign first
+  // responder mid-animation.
+  const handleFocus = () => {
+    setFocused(true);
+    onFocusChange?.(true);
+  };
+
   const handleBlur = () => {
     if (!input) setShowSuggestions(false);
+    setFocused(false);
+    setActiveIndex(-1);
+    onFocusChange?.(false);
   };
 
   // Return key: pick the top suggestion if we have one, otherwise just
   // dismiss the keyboard. `blurOnSubmit={false}` on the input means we
   // control the blur explicitly via handleSelect / Keyboard.dismiss.
   const handleSubmit = () => {
+    if (showRecent && activeIndex >= 0) {
+      handleRecentSelect(recentPlaces[activeIndex]);
+      return;
+    }
     if (suggestions.length > 0) {
-      handleSelect(suggestions[0]);
+      handleSelect(suggestions[Math.max(0, activeIndex)]);
       return;
     }
     Keyboard.dismiss();
+  };
+
+  // Web keyboard: arrows move through the options, Escape closes them.
+  const handleKeyPress = (event) => {
+    const { key } = event.nativeEvent;
+    const options = showRecent ? recentPlaces : showSuggestions ? suggestions : [];
+    if ((key === 'ArrowDown' || key === 'ArrowUp') && options.length) {
+      event.preventDefault?.();
+      const step = key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex((i) => (i + step + options.length) % options.length);
+    } else if (key === 'Escape') {
+      setActiveIndex(-1);
+      if (showSuggestions) setShowSuggestions(false);
+      else inputRef.current?.blur();
+    }
   };
 
   const clearInput = () => {
@@ -178,6 +255,9 @@ export default function PlacesSearchBar({
     inputRef.current?.focus();
   };
 
+  // Before you type: the places you picked last, to go back in one tap.
+  const showRecent = focused && input.length === 0 && recentPlaces.length > 0;
+
   const showEmptyState =
     showSuggestions &&
     !loading &&
@@ -185,9 +265,38 @@ export default function PlacesSearchBar({
     input.length >= minChars &&
     suggestions.length === 0;
 
+  // The empty and error messages below use accessibilityLiveRegion, which
+  // only Android supports. Announce them on iOS so VoiceOver users hear
+  // whether the search found anything.
+  const showError = Boolean(error) && !loading;
+  useEffect(() => {
+    if (Platform.OS === 'ios' && showError) {
+      AccessibilityInfo.announceForAccessibility(USER_ERROR_MESSAGE);
+    }
+  }, [showError]);
+  useEffect(() => {
+    if (Platform.OS === 'ios' && showEmptyState) {
+      AccessibilityInfo.announceForAccessibility('No matches. Try a street or landmark.');
+    }
+  }, [showEmptyState]);
+
+  // Tell the parent when a results panel opens or closes, so it can make room
+  // and hold its layout steady. A layout effect, so the parent hears about it
+  // before the new size is measured.
+  const listVisible = showRecent || (showSuggestions && suggestions.length > 0);
+  const resultsVisible = listVisible || showEmptyState || showError;
+  useLayoutEffect(() => {
+    onResultsVisibleChange?.(resultsVisible);
+  }, [resultsVisible, onResultsVisibleChange]);
+
   return (
     <View style={[styles.container, containerStyle, style]}>
-      <View style={styles.inputContainer}>
+      <View
+        style={styles.inputContainer}
+        // Web: the whole pill focuses the field, not just its line of text,
+        // and public/index.html draws the pill's focus ring from this tag.
+        {...(IS_WEB ? { onClick: () => inputRef.current?.focus(), dataSet: { search: 'pill' } } : null)}
+      >
         <MaterialCommunityIcons
           name="magnify"
           size={20}
@@ -199,6 +308,7 @@ export default function PlacesSearchBar({
           value={input}
           placeholder={placeholder}
           onChangeText={handleChangeText}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           onSubmitEditing={handleSubmit}
           style={styles.input}
@@ -213,6 +323,14 @@ export default function PlacesSearchBar({
           autoComplete="street-address"
           accessibilityLabel="Search address or place"
           accessibilityHint="Shows matching addresses as you type"
+          onKeyPress={IS_WEB ? handleKeyPress : undefined}
+          {...(IS_WEB ? {
+            role: 'combobox',
+            'aria-expanded': listVisible,
+            'aria-controls': listVisible ? 'search-options' : undefined,
+            'aria-autocomplete': 'list',
+            'aria-activedescendant': listVisible && activeIndex >= 0 ? OPTION_ID(activeIndex) : undefined,
+          } : null)}
         />
 
         {/* fixed search container prevents layout shift when loading/clear appears */}
@@ -220,9 +338,9 @@ export default function PlacesSearchBar({
           {loading ? (
             <SearchLoadingDots />
           ) : input.length > 0 ? (
-            <TouchableOpacity
+            <Pressable
               onPress={clearInput}
-              style={styles.clearButton}
+              style={({ pressed }) => [styles.clearButton, pressed && styles.clearButtonPressed]}
               accessibilityRole="button"
               accessibilityLabel="Clear search"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -232,55 +350,72 @@ export default function PlacesSearchBar({
                 size={20}
                 color={TOKENS.textMuted}
               />
-            </TouchableOpacity>
+            </Pressable>
           ) : null}
         </View>
       </View>
+
+      {showRecent && (
+        <View style={styles.suggestionsContainer}>
+          <View style={styles.recentHeader}>
+            <Text style={styles.recentTitle} accessibilityRole="header" aria-level={2}>Recent</Text>
+            <Pressable
+              onPress={clearRecentPlaces}
+              style={({ pressed }) => [styles.recentClear, pressed && styles.clearButtonPressed]}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear recent searches"
+            >
+              <Text style={styles.recentClearText}>Clear</Text>
+            </Pressable>
+          </View>
+          {/* Three fit without scrolling; it scrolls only at large text sizes. */}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={styles.suggestionsList}
+            {...(IS_WEB ? { role: 'listbox', nativeID: 'search-options', 'aria-label': 'Recent places' } : null)}
+          >
+            {recentPlaces.map((place, index) => {
+              const { title, detail } = describeRecent(place);
+              return (
+                <View key={place.place_id || `${place.lat},${place.lng}`}>
+                  {index > 0 && <View style={styles.separator} />}
+                  <PlaceRow
+                    icon="history"
+                    title={title}
+                    detail={detail}
+                    onPress={() => handleRecentSelect(place)}
+                    last={index === recentPlaces.length - 1}
+                    index={index}
+                    active={index === activeIndex}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {showSuggestions && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
           <FlatList
             keyboardShouldPersistTaps="handled"
+            {...(IS_WEB ? { role: 'listbox', nativeID: 'search-options', 'aria-label': 'Places' } : null)}
             data={suggestions}
             keyExtractor={(item) => item.place_id}
-            renderItem={({ item, index }) => {
-              const mainText = item.structured_formatting?.main_text
-                || item.description.split(',')[0];
-              const secondaryText = item.structured_formatting?.secondary_text
-                || item.description.split(',').slice(1).join(',').trim();
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.suggestionItem,
-                    index === 0 && styles.suggestionItemFirst,
-                    index === suggestions.length - 1 && styles.suggestionItemLast
-                  ]}
-                  onPress={() => handleSelect(item)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    secondaryText ? `${mainText}, ${secondaryText}` : mainText
-                  }
-                >
-                  <View style={styles.suggestionIcon}>
-                    <MaterialCommunityIcons
-                      name={iconForTypes(item.types)}
-                      size={18}
-                      color={TOKENS.primary}
-                    />
-                  </View>
-
-                  <View style={styles.suggestionText}>
-                    <Text style={styles.mainText} numberOfLines={1}>
-                      {mainText}
-                    </Text>
-                    <Text style={styles.secondaryText} numberOfLines={1}>
-                      {secondaryText}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
+            renderItem={({ item, index }) => (
+              <PlaceRow
+                icon={iconForTypes(item.types)}
+                title={item.structured_formatting?.main_text || item.description.split(',')[0]}
+                detail={item.structured_formatting?.secondary_text
+                  || item.description.split(',').slice(1).join(',').trim()}
+                onPress={() => handleSelect(item)}
+                first={index === 0}
+                last={index === suggestions.length - 1}
+                index={index}
+                active={index === activeIndex}
+              />
+            )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             style={styles.suggestionsList}
             nestedScrollEnabled
@@ -322,9 +457,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
+    backgroundColor: TOKENS.surface,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 16,
     height: 44,
     gap: 10,
     borderWidth: 1,
@@ -370,9 +505,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
   },
 
+  clearButtonPressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.9,
+  },
+
   suggestionsContainer: {
-    marginTop: 6,
-    borderRadius: RADIUS.lg,
+    marginTop: 8,
+    borderRadius: RADIUS.xl,
     backgroundColor: TOKENS.surface,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
@@ -387,6 +527,38 @@ const styles = StyleSheet.create({
 
   suggestionsList: {
     flexGrow: 0,
+  },
+
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 2,
+  },
+
+  // Matches the sheet's "Within" label.
+  recentTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TOKENS.textMuted,
+    letterSpacing: 0.2,
+  },
+
+  // Padding plus hitSlop make a 44pt target out of a small word; the
+  // negative margin keeps the word itself on the rows' 16pt edge.
+  recentClear: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    marginRight: -4,
+    borderRadius: RADIUS.pill,
+  },
+
+  recentClearText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: TOKENS.primary,
   },
 
   suggestionItem: {
@@ -405,10 +577,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
 
+  suggestionItemPressed: {
+    backgroundColor: TOKENS.surfaceMuted,
+  },
+
   suggestionIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 18,
     backgroundColor: TOKENS.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -441,13 +617,13 @@ const styles = StyleSheet.create({
   },
 
   emptyStateContainer: {
-    marginTop: 6,
+    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     backgroundColor: TOKENS.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: TOKENS.hairline,
@@ -462,10 +638,10 @@ const styles = StyleSheet.create({
   },
 
   errorContainer: {
-    marginTop: 6,
-    paddingHorizontal: 14,
+    marginTop: 8,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.xl,
     backgroundColor: TOKENS.dangerSoft,
     borderWidth: 1,
     borderColor: alpha(TOKENS.danger, 0.18),

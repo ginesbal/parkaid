@@ -1,13 +1,24 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Animated,
+    PanResponder,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import WalkSlider from '../../../components/Filters/WalkSlider';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
-import { TOKENS, alpha } from '../../../constants/theme';
-import { SCREEN_HEIGHT } from '../constants';
+import { WAKING_NOTICE, WAKING_NOTICE_SHORT, getLoadError } from '../../../constants/loadErrors';
+import { WALK_MINUTES, walkPhrase } from '../../../constants/parking';
+import { NATIVE_DRIVER, TOKENS, alpha } from '../../../constants/theme';
+import { SCREEN_HEIGHT, SHEET_BOTTOM_OFFSET } from '../constants';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-const SHEET_BOTTOM_OFFSET = 10;
 const SHEET_EXPANDED_TOP_GAP = 18;
 
 // Inset row separator — aligns under the address text, not the walk-time anchor.
@@ -28,19 +39,43 @@ const RUBBER_BAND_FACTOR = 0.35;
 // that depends on expandTo from re-running on every parent re-render.
 const EXPANDED_Y = 0;
 
-const ParkingBottomSheet = forwardRef(({
+// Memoized: the map screen re-renders on every pan settle, and none of the
+// sheet's props change then — so the sheet and its list skip that work.
+const ParkingBottomSheet = memo(forwardRef(({
     spots,
     selectedSpot,
     searchMode,
-    getCurrentPrice,
+    placingPin = false,
+    walkMinutes,
+    onWalkChange,
+    onWalkChangeEnd,
+    loading = false,
+    error = null,
+    errorKind = null,
+    waking = false,
+    onRetry,
     onItemPress,
     onClearPin,
     onPeekHeightChange,
-    tabBarHeight = 80,
+    // The map screen's measured height. It ends at the tab bar, so it is
+    // shorter than the window — capping by the window let the expanded sheet
+    // slide up under the floating header on smaller phones.
+    containerHeight = SCREEN_HEIGHT,
     topInset = 0,
 }, ref) => {
-    const insets = useSafeAreaInsets();
     const listRef = useRef(null);
+    // Below the peek. While the sheet is closed it's hidden from screen
+    // readers (aria-hidden); on the web it's also `inert`, so keyboard focus
+    // can't land on rows that are off screen (focusing one scrolled the whole
+    // map screen to reveal it). One attribute on the container, so opening
+    // and closing never re-renders the rows.
+    const bodyRef = useRef(null);
+    // Mirrors the snap state for screen readers: the list below the peek is
+    // only exposed to them when it's actually on screen.
+    const [isExpanded, setIsExpanded] = useState(false);
+    useEffect(() => {
+        if (Platform.OS === 'web' && bodyRef.current) bodyRef.current.inert = !isExpanded;
+    }, [isExpanded]);
     // Start conservatively low — onLayout will set the real height on first
     // paint. Undershooting is safer than overshooting: a slightly-too-short
     // peek is corrected upward once measured; a too-tall peek would leak the
@@ -53,35 +88,38 @@ const ParkingBottomSheet = forwardRef(({
     const maxHeight = useMemo(() => {
         const availableHeight = Math.max(
             peekHeight,
-            SCREEN_HEIGHT - topInset - SHEET_EXPANDED_TOP_GAP - SHEET_BOTTOM_OFFSET
+            containerHeight - topInset - SHEET_EXPANDED_TOP_GAP - SHEET_BOTTOM_OFFSET
         );
         return Math.min(Math.round(peekHeight + 420), availableHeight);
-    }, [peekHeight, topInset]);
+    }, [containerHeight, peekHeight, topInset]);
 
     const PEEK_Y = Math.max(0, maxHeight - peekHeight);
     const HIDDEN_Y = maxHeight + 48;
     const translateY = useRef(new Animated.Value(PEEK_Y)).current;
     const dragStartY = useRef(PEEK_Y);
 
-    // Tighter spring for expand (user is waiting to see content)
+    // Expand and collapse settle without overshoot (friction 12 damps these
+    // springs fully), so the sheet lands instead of bouncing.
     const expandTo = useCallback((velocity = 0) => {
+        setIsExpanded(true);
         Animated.spring(translateY, {
             toValue: EXPANDED_Y,
             velocity,
             tension: 68,
-            friction: 9,
-            useNativeDriver: true,
+            friction: 12,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     }, [translateY]);
 
-    // Slightly faster spring for collapse — exit should feel snappier than enter
+    // A stiffer spring for collapse: exit should feel snappier than enter.
     const collapseTo = useCallback((velocity = 0) => {
+        setIsExpanded(false);
         Animated.spring(translateY, {
             toValue: PEEK_Y,
             velocity,
             tension: 76,
-            friction: 10,
-            useNativeDriver: true,
+            friction: 12,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
 
         // Coordinate scroll-to-top with collapse — slight delay so both
@@ -95,6 +133,19 @@ const ParkingBottomSheet = forwardRef(({
         present: () => expandTo(),
         dismiss: () => collapseTo(),
     }));
+
+    // The PanResponder below is created once, so it must read layout and
+    // snap functions through refs. Capturing them directly froze the first
+    // render's values: on shorter phones, where the sheet height is capped,
+    // PEEK_Y changes once the header is measured, and a drag-to-collapse
+    // would land at the stale position and cut the header off.
+    const gestureRef = useRef({ PEEK_Y, HIDDEN_Y, expandTo, collapseTo });
+    gestureRef.current = { PEEK_Y, HIDDEN_Y, expandTo, collapseTo };
+
+    const toggleExpanded = useCallback(() => {
+        if (isExpanded) collapseTo();
+        else expandTo();
+    }, [collapseTo, expandTo, isExpanded]);
 
     const handleHeaderLayout = useCallback((event) => {
         // Use the header's true measured height — no artificial floor.
@@ -171,10 +222,11 @@ const ParkingBottomSheet = forwardRef(({
                 isDragging.current = true;
 
                 translateY.stopAnimation((cur) => {
-                    dragStartY.current = cur ?? PEEK_Y;
+                    dragStartY.current = cur ?? gestureRef.current.PEEK_Y;
                 });
             },
             onPanResponderMove: (_, g) => {
+                const { HIDDEN_Y: hiddenY } = gestureRef.current;
                 const raw = dragStartY.current + g.dy;
 
                 // Rubber-band damping when pulling past the top boundary
@@ -183,44 +235,89 @@ const ParkingBottomSheet = forwardRef(({
                     const damped = EXPANDED_Y - (overPull * RUBBER_BAND_FACTOR);
                     translateY.setValue(damped);
                 } else {
-                    translateY.setValue(clamp(raw, EXPANDED_Y, HIDDEN_Y));
+                    translateY.setValue(clamp(raw, EXPANDED_Y, hiddenY));
                 }
             },
             onPanResponderRelease: (_, g) => {
                 isDragging.current = false;
 
-                const finalY = clamp(dragStartY.current + g.dy, EXPANDED_Y, HIDDEN_Y);
+                const { PEEK_Y: peekY, HIDDEN_Y: hiddenY, expandTo: expand, collapseTo: collapse } =
+                    gestureRef.current;
+                const finalY = clamp(dragStartY.current + g.dy, EXPANDED_Y, hiddenY);
                 const velocity = Math.abs(g.vy);
 
                 // Momentum-based snap: a quick flick should decide regardless of position
                 if (velocity > VELOCITY_THRESHOLD) {
                     if (g.vy < 0) {
-                        expandTo(g.vy);
+                        expand(g.vy);
                     } else {
-                        collapseTo(g.vy);
+                        collapse(g.vy);
                     }
                     return;
                 }
 
                 // Position-based snap for slow drags
-                const mid = (PEEK_Y + EXPANDED_Y) / 2;
+                const mid = (peekY + EXPANDED_Y) / 2;
                 if (finalY <= mid) {
-                    expandTo(g.vy);
+                    expand(g.vy);
                 } else {
-                    collapseTo(g.vy);
+                    collapse(g.vy);
                 }
+            },
+            // The system took the gesture mid-drag (e.g. an incoming call
+            // banner). Clear the multi-touch guard and settle to the nearest
+            // snap point instead of leaving the sheet stranded halfway.
+            onPanResponderTerminate: () => {
+                isDragging.current = false;
+                translateY.stopAnimation((cur) => {
+                    const { PEEK_Y: peekY, expandTo: expand, collapseTo: collapse } = gestureRef.current;
+                    if ((cur ?? peekY) <= (peekY + EXPANDED_Y) / 2) expand();
+                    else collapse();
+                });
             },
         })
     ).current;
 
+    // Rows are memoized and get the stable `onItemPress` itself (they call it
+    // with their spot), so a selection change re-renders just the two rows
+    // whose `isSelected` flips.
     const renderItem = useCallback(({ item }) => (
         <ParkingListItem
             spot={item}
-            price={getCurrentPrice(item)}
             isSelected={selectedSpot?.id === item.id}
-            onPress={() => onItemPress(item)}
+            onPress={onItemPress}
         />
-    ), [getCurrentPrice, onItemPress, selectedSpot?.id]);
+    ), [onItemPress, selectedSpot?.id]);
+
+    // The title is the one line always visible in the peek, so it carries the
+    // load state too — "0 spots nearby" while loading or offline would read
+    // as an answer when it's really "we don't know yet".
+    const headerTitle = spots.length === 0 && loading
+        ? 'Finding parking…'
+        : error
+            ? "Couldn't load parking"
+            : `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} nearby`;
+
+    // Android reads title changes through accessibilityLiveRegion; iOS has
+    // no live regions, so announce them explicitly — e.g. the new count
+    // as the walk slider changes it, or a failed load. Skipped on first render so it
+    // doesn't talk over the screen opening.
+    // Advice that fits the failure: no connection, too slow, or the server.
+    const loadError = getLoadError(errorKind);
+    const announcement = error
+        ? `${headerTitle}. ${loadError.hint}.`
+        : waking ? `${headerTitle} ${WAKING_NOTICE}` : headerTitle;
+    const lastAnnouncementRef = useRef(null);
+    useEffect(() => {
+        if (Platform.OS !== 'ios') return;
+        if (lastAnnouncementRef.current === null) {
+            lastAnnouncementRef.current = announcement;
+            return;
+        }
+        if (lastAnnouncementRef.current === announcement) return;
+        lastAnnouncementRef.current = announcement;
+        AccessibilityInfo.announceForAccessibility(announcement);
+    }, [announcement]);
 
     return (
         <Animated.View
@@ -234,36 +331,58 @@ const ParkingBottomSheet = forwardRef(({
             ]}
         >
             <View style={styles.header} onLayout={handleHeaderLayout} {...panResponder.panHandlers}>
-                <View style={styles.handle} />
+                {/* The handle is also a button: tap or click it, press Enter on
+                    it, or activate it with a screen reader, as an alternative
+                    to dragging. A drag that starts on it still moves the sheet. */}
+                <Pressable
+                    style={styles.handleHit}
+                    onPress={toggleExpanded}
+                    accessibilityRole="button"
+                    accessibilityLabel={isExpanded ? 'Collapse spot list' : 'Expand spot list'}
+                >
+                    <View style={styles.handle} />
+                </Pressable>
 
                 <View style={styles.headerContent}>
-                    <View style={styles.headerLeft}>
-                        <View style={[
-                            styles.searchModeIndicator,
-                            searchMode === 'pinned' && styles.searchModeIndicatorPinned
-                        ]}>
-                            <MaterialCommunityIcons
-                                name={searchMode === 'pinned' ? 'map-marker' : 'crosshairs-gps'}
-                                size={14}
-                                color="#fff"
-                            />
-                        </View>
-
-                        <View style={styles.headerInfo}>
-                            <Text style={styles.headerTitle}>
-                                {spots.length} {spots.length === 1 ? 'spot' : 'spots'} nearby
-                            </Text>
-                            <Text style={styles.headerSubtitle} numberOfLines={1}>
-                                {selectedSpot?.address
-                                    ? `Selected: ${selectedSpot.address}`
-                                    : searchMode === 'pinned'
-                                        ? 'Around your pinned location'
-                                        : 'Near your current location'}
-                            </Text>
-                        </View>
+                    <View style={styles.headerInfo}>
+                        <Text style={styles.headerTitle} accessibilityLiveRegion="polite">
+                            {headerTitle}
+                        </Text>
+                        {/* What the count is counting. While placing, the
+                            count follows the pin as the map moves. */}
+                        <Text style={styles.headerSubtitle} numberOfLines={1}>
+                            {error
+                                ? loadError.hint
+                                : waking
+                                    ? WAKING_NOTICE_SHORT
+                                    : placingPin
+                                        ? 'Around the pin'
+                                        : selectedSpot?.address
+                                            ? `Selected: ${selectedSpot.address}`
+                                            : searchMode === 'pinned'
+                                                ? 'Around your pin'
+                                                : 'Near you'}
+                        </Text>
                     </View>
 
-                    {searchMode === 'pinned' && onClearPin && (
+                    {/* The peek is all most people see, so a failed load is
+                        recoverable from here without expanding the sheet. */}
+                    {error && onRetry ? (
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.clearButton,
+                                pressed && styles.clearButtonPressed
+                            ]}
+                            onPress={onRetry}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Try again"
+                            accessibilityHint="Loads parking again"
+                        >
+                            <MaterialCommunityIcons name="refresh" size={14} color={TOKENS.primary} />
+                            <Text style={styles.clearButtonText}>Try again</Text>
+                        </Pressable>
+                    ) : searchMode === 'pinned' && onClearPin && (
                         <Pressable
                             style={({ pressed }) => [
                                 styles.clearButton,
@@ -272,7 +391,8 @@ const ParkingBottomSheet = forwardRef(({
                             onPress={onClearPin}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel="Clear pinned search location"
+                            accessibilityLabel="Clear pin"
+                            accessibilityHint="Searches near you again"
                         >
                             <MaterialCommunityIcons
                                 name="close-circle"
@@ -284,23 +404,69 @@ const ParkingBottomSheet = forwardRef(({
                         </Pressable>
                     )}
                 </View>
+
+                {/* How far you'll walk, right beside the count it changes. The
+                    count and the ring follow the finger; the map refits once
+                    on release. */}
+                {onWalkChange && (
+                    <WalkSlider
+                        minutes={walkMinutes}
+                        onChange={onWalkChange}
+                        onChangeEnd={onWalkChangeEnd}
+                        style={styles.walkSlider}
+                    />
+                )}
             </View>
 
-            {spots.length === 0 ? (
+            {/* Below the peek (see bodyRef). */}
+            <View
+                ref={bodyRef}
+                style={styles.body}
+                aria-hidden={!isExpanded}
+            >
+            {spots.length === 0 && loading ? (
+                <View style={styles.emptyState}>
+                    <ActivityIndicator color={TOKENS.primary} />
+                </View>
+            ) : spots.length === 0 && error ? (
+                <View style={styles.emptyState}>
+                    <View style={styles.emptyIconContainer}>
+                        <MaterialCommunityIcons name={loadError.icon} size={26} color={TOKENS.textMuted} />
+                    </View>
+                    {/* Nothing retries on its own, so don't promise it. */}
+                    <Text style={styles.emptyHint}>{loadError.instruction}</Text>
+                </View>
+            ) : spots.length === 0 ? (
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
                         <MaterialCommunityIcons
                             name={searchMode === 'pinned' ? 'map-marker-remove' : 'parking'}
-                            size={28}
-                            color={TOKENS.textFaint}
+                            size={26}
+                            color={TOKENS.textMuted}
                         />
                     </View>
-                    <Text style={styles.emptyTitle}>No spots in this area</Text>
-                    <Text style={styles.emptyHint}>
-                        {searchMode === 'pinned'
-                            ? 'Move your pin or widen the radius'
-                            : 'Pan or zoom the map to search elsewhere'}
+                    <Text style={styles.emptyTitle}>
+                        No spots within {walkPhrase(walkMinutes)}
                     </Text>
+                    <Text style={styles.emptyHint}>
+                        {searchMode === 'pinned' || placingPin
+                            ? 'Walk a little farther, or move your pin.'
+                            : 'Walk a little farther, or drop a pin to search somewhere else.'}
+                    </Text>
+                    {onWalkChange && walkMinutes < WALK_MINUTES.max ? (
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.emptyAction,
+                                pressed && styles.clearButtonPressed,
+                            ]}
+                            onPress={() => onWalkChangeEnd?.(WALK_MINUTES.max)}
+                            accessibilityRole="button"
+                        >
+                            <Text style={styles.emptyActionText}>
+                                Widen to {walkPhrase(WALK_MINUTES.max)}
+                            </Text>
+                        </Pressable>
+                    ) : null}
                 </View>
             ) : (
                 <Animated.FlatList
@@ -311,7 +477,10 @@ const ParkingBottomSheet = forwardRef(({
                     ItemSeparatorComponent={RowSeparator}
                     contentContainerStyle={[
                         styles.listContent,
-                        { paddingBottom: insets.bottom + tabBarHeight + 16 },
+                        // The sheet already sits above the tab bar (which
+                        // handles the home-indicator inset), so the list only
+                        // needs its own breathing room at the end.
+                        { paddingBottom: 16 },
                     ]}
                     showsVerticalScrollIndicator={false}
                     onScrollToIndexFailed={({ index }) => {
@@ -325,9 +494,10 @@ const ParkingBottomSheet = forwardRef(({
                     }}
                 />
             )}
+            </View>
         </Animated.View>
     );
-});
+}));
 
 ParkingBottomSheet.displayName = 'ParkingBottomSheet';
 
@@ -336,7 +506,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 10,
         right: 10,
-        borderRadius: 18,
+        borderRadius: 22,
         backgroundColor: TOKENS.surface,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -346,6 +516,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 12,
         elevation: 3,
+        // Pulled up, the sheet covers the floating map controls (zIndex 500)
+        // rather than having them float over its list. Android already
+        // stacks it that way by elevation; this matches iOS and the web.
+        zIndex: 600,
     },
     header: {
         paddingTop: 12,
@@ -357,13 +531,24 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: TOKENS.divider,
     },
-    handle: {
+    // The tap target fills the strip from the sheet's top edge down to the
+    // title (28 tall, 160 wide); the negative margin cancels its padding, so
+    // the handle and the title sit exactly where they did.
+    handleHit: {
         alignSelf: 'center',
+        paddingHorizontal: 62,
+        paddingTop: 13,
+        paddingBottom: 12,
+        marginTop: -13,
+    },
+    handle: {
         backgroundColor: alpha(TOKENS.text, 0.12),
         width: 36,
         height: 3,
         borderRadius: 2,
-        marginBottom: 12,
+    },
+    body: {
+        flex: 1,
     },
     headerContent: {
         flexDirection: 'row',
@@ -372,35 +557,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         gap: 12,
     },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        gap: 10,
-    },
-    // Calmer indicator — smaller, less dominant. Color carries the meaning, size doesn't need to.
-    searchModeIndicator: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
-        backgroundColor: TOKENS.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    searchModeIndicatorPinned: {
-        backgroundColor: TOKENS.primaryAlt,
-    },
     headerInfo: {
         gap: 4,
         flex: 1,
+    },
+    walkSlider: {
+        marginTop: 2,
     },
     clearButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 5,
-        paddingHorizontal: 12,
+        paddingHorizontal: 14,
         paddingVertical: 8,
-        borderRadius: 10,
+        borderRadius: 999,
         backgroundColor: TOKENS.surface,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.primaryBorder,
@@ -409,7 +579,7 @@ const styles = StyleSheet.create({
     // Emil: "Buttons must feel responsive. Add scale(0.97) on active."
     clearButtonPressed: {
         transform: [{ scale: 0.97 }],
-        opacity: 0.8,
+        opacity: 0.9,
     },
     clearButtonText: {
         fontSize: 13,
@@ -447,7 +617,7 @@ const styles = StyleSheet.create({
     emptyIconContainer: {
         width: 48,
         height: 48,
-        borderRadius: 12,
+        borderRadius: 24,
         backgroundColor: TOKENS.surfaceMuted,
         alignItems: 'center',
         justifyContent: 'center',
@@ -465,6 +635,22 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         textAlign: 'center',
         maxWidth: 260,
+    },
+    // The next best action, not just "nothing here".
+    emptyAction: {
+        marginTop: 16,
+        minHeight: 44,
+        paddingHorizontal: 18,
+        justifyContent: 'center',
+        borderRadius: 999,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.primaryBorder,
+    },
+    emptyActionText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primary,
     },
 });
 

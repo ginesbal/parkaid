@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { FlatList, RefreshControl, Animated, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Animated, Linking, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ScreenHeading from '../../components/ScreenHeading';
 import Header from './components/Header';
 import MapFAB from './components/MapFAB';
 import ParkingList from './components/ParkingList';
@@ -10,36 +11,58 @@ import EmptyState from './components/ParkingList/EmptyState';
 import LoadingState from './components/ParkingList/LoadingState';
 
 import { useFilterState } from '../../hooks/useFilterState';
+import { useWalkMinutes } from '../../hooks/useWalkMinutes';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 
 import { logger } from '../../utils/loggers';
 import { calculateQuickInfo } from '../../utils/parkingHelpers';
 
+import { FETCH_RADIUS, WALK_MINUTES, minutesToMeters, walkPhrase } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
 import { styles } from './HomeScreen.styles';
 
+// Never leave the pull-to-refresh spinner up if a refetch can't complete
+// (the API itself gives up after 8s).
+const REFRESH_TIMEOUT_MS = 10000;
+
 export default function HomeScreen({ navigation }) {
   // location & filter state
-  const { location, isLoadingLocation, locationError } = useLocationManager();
+  const { location, isLoadingLocation, locationError, locationDenied } = useLocationManager();
+  // A refused permission is fixable — offer the way to fix it.
+  const openSettings = useCallback(() => {
+    Linking.openSettings().catch(() => {});
+  }, []);
 
-  const {
-    activeFilter,
-    setActiveFilter,
-    searchRadius,
-    setSearchRadius,
-  } = useFilterState();
+  const { activeFilter, setActiveFilter } = useFilterState();
+  // How far you'll walk: shared with the map, remembered between visits.
+  const [walkMinutes, setWalkMinutes] = useWalkMinutes();
+  const searchRadius = minutesToMeters(walkMinutes);
+
+  // Bumped by pull-to-refresh and "Retry" to refetch, bypassing the cache.
+  const [reloadKey, setReloadKey] = useState(0);
 
   // data fetching hook
-  const { spots, loading, error } = useParkingSpots(
+  // Fetched once at the longest walk, then narrowed here, so moving the walk
+  // slider is instant. The server returns the closest 100 either way, so the
+  // narrowed list is exactly what a narrower request would return.
+  const { spots: allSpots, loading, error, errorKind, lastUpdated, waking } = useParkingSpots(
     location,
-    searchRadius,
-    activeFilter
+    FETCH_RADIUS,
+    activeFilter,
+    reloadKey
   );
+  const spots = useMemo(() => (
+    Array.isArray(allSpots)
+      ? allSpots.filter((s) => (typeof s.distance === 'number' ? s.distance : Infinity) <= searchRadius)
+      : allSpots
+  ), [allSpots, searchRadius]);
 
   // local UI state
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const refreshStartedAtRef = useRef(0);
+  const refreshTimeoutRef = useRef(null);
 
   // animations (UI concern, not data concern)
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -91,7 +114,9 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Map');
   };
 
-  const handleSpotPress = (spot) => {
+  // Stable, and called by the row with its spot — so memoized rows don't
+  // re-render every time Home does.
+  const handleSpotPress = useCallback((spot) => {
     logger.log('spot_selected_from_home', {
       spotId: spot?.id,
       address: spot?.address
@@ -101,32 +126,58 @@ export default function HomeScreen({ navigation }) {
       initialSpot: spot,
       fromList: true,
     });
-  };
+  }, [navigation]);
+
+  // The empty state's next step. Walk farther first — keeping the user's
+  // type filter — and only at the longest walk offer to clear the filter.
+  const canWiden = walkMinutes < WALK_MINUTES.max;
+  const canShowAllTypes = activeFilter !== 'all';
+  const expandLabel = canWiden
+    ? `Widen to ${walkPhrase(WALK_MINUTES.max)}`
+    : canShowAllTypes
+      ? 'Show all parking types'
+      : null;
+  const emptyHint = expandLabel
+    ? 'Walk a little farther, or switch to the map to look around the next block.'
+    : `Nothing within ${walkPhrase(WALK_MINUTES.max)}. Switch to the map to search somewhere else.`;
 
   const handleExpandSearch = () => {
-    logger.log('expand_search', {
-      oldRadius: searchRadius,
-      newRadius: 1000
-    });
-
-    setSearchRadius(1000);
-    setActiveFilter('all');
+    if (canWiden) {
+      logger.log('expand_search', { oldMinutes: walkMinutes, newMinutes: WALK_MINUTES.max });
+      setWalkMinutes(WALK_MINUTES.max);
+      return;
+    }
+    if (canShowAllTypes) {
+      logger.log('expand_search', { clearedFilter: activeFilter });
+      setActiveFilter('all');
+    }
   };
 
+  // Pull-to-refresh refetches for real (bypassing the response cache) and
+  // the spinner stays up until that fetch has actually finished.
   const handleRefresh = useCallback(() => {
     logger.log('home_refresh', {
       filter: activeFilter,
       radius: searchRadius
     });
-    
+
+    refreshStartedAtRef.current = Date.now();
     setRefreshing(true);
     setLastRefresh(new Date());
-    
-    // reset refreshing after delay
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setReloadKey((key) => key + 1);
+
+    clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => setRefreshing(false), REFRESH_TIMEOUT_MS);
   }, [activeFilter, searchRadius]);
+
+  React.useEffect(() => {
+    if (refreshing && lastUpdated && lastUpdated >= refreshStartedAtRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      setRefreshing(false);
+    }
+  }, [refreshing, lastUpdated]);
+
+  React.useEffect(() => () => clearTimeout(refreshTimeoutRef.current), []);
 
   // filter/radius changes
   React.useEffect(() => {
@@ -136,28 +187,35 @@ export default function HomeScreen({ navigation }) {
   }, [activeFilter]);
 
   React.useEffect(() => {
-    if (searchRadius) {
-      logger.log('radius_changed', { radius: searchRadius });
-    }
-  }, [searchRadius]);
+    logger.log('walk_changed', { minutes: walkMinutes });
+  }, [walkMinutes]);
 
-  // initial loading state
-  if ((loading && !refreshing) || isLoadingLocation) {
+  // Full-screen loading only for the very first load. After that, changing
+  // the parking type keeps the header (and the control just used) on screen
+  // and shows progress in place instead of blanking everything.
+  const isFirstLoad = isLoadingLocation || (loading && lastUpdated === null);
+  const isUpdating = loading && !refreshing && !isFirstLoad;
+
+  if (isFirstLoad) {
     logger.log('home_loading_state', {
       loading,
       refreshing,
       isLoadingLocation
     });
-    return <LoadingState searchRadius={searchRadius} />;
+    return <LoadingState walkMinutes={walkMinutes} waking={waking} />;
   }
 
+  // While new results load, dim the current ones so it's clear they're
+  // about to change — without moving anything.
   const renderSpot = ({ item }) => (
-    <ParkingList.Item
-      spot={item}
-      onPress={() => handleSpotPress(item)}
-      fadeAnim={fadeAnim}
-      slideAnim={slideAnim}
-    />
+    <View style={isUpdating ? listStyles.updating : null}>
+      <ParkingList.Item
+        spot={item}
+        onPress={handleSpotPress}
+        fadeAnim={fadeAnim}
+        slideAnim={slideAnim}
+      />
+    </View>
   );
 
   // Inset hairline between rows — begins where the address begins
@@ -168,10 +226,16 @@ export default function HomeScreen({ navigation }) {
     <>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top']} style={{ backgroundColor: TOKENS.surface }} />
-      <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.container}>
+      {/* No 'bottom' edge: the tab bar already covers the home indicator,
+          and bottom tabs gives screens the raw insets — adding it again
+          left a blank strip above the tab bar. */}
+      <SafeAreaView edges={['left', 'right']} style={styles.container} role="main">
+        <ScreenHeading>Parking near you</ScreenHeading>
         <FlatList
           data={spots}
           renderItem={renderSpot}
+          extraData={isUpdating}
+          accessibilityState={{ busy: isUpdating }}
           keyExtractor={(item) => String(item.id)}
           ItemSeparatorComponent={renderSeparator}
           ListHeaderComponent={
@@ -181,13 +245,15 @@ export default function HomeScreen({ navigation }) {
               quickInfo={quickInfo}
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
-              searchRadius={searchRadius}
-              setSearchRadius={setSearchRadius}
+              walkMinutes={walkMinutes}
+              setWalkMinutes={setWalkMinutes}
               fadeAnim={fadeAnim}
               slideAnim={slideAnim}
               onLocationPress={handleMapPress}
-              statusMessage={error || locationError}
-              statusTone={error ? 'warning' : 'info'}
+              // Only the location notice: a failed load already explains
+              // itself, with a way out, in the empty state below.
+              statusMessage={locationError}
+              statusAction={locationDenied ? { label: 'Open Settings', onPress: openSettings } : null}
             />
           }
           refreshControl={
@@ -199,14 +265,26 @@ export default function HomeScreen({ navigation }) {
             />
           }
           ListEmptyComponent={
-            <EmptyState
-              onExpandSearch={handleExpandSearch}
-              onViewMap={handleMapPress}
-              onRetry={handleRefresh}
-              errorMessage={error}
-            />
+            // Loading with nothing on screen yet: a quiet spinner, not
+            // "Nothing nearby" — that would be an answer we don't have.
+            loading ? (
+              <View style={listStyles.inlineLoading}>
+                <ActivityIndicator color={TOKENS.primary} accessibilityLabel="Looking for spots" />
+              </View>
+            ) : (
+              <EmptyState
+                onExpandSearch={handleExpandSearch}
+                onViewMap={handleMapPress}
+                onRetry={handleRefresh}
+                hasError={Boolean(error)}
+                errorKind={errorKind}
+                title={`No spots within ${walkPhrase(walkMinutes)}`}
+                expandLabel={expandLabel}
+                hint={emptyHint}
+              />
+            )
           }
-          contentContainerStyle={Array.isArray(spots) && spots.length === 0 ? styles.emptyList : null}
+          contentContainerStyle={Array.isArray(spots) && spots.length === 0 ? styles.emptyList : listStyles.listEnd}
         />
 
         <MapFAB onPress={handleMapPress} />
@@ -216,9 +294,21 @@ export default function HomeScreen({ navigation }) {
 }
 
 const listStyles = StyleSheet.create({
+  // Room under the last row, so it can scroll clear of the floating Map
+  // button (24 from the bottom + 48 tall + 16 breathing room).
+  listEnd: {
+    paddingBottom: 88,
+  },
   rowSeparator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: TOKENS.divider,
     marginLeft: 86,
+  },
+  updating: {
+    opacity: 0.45,
+  },
+  inlineLoading: {
+    paddingVertical: 48,
+    alignItems: 'center',
   },
 });

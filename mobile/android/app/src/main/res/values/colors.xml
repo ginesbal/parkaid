@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <resources>
-  <color name="splashscreen_background">#FFFFFF</color>
+  <!-- The app's primary cerulean (TOKENS.primary), behind the white "P". -->
+  <color name="splashscreen_background">#1D6D8B</color>
+  <color name="iconBackground">#1D6D8B</color>
+  <color name="notification_icon_color">#1D6D8B</color>
 </resources>

@@ -14,11 +14,18 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 ## What it does
 
 - Search for parking near your current location, or drop a pin to search
-  somewhere else. There's a radius selector from 250m up to 2km.
+  somewhere else. A slider sets how far you'll walk, anywhere from 1 to 25
+  minutes (about 2km), and both screens remember it.
+- Search by address or place. Your last three picks show when you tap the
+  empty search box. They're kept only on your phone, and Clear removes them.
 - See spots on a map with markers you can tap for details (price, zone,
   restrictions, capacity).
 - See a list of nearby spots sorted by distance, with a rough walking time and
-  filters by type (street, lot, residential, school, or free).
+  a switch to show only street parking, lots or permit parking.
+- Start a parking timer for a spot ("Park here" on its card). It won't plan
+  past the spot's posted time limit, and it reminds you 10 minutes before
+  time's up, even with the app closed. It's a reminder only: paying still
+  happens at the pay station or in the City's parking app.
 - Keep working when the network drops. Responses are cached on the phone, so
   the app shows the last data it had instead of an error.
 
@@ -27,20 +34,24 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 Mobile app
 - React Native with Expo SDK 54 (one codebase for iOS, Android, and web)
 - React Navigation for moving between screens
-- React Native Maps for the map and markers
+- React Native Maps for the map and markers on phones; on the web, MapLibre
+  with free OpenStreetMap tiles from OpenFreeMap (no key needed)
 - Expo Location for GPS
+- Expo Notifications for the parking reminders (scheduled on the phone, no
+  push server)
 - AsyncStorage for caching data on the phone
 
 Backend
 - Node.js and Express for the API
 - node-postgres (`pg`) to talk to the database with plain SQL
 - PostGIS for the "find spots within X meters" queries
-- axios to call the Google Places API from the server
+- axios to call the address search services from the server
 
 Database and data
 - PostgreSQL, hosted on Supabase
 - Parking data from Calgary's Open Data (about 2,700 spots)
-- Google Places API for address search
+- Address search: OpenStreetMap search (Photon) for free, or Google Places
+  when a key is set
 
 Hosting and testing
 - Render hosts the backend and redeploys when you push to GitHub
@@ -55,7 +66,7 @@ routes running SQL.
 Mobile app          Express API              PostgreSQL + PostGIS
 (React Native)  ->  (on Render)         ->   (Supabase)
                     finds nearby spots,       parking_spots table
-                    proxies Google Places
+                    proxies address search
 ```
 
 When you search, the app sends your location to the backend. The backend runs a
@@ -97,7 +108,8 @@ There are two parts to run: the backend (the API) and the mobile app.
 You'll need:
 - Node.js 18 or newer, and npm
 - A Supabase project (the free tier is fine). This is your database.
-- The Expo Go app on your phone, or an iOS/Android simulator
+- An iOS simulator or Android emulator, or a phone (see "Expo Go and SDK 54"
+  below before using Expo Go on an iPhone)
 
 ### 1. Backend
 
@@ -149,6 +161,62 @@ npx expo start -c        # press i for iOS, a for Android, or scan the QR code
 Once the backend is deployed, you can use the Render URL here instead of your
 local IP.
 
+#### Expo Go and SDK 54
+
+The app is on Expo SDK 54, and Expo Go can only open projects on the SDK it was
+built for. The App Store's Expo Go moved to SDK 57 in September 2026, so it
+can't run this project on an iPhone. It crashes on launch with
+"'PlatformConstants' could not be found". Use one of these instead:
+
+- **Simulator or emulator:** run `npx expo start -c`, then press `i` or `a`.
+  Expo installs the matching Expo Go for you.
+- **Android phone:** install Expo Go for SDK 54 from
+  [expo.dev/go](https://expo.dev/go), then scan the QR code.
+- **Any phone, iPhone included:** a development build, which is the app
+  compiled with its own native code, so Expo Go isn't involved. Plug the phone
+  in and run `npm run ios -- --device` (needs a Mac with Xcode; a free Apple ID
+  works) or `npm run android`.
+
+A build of your own draws the map with your Google key, `GOOGLE_MAPS_API_KEY`
+in `mobile/.env`, since Expo Go isn't there to supply one. Android needs it;
+without it the iPhone shows Apple Maps instead. Setup is in
+[mobile/GOOGLE_MAPS_SETUP.md](mobile/GOOGLE_MAPS_SETUP.md).
+
+Rebuild a development build after pulling changes that add a native module,
+such as `expo-notifications`.
+
+## The web demo
+
+The same app builds for the web, with a live map, real spots and working
+search, so people can try it without a phone. Point it at your deployed backend
+and export it as a static site:
+
+```bash
+cd mobile
+EXPO_PUBLIC_API_URL=https://<your-backend>.onrender.com npm run export:web
+```
+
+Then upload the `mobile/dist` folder to any static host (Netlify, Vercel,
+GitHub Pages, and so on).
+
+Shared links show a preview card (`mobile/public/og-image.png`). LinkedIn and
+some other sites only load it from a full address, so once the demo is
+hosted, put the site's address in front of `og-image.png` in
+`mobile/public/index.html`.
+
+How the web version differs:
+- It starts in downtown Calgary without asking for the visitor's location,
+  since most visitors won't be in Calgary, where the parking data is.
+- The map uses free OpenFreeMap tiles: no key or sign-up. OpenFreeMap is
+  donation-funded with no uptime guarantee; to use another provider or a
+  copy you host yourself, set `EXPO_PUBLIC_MAP_STYLE_URL` to its style. A
+  self-hosted style can give its tiles, sprite and fonts as relative paths.
+- Address search works with no setup (free OpenStreetMap search through the
+  backend). Set `GOOGLE_PLACES_API_KEY` on Render to use Google instead.
+- Reminders are phone-only, so the Park tab's timer doesn't notify on the web.
+- Render's free plan sleeps after about 15 minutes without visits, so the
+  first visitor after a quiet spell waits up to a minute for spots to load.
+
 ## Deploying the backend (Render)
 
 The repo has a `render.yaml` file, which tells Render how to build and run the
@@ -186,6 +254,12 @@ npm run migrate     # create the table
 npm run setup       # load the parking data
 ```
 
+Prices come from each street block's rate schedule, which `npm run setup`
+takes from the City's "On-Street Parking Zones with Rates" data. A database
+loaded before that was added has no schedules, so street spots read "Rate on
+signs": run `npm run setup` again to fill them in. It updates the rows it
+loaded before rather than adding copies.
+
 ### Step 4: check it's live
 
 Open these in a browser. On the free tier the first request can take 30 to 60
@@ -209,8 +283,8 @@ at `/api/test-db` instead.
 | GET | `/health` | Says the server is up. Used by Render. Always returns 200 when running. |
 | GET | `/api/test-db` | Checks the database connection and returns how many spots are stored. |
 | GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. |
-| GET | `/api/places/autocomplete?input=` | Address search suggestions (calls Google from the server). |
-| GET | `/api/places/details?place_id=` | Details for one address (calls Google from the server). |
+| GET | `/api/places/autocomplete?input=` | Address search suggestions in Calgary. Uses free OpenStreetMap search (Photon), or Google Places when `GOOGLE_PLACES_API_KEY` is set. |
+| GET | `/api/places/details?place_id=` | Where one suggestion is, so the map can go there. |
 
 ## What I worked on
 
@@ -255,6 +329,15 @@ The main things I did:
   when the connection is bad.
 - The server fails loudly at startup if a required setting is missing, but
   handles a temporary database outage per request instead of crashing.
+
+## Design skills
+
+The design passes (audit, critique, polish and the rest) use the
+[impeccable](https://github.com/pbakaus/impeccable) skills. They're in
+`.claude/skills`, where Claude Code picks them up, so `/audit` or `/critique`
+works in any session on this repo. `.agents/skills` holds the same skills for
+other AI tools. The project's design brief, which every skill reads first, is
+`.impeccable.md`.
 
 ## Credits
 

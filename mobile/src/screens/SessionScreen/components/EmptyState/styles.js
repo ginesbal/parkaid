@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS, alpha } from '../../../../constants/theme';
+import { RADIUS, TOKENS } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     scrollContent: {
@@ -9,32 +9,26 @@ export const styles = StyleSheet.create({
     },
 
     header: {
-        alignItems: 'center',
-        marginBottom: 28,
-    },
-    iconContainer: {
-        width: 64,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 24,
     },
     title: {
-        fontSize: 22,
+        fontSize: 26,
+        lineHeight: 32,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: -0.3,
+        letterSpacing: -0.4,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 15,
+        lineHeight: 21,
         color: TOKENS.textMuted,
-        marginTop: 6,
+        marginTop: 4,
     },
 
     setupCard: {
         backgroundColor: TOKENS.surface,
         borderRadius: 18,
-        padding: 22,
+        padding: 20,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
         shadowColor: TOKENS.shadow,
@@ -44,54 +38,71 @@ export const styles = StyleSheet.create({
         elevation: 1,
     },
 
-    setupSection: {
-        flexDirection: 'row',
-        marginBottom: 20,
-    },
-    stepIndicator: {
-        width: 30,
-        height: 30,
-        borderRadius: 10,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 14,
-        marginTop: 2,
-    },
-    stepNumber: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.primary,
-    },
-    setupContent: {
-        flex: 1,
-    },
     setupLabel: {
         fontSize: 13,
         fontWeight: '600',
         color: TOKENS.textMuted,
-        marginBottom: 12,
-        letterSpacing: 0,
+        marginBottom: 10,
+    },
+    setupLabelSpaced: {
+        marginTop: 20,
     },
 
-    plateInput: {
-        minHeight: 50,
-        borderRadius: 12,
+    // Where — the chosen spot, a suggestion, or a way to pick one.
+    spotRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        minHeight: 56,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
-        paddingHorizontal: 16,
-        fontSize: 18,
+    },
+    suggestionRow: {
+        backgroundColor: TOKENS.surface,
+        borderColor: TOKENS.primaryBorder,
+    },
+    spotText: {
+        flex: 1,
+        gap: 2,
+    },
+    spotAddress: {
+        fontSize: 15,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: 2,
-        textAlign: 'center',
-        textTransform: 'uppercase',
+    },
+    spotMeta: {
+        fontSize: 13,
+        color: TOKENS.textMuted,
         fontVariant: ['tabular-nums'],
     },
+    spotClear: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    suggestionLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: TOKENS.textMuted,
+    },
+    suggestionAction: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primary,
+    },
+    findSpotText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: TOKENS.text,
+    },
 
+    // How long — single-line options are pills, like every other control.
     durationGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -100,78 +111,46 @@ export const styles = StyleSheet.create({
     },
     durationOption: {
         width: '48%',
-        minHeight: 60,
-        borderRadius: 12,
+        minHeight: 44,
+        borderRadius: RADIUS.pill,
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
     },
     durationOptionActive: {
-        backgroundColor: TOKENS.primaryWash,
-        borderColor: TOKENS.primary,
-    },
-    durationTime: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: TOKENS.text,
-        marginBottom: 4,
-        textAlign: 'center',
-        fontVariant: ['tabular-nums'],
-    },
-    durationTimeActive: {
-        color: TOKENS.primary,
-        fontWeight: '600',
-    },
-    durationCost: {
-        fontSize: 12,
-        color: TOKENS.textMuted,
-        fontWeight: '500',
-        textAlign: 'center',
-        fontVariant: ['tabular-nums'],
-    },
-    durationCostActive: {
-        color: TOKENS.primary,
-        fontWeight: '500',
-    },
-
-    rateOptions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    rateOption: {
-        flex: 1,
-        minHeight: 44,
-        borderRadius: 10,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    rateOptionActive: {
         backgroundColor: TOKENS.primary,
         borderColor: TOKENS.primary,
     },
-    rateText: {
-        fontSize: 12,
-        fontWeight: '500',
+    durationOptionDisabled: {
+        opacity: 0.45,
+    },
+    durationTime: {
+        fontSize: 15,
+        fontWeight: '600',
         color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
-    rateTextActive: {
-        color: '#fff',
-        fontWeight: '600',
+    durationTimeActive: {
+        color: TOKENS.onPrimary,
+    },
+    durationTimeDisabled: {
+        color: TOKENS.textMuted,
+    },
+    limitNote: {
+        fontSize: 13,
+        color: TOKENS.textMuted,
+        marginTop: 10,
     },
 
     summaryBox: {
         paddingVertical: 16,
         paddingHorizontal: 16,
+        marginTop: 20,
         marginBottom: 16,
-        borderRadius: 12,
+        borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
@@ -193,7 +172,7 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
     summaryValueLarge: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '600',
         color: TOKENS.primary,
         fontVariant: ['tabular-nums'],
@@ -204,9 +183,13 @@ export const styles = StyleSheet.create({
         marginVertical: 10,
     },
 
+    reminderNoteWrap: {
+        marginBottom: 16,
+    },
+
     primaryButton: {
         minHeight: 54,
-        borderRadius: 14,
+        borderRadius: RADIUS.pill, // primary actions are pills app-wide
         backgroundColor: TOKENS.primary,
         flexDirection: 'row',
         alignItems: 'center',
@@ -218,13 +201,14 @@ export const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 2,
     },
-    primaryButtonDisabled: {
-        backgroundColor: alpha(TOKENS.textMuted, 0.2),
-        shadowOpacity: 0,
-    },
     primaryButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
+    },
+
+    optionPressed: {
+        transform: [{ scale: 0.97 }],
+        opacity: 0.9,
     },
 });

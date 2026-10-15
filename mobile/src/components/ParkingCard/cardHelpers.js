@@ -1,6 +1,6 @@
 // src/components/ParkingCard/cardHelpers.js
 
-import { getAccess, getCapacity, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
+import { getAccess, getCapacity, getHours, getLotInfo, getMaxStay, getPriceInfo, getSpotType } from '../../utils/spotInfo';
 import { logger } from '../../utils/loggers';
 
 // json parsing helpers
@@ -121,14 +121,16 @@ export const getDetailsPages = (spot) => {
         pricing.push({ label: 'Access', value: access.label, highlight: true });
     } else if (price.kind === 'paid') {
         pricing.push({ label: 'Rate', value: `${price.value}${price.unit ? ` ${price.unit}` : ''}`, highlight: true });
-    } else if (price.kind === 'free') {
-        pricing.push({ label: 'Rate', value: 'Free', highlight: true });
+    } else if (price.kind === 'free' || price.kind === 'no_parking' || price.kind === 'zone') {
+        pricing.push({ label: 'Rate', value: price.value, highlight: true });
     } else {
         pricing.push({ label: 'Rate', value: 'Posted on signs' });
     }
 
+    // Read the same way as the front ("Mon–Fri, 7:10 AM – 5:50 PM"), not the
+    // city's "0710-1750 MON-FRI".
     const enforceable = field('enforceable_time');
-    if (enforceable) pricing.push({ label: 'Paid hours', value: enforceable });
+    if (enforceable) pricing.push({ label: 'Paid hours', value: getHours(spot || {}).schedule || enforceable });
 
     const priceZone = field('price_zone');
     if (priceZone) pricing.push({ label: 'Price zone', value: `Zone ${priceZone}` });
@@ -179,8 +181,11 @@ export const getDetailsPages = (spot) => {
     const about = [];
     about.push({ label: 'Type', value: type.label });
 
+    // Lot name and kind read as the front shows them ("Centennial Parkade"),
+    // not in the city's capitals.
+    const lot = getLotInfo(spot || {});
     const lotName = field('lot_name');
-    if (lotName) about.push({ label: 'Lot name', value: lotName });
+    if (lotName) about.push({ label: 'Lot name', value: lot?.name || lotName });
 
     const lotNum = field('lot_num');
     if (lotNum) about.push({ label: 'Lot number', value: lotNum });
@@ -194,7 +199,7 @@ export const getDetailsPages = (spot) => {
     if (zoneType) about.push({ label: 'Zone type', value: zoneType });
 
     const parkingType = field('parking_type');
-    if (parkingType) about.push({ label: 'Parking type', value: parkingType });
+    if (parkingType) about.push({ label: 'Parking type', value: lot?.kind || parkingType });
 
     const description = field('description');
     if (description) about.push({ label: 'Description', value: description });

@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "export:web": "npx expo export --platform web",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "icons:web": "node scripts/web-icons.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -22,7 +23,9 @@
     "expo": "~54.0.0",
     "expo-device": "~8.0.7",
     "expo-location": "~19.0.7",
+    "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.8",
+    "maplibre-gl": "~5.24.0",
     "metro-minify-terser": "^0.83.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -37,7 +40,8 @@
     "@babel/core": "^7.20.0",
     "@testing-library/react-native": "^13.3.3",
     "jest": "^30.2.0",
-    "react-test-renderer": "^19.1.0"
+    "react-test-renderer": "^19.1.0",
+    "subset-font": "^2.9.0"
   },
   "private": true,
   "overrides": {

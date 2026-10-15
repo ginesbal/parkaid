@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+
+    <!-- Link previews (Slack, LinkedIn, iMessage…). Some sites need the image
+         as a full URL: once the demo is hosted, put its address in front of
+         og-image.png. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="parkaid · Parking in downtown Calgary" />
+    <meta property="og:description" content="Find street parking and lots near you in downtown Calgary, with walk times, rates and time limits on a live map." />
+    <meta property="og:image" content="og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+        background: #f6f8fa;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+
+    <!-- Shown while the app downloads; React replaces it on first render. -->
+    <style id="boot">
+      .boot {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #0f1a26;
+      }
+      .boot-mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: #1d6d8b;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        font-weight: 700;
+        animation: boot-breathe 1.6s ease-in-out infinite;
+      }
+      .boot-name {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.2px;
+      }
+      .boot-note {
+        font-size: 14px;
+        color: #5b6b7c;
+      }
+      @keyframes boot-breathe {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.55; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-mark { animation: none; }
+      }
+    </style>
+
+    <!-- Hover feedback for mouse users. React Native has no hover state, so
+         the web adds one here: a faint ink wash over any button, tab or link,
+         the same on white rows, grey chips and blue buttons. Touch screens
+         never see it, and map pins keep their own look. -->
+    <style id="hover">
+      @media (hover: hover) and (pointer: fine) {
+        [role="button"]:not([aria-disabled="true"])::after,
+        [role="tab"]::after,
+        [role="radio"]::after,
+        [role="link"]::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: #0f1a26;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 120ms ease-out;
+        }
+        [role="button"]:not([aria-disabled="true"]):hover::after,
+        [role="tab"]:hover::after,
+        [role="radio"]:not([aria-checked="true"]):hover::after,
+        [role="link"]:hover::after {
+          opacity: 0.06;
+        }
+        .maplibregl-marker [role="button"]::after {
+          content: none;
+        }
+      }
+    </style>
+
+    <!-- Touch details the app can't style itself on the web. The search box
+         shows focus as a ring around the whole pill (the app's blue), not the
+         browser's box around the text: the app keeps the pill's own style
+         fixed while focused, which iOS needs. -->
+    <style id="touch">
+      [data-search="pill"] { cursor: text; }
+      /* The walk slider: a ring around the whole slider for the keyboard. */
+      [data-slider="walk"]:focus-visible {
+        outline: 2px solid rgba(29, 109, 139, 0.55);
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+      /* The type switch's segments: phones extend their tap area with
+         hitSlop, which browsers ignore, so this adds the same 5px above and
+         below. */
+      [data-hit="segment"]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -5px;
+        bottom: -5px;
+      }
+      [data-search="pill"] input:focus { outline: none; }
+      [data-search="pill"]:focus-within {
+        border-color: #1d6d8b !important;
+        box-shadow: 0 0 0 3px rgba(29, 109, 139, 0.28);
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <div id="root">
+      <div class="boot" role="status">
+        <div class="boot-mark" aria-hidden="true">P</div>
+        <div class="boot-name">parkaid</div>
+        <div class="boot-note">Loading parking in downtown Calgary…</div>
+      </div>
+    </div>
+  </body>
+</html>

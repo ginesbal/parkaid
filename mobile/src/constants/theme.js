@@ -7,6 +7,8 @@
 //   - 3 weights total: 400 body, 500 numerics, 600 titles
 //   - Tokens kept backward-compatible by name; values simplified
 
+import { Platform } from 'react-native';
+
 export function alpha(hex, a) {
     const h = hex.replace('#', '');
     const n = parseInt(h, 16);
@@ -93,12 +95,22 @@ export const TOKENS = {
     accent: PALETTE.cerulean[500],
     accentAlt: PALETTE.cerulean[400],
 
-    // semantic — single value each, no ramps
+    // content (text, icons) sitting on a solid fill — cerulean, a semantic
+    // color, or ink. White halos on the map use `surface`, not these.
+    onPrimary: '#FFFFFF',
+    onPrimaryMuted: 'rgba(255, 255, 255, 0.82)',
+
+    // semantic — base hue for dots, fills, borders and large text.
+    // The *Ink variants are for small/medium TEXT, where the base hue falls
+    // short of WCAG AA: warning is 3.3:1 on white, danger 4.4:1 on its soft
+    // banner. Ink keeps the hue but darkens it to pass on both grounds.
     danger: '#B5524A',
+    dangerInk: '#9E4038',      // 6.5:1 on white, 5.8:1 on dangerSoft
     dangerSoft: 'rgba(181, 82, 74, 0.08)',
-    success: '#2C7A6B',
+    success: '#2C7A6B',        // 5.1:1 on white — already passes as text
     successSoft: 'rgba(44, 122, 107, 0.08)',
     warning: '#B8832D',
+    warningInk: '#8F6418',     // 5.2:1 on white, 4.8:1 on warningSoft
     warningSoft: 'rgba(184, 131, 45, 0.08)',
 
     shadow: '#0F1A26',
@@ -231,3 +243,8 @@ export const TYPOGRAPHY = {
         color: TOKENS.text,
     },
 };
+
+// Animations run on the native thread on phones. The web has no native
+// animation module (React Native Web warns, then falls back to JavaScript),
+// so it asks for the JavaScript driver up front.
+export const NATIVE_DRIVER = Platform.OS !== 'web';

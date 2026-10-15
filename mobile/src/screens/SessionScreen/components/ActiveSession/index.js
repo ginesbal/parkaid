@@ -1,83 +1,165 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useRef } from 'react';
+import { AccessibilityInfo, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import ScreenHeading from '../../../../components/ScreenHeading';
+import { TOKENS } from '../../../../constants/theme';
+import { WARNING_LEAD_MINUTES } from '../../../../services/timerReminders';
+import { formatEndTime } from '../../../../utils/formatters';
+import ReminderNote from '../shared/ReminderNote';
 import StatusBadge from '../shared/StatusBadge';
 import QuickExtend from './QuickExtend';
 import SessionDetails from './SessionDetails';
 import { styles } from './styles';
 import TimerCard from './TimerCard';
 
+const STATE_ANNOUNCEMENTS = {
+    expiring: 'Your parking timer ends in 10 minutes.',
+    expired: "Time's up on your parking timer.",
+};
+
 /**
- * ActiveSession - Displays and manages an active parking session
+ * ActiveSession — a running parking timer.
  */
 const ActiveSession = ({
     session,
     sessionState,
-    timeRemaining,
+    timeRemainingMs,
     elapsedTime,
-    progress,
-    totalCost,
+    estimatedCost,
     endTime,
+    remainingAllowance,
+    canExtendBy,
+    lastExtension,
+    reminderStatus,
+    pendingSpot,
+    onSwitchSpot,
+    onKeepTimer,
     onExtend,
+    onUndoExtend,
     onEnd,
 }) => {
-    const sessionLabel = [session?.spotId, session?.locationName].filter(Boolean).join(' • ');
+    const isExpired = sessionState === 'expired';
+
+    // Reassurance at the anxious moment: when the reminder will come. More
+    // than ten minutes left means the heads-up is still ahead.
+    let reminderLine = null;
+    if (reminderStatus === 'granted' && !isExpired && endTime) {
+        reminderLine = sessionState === 'active'
+            ? `You'll get a reminder at ${formatEndTime(new Date(endTime.getTime() - WARNING_LEAD_MINUTES * 60000))}, ${WARNING_LEAD_MINUTES} minutes before it ends.`
+            : "You'll get a reminder when time's up.";
+    }
+    const footnote = [reminderLine, "This timer doesn't pay for parking."].filter(Boolean).join(' ');
+
+    // Say it when the timer crosses into its last ten minutes, or runs out,
+    // while this screen is open. (Android reads the live region below.)
+    const prevStateRef = useRef(sessionState);
+    useEffect(() => {
+        const prev = prevStateRef.current;
+        prevStateRef.current = sessionState;
+        if (prev === sessionState || Platform.OS !== 'ios') return;
+        const message = STATE_ANNOUNCEMENTS[sessionState];
+        if (message) AccessibilityInfo.announceForAccessibility(message);
+    }, [sessionState]);
 
     return (
         <>
+            <ScreenHeading>Parking timer</ScreenHeading>
             <View style={styles.header}>
-                <View style={styles.statusBar}>
-                    <StatusBadge state={sessionState} />
-                    <Text style={styles.locationText} numberOfLines={1}>
-                        {sessionLabel}
-                    </Text>
-                </View>
+                <StatusBadge state={sessionState} />
+                <Text style={styles.headerSpot} numberOfLines={1}>
+                    {session.spot?.address || 'Parking timer'}
+                </Text>
             </View>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                {/* "Park here" was tapped for another spot while this timer
+                    runs: say what happened, and let the user choose. */}
+                {pendingSpot ? (
+                    <View style={styles.switchCard}>
+                        <Text style={styles.switchTitle} accessibilityRole="header" aria-level={2}>
+                            Switch to {pendingSpot.address}?
+                        </Text>
+                        <Text style={styles.switchBody}>
+                            This ends the timer that's running now, so you can start one there.
+                        </Text>
+                        <View style={styles.switchActions}>
+                            <Pressable
+                                onPress={onSwitchSpot}
+                                style={({ pressed }) => [styles.switchPrimary, pressed && styles.pressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Switch to ${pendingSpot.address}`}
+                            >
+                                <Text style={styles.switchPrimaryText}>Switch</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={onKeepTimer}
+                                style={({ pressed }) => [styles.switchSecondary, pressed && styles.pressed]}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.switchSecondaryText}>Keep this timer</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                ) : null}
+
                 <TimerCard
                     sessionState={sessionState}
-                    timeRemaining={timeRemaining}
-                    progress={progress}
+                    timeRemainingMs={timeRemainingMs}
+                    plannedMinutes={session.duration}
                     endTime={endTime}
-                    totalCost={totalCost}
+                    estimatedCost={estimatedCost}
                 />
 
-                <QuickExtend
-                    onExtend={onExtend}
-                    hourlyRate={session.hourlyRate}
-                    disabled={sessionState === 'expired'}
-                />
+                {reminderStatus === 'denied' && !isExpired ? (
+                    <View style={styles.reminderNoteWrap}>
+                        <ReminderNote text="Notifications are off, so you won't be reminded when the app is closed." />
+                    </View>
+                ) : null}
 
-                <SessionDetails
-                    session={session}
-                    elapsedTime={elapsedTime}
-                />
-            </ScrollView>
-
-            <SafeAreaView edges={['bottom']} style={styles.bottomActions}>
-                <TouchableOpacity
-                    onPress={onEnd}
-                    activeOpacity={0.9}
-                    style={styles.endButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="End parking session"
-                    accessibilityHint="Stops your current parking session"
-                >
-                    <MaterialCommunityIcons
-                        name="stop-circle"
-                        size={20}
-                        color="#fff"
+                {isExpired ? (
+                    <View style={styles.expiredSection} accessibilityLiveRegion="polite">
+                        <Text style={styles.expiredText}>
+                            Move your car or pay for more time, then start a new timer.
+                        </Text>
+                        <Pressable
+                            onPress={onEnd}
+                            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Start a new timer"
+                        >
+                            <MaterialCommunityIcons name="timer-refresh" size={20} color={TOKENS.onPrimary} />
+                            <Text style={styles.primaryButtonText}>Start a new timer</Text>
+                        </Pressable>
+                    </View>
+                ) : (
+                    <QuickExtend
+                        onExtend={onExtend}
+                        onUndo={onUndoExtend}
+                        canExtendBy={canExtendBy}
+                        lastExtension={lastExtension}
+                        maxStayText={session.spot?.maxStayText}
+                        remainingAllowance={remainingAllowance}
                     />
-                    <Text style={styles.endButtonText}>End session</Text>
-                </TouchableOpacity>
-                <Text style={styles.bottomHint}>
-                    Ending early will stop the demo timer immediately.
-                </Text>
-            </SafeAreaView>
+                )}
+
+                <SessionDetails session={session} elapsedTime={elapsedTime} />
+
+                {!isExpired ? (
+                    <Pressable
+                        onPress={onEnd}
+                        style={({ pressed }) => [styles.endButton, pressed && styles.pressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel="End timer"
+                    >
+                        <Text style={styles.endButtonText}>End timer</Text>
+                    </Pressable>
+                ) : null}
+
+                <Text style={styles.footnote}>{footnote}</Text>
+            </ScrollView>
         </>
     );
 };

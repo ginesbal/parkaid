@@ -10,7 +10,7 @@
 // walk and what will it cost", so those two numbers anchor the row instead.
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import {
     Animated,
     Pressable,
@@ -18,14 +18,15 @@ import {
     Text,
     View,
 } from 'react-native';
-import { TOKENS, alpha } from '../../constants/theme';
+import { NATIVE_DRIVER, TOKENS, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
+import { getDistanceLabel } from '../../utils/parkingHelpers';
 import { getAccess, getMaxStay, getPriceInfo, getSpotType, parseAddress } from '../../utils/spotInfo';
 
 const PRICE_TONE = {
     text: TOKENS.text,
     success: TOKENS.success,
-    warning: TOKENS.warning,
+    warning: TOKENS.warningInk, // "Residents" — the base amber is 3.3:1
     danger: TOKENS.danger,
     muted: TOKENS.textMuted,
 };
@@ -33,7 +34,10 @@ const PRICE_TONE = {
 // Short, plain-language labels for spots that aren't public parking.
 const ACCESS_LABEL = { residents: 'Residents', no_parking: 'No stopping' };
 
-export default function ParkingListItem({
+// Memoized: lists re-render on every selection, refresh or load flag, but a
+// row only needs to when its spot or selection changes. Callers pass a stable
+// `onPress`, which is called with the spot.
+function ParkingListItem({
     spot,
     onPress,
     isSelected = false,
@@ -52,14 +56,14 @@ export default function ParkingListItem({
         Animated.timing(scaleAnim, {
             toValue: 0.985,
             duration: 120,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     };
     const handlePressOut = () => {
         Animated.timing(scaleAnim, {
             toValue: 1,
             duration: 200,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
         }).start();
     };
 
@@ -78,17 +82,28 @@ export default function ParkingListItem({
         onPress?.(spot, { stayInList: true });
     };
 
-    const a11yPrice =
-        !isPublic ? access.detail || access.label
-        : price.kind === 'paid' ? `${price.value} per hour`
-        : price.kind === 'free' ? 'free'
-        : 'rate not listed';
+    // The price column as it reads ("$3.00 per hour", "Rate on signs",
+    // "Residents"), plus the reason when it isn't public parking.
+    const accessText = ACCESS_LABEL[access.kind] || access.label;
+    const a11yPrice = !isPublic
+        ? [accessText, access.detail].filter(Boolean).join(', ')
+        : [price.value, price.kind === 'paid' ? price.unit : null].filter(Boolean).join(' ');
+
+    // Spoken address first, so voice control can say what it sees ("tap 9 Ave
+    // SW"), then everything else the row shows, in words: "9 Ave SW, 5 minute
+    // walk, 400 meters away, Street, 2 hours max, Rate on signs". When the
+    // walk time is missing, say so rather than reading out a dash.
+    const a11yLabel = [
+        addr.primary,
+        walk != null ? `${walk} minute walk` : 'walk time unknown',
+        Number.isFinite(spot.distance) ? `${getDistanceLabel(spot.distance)} away` : null,
+        type.label,
+        maxStay ? `${maxStay.text} max` : null,
+        a11yPrice,
+    ].filter(Boolean).join(', ');
 
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            {/* Selected: a 3px primary rail on the leading edge. Selection should
-                register at a glance without tinting the whole row. */}
-            {isSelected && <View style={styles.selectedStripe} pointerEvents="none" />}
             <Pressable
                 onPress={handleRowPress}
                 onPressIn={handlePressIn}
@@ -96,7 +111,8 @@ export default function ParkingListItem({
                 android_ripple={{ color: alpha(TOKENS.text, 0.04), borderless: false }}
                 style={[styles.row, isSelected && styles.rowSelected]}
                 accessibilityRole="button"
-                accessibilityLabel={`Parking at ${addr.primary}, ${walk ?? '—'} minute walk, ${spot.distance} meters away, ${a11yPrice}`}
+                accessibilityLabel={a11yLabel}
+                accessibilityState={{ selected: isSelected }}
                 hitSlop={4}
             >
                 {/* Tier 1a — walk time, the hero metric */}
@@ -123,6 +139,7 @@ export default function ParkingListItem({
                             size={13}
                             color={TOKENS.textMuted}
                             style={styles.metaIcon}
+                            aria-hidden
                         />
                         <Text style={styles.metaText}>{type.label}</Text>
 
@@ -165,6 +182,8 @@ export default function ParkingListItem({
     );
 }
 
+export default memo(ParkingListItem);
+
 const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
@@ -175,17 +194,9 @@ const styles = StyleSheet.create({
         gap: 10,
         backgroundColor: TOKENS.surface,
     },
+    // Selection is one quiet signal: a tint across the row (no side rail).
     rowSelected: {
-        backgroundColor: alpha(TOKENS.primary, 0.08),
-    },
-    selectedStripe: {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 3,
-        backgroundColor: TOKENS.primary,
-        zIndex: 1,
+        backgroundColor: TOKENS.primarySoft,
     },
     sectionDivider: {
         width: StyleSheet.hairlineWidth,

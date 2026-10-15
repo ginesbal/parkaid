@@ -3,6 +3,8 @@
     <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
   </style>
   <style name="Theme.App.SplashScreen" parent="AppTheme">
-    <item name="android:windowBackground">@drawable/splashscreen_logo</item>
+    <!-- The logo centered on the background color (a layer-list), rather
+         than the bitmap stretched to fill the window. -->
+    <item name="android:windowBackground">@drawable/ic_launcher_background</item>
   </style>
 </resources>

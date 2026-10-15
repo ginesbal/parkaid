@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
+import { RADIUS, TOKENS } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     // Loading State
@@ -27,9 +27,13 @@ export const styles = StyleSheet.create({
         marginBottom: 4,
         letterSpacing: -0.1,
     },
+    // Centered under the title; the starting-up notice runs to two lines.
     loadingSubtext: {
         fontSize: 14,
+        lineHeight: 20,
         color: TOKENS.textMuted,
+        textAlign: 'center',
+        maxWidth: 300,
         marginBottom: 24,
     },
     loadingSkeletonStack: {
@@ -118,7 +122,7 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 12,
         backgroundColor: TOKENS.primary,
-        borderRadius: 10,
+        borderRadius: RADIUS.pill,
         gap: 8,
     },
     emptyButtonSecondary: {
@@ -127,12 +131,13 @@ export const styles = StyleSheet.create({
         borderColor: TOKENS.hairline,
     },
     emptyButtonPressed: {
-        opacity: 0.6,
+        transform: [{ scale: 0.97 }],
+        opacity: 0.9,
     },
     emptyButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.onPrimary,
     },
     emptyButtonTextSecondary: {
         color: TOKENS.text,

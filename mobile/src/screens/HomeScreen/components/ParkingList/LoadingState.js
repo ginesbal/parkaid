@@ -1,17 +1,23 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TOKENS } from '../../../../constants/theme';
-import { getDistanceLabel } from '../../../../utils/parkingHelpers';
+import { WAKING_NOTICE } from '../../../../constants/loadErrors';
+import { NATIVE_DRIVER, TOKENS } from '../../../../constants/theme';
+import { walkPhrase } from '../../../../constants/parking';
 import { styles } from './styles';
 
 /**
  * LoadingState - Initial loading screen with skeleton placeholders
  */
-const LoadingState = ({ searchRadius }) => {
+const LoadingState = ({ walkMinutes, waking = false }) => {
     const pulseAnim = useRef(new Animated.Value(0.45)).current;
+
+    // iOS has no live regions, so say it there too.
+    useEffect(() => {
+        if (waking && Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(WAKING_NOTICE);
+    }, [waking]);
 
     useEffect(() => {
         const loop = Animated.loop(
@@ -19,12 +25,12 @@ const LoadingState = ({ searchRadius }) => {
                 Animated.timing(pulseAnim, {
                     toValue: 1,
                     duration: 950,
-                    useNativeDriver: true,
+                    useNativeDriver: NATIVE_DRIVER,
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 0.45,
                     duration: 950,
-                    useNativeDriver: true,
+                    useNativeDriver: NATIVE_DRIVER,
                 }),
             ])
         );
@@ -34,7 +40,7 @@ const LoadingState = ({ searchRadius }) => {
     }, [pulseAnim]);
 
     return (
-        <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right', 'bottom']}>
+        <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right']}>
             <StatusBar style="dark" />
             <View style={styles.loadingContainer}>
                 <View style={styles.loadingIcon}>
@@ -46,8 +52,9 @@ const LoadingState = ({ searchRadius }) => {
                 </View>
 
                 <Text style={styles.loadingText}>Looking for spots nearby</Text>
-                <Text style={styles.loadingSubtext}>
-                    Checking within {getDistanceLabel(searchRadius)} of you
+                {/* A long first wait gets explained, not just spun. */}
+                <Text style={styles.loadingSubtext} accessibilityLiveRegion="polite">
+                    {waking ? WAKING_NOTICE : `Looking within ${walkPhrase(walkMinutes)} of you`}
                 </Text>
 
                 <View style={styles.loadingSkeletonStack}>

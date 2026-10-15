@@ -3,10 +3,9 @@ const router = express.Router();
 const { pool } = require('../config/env');
 const { jlog } = require('../utils/logger');
 
-// Calgary price-zone -> $/hour. The mobile app reads both `price` and
-// `price_per_hour`, so /nearby returns both from this one source.
-const PRICE_BY_ZONE = { '1': 1.0, '2': 2.0, '3': 3.0, '4': 4.0, '5': 5.0, '6': 6.0 };
-const priceForZone = (zone) => (zone ? PRICE_BY_ZONE[zone] || 0 : 0);
+// Prices: the app reads each block's rate schedule (zone_info.html_zone_rate)
+// and shows the rate in effect at the time. price_zone is only the zone's
+// name ("4a", "14"), not a dollar amount, so no price is derived from it here.
 
 router.get('/nearby', async (req, res) => {
   const started = Date.now();
@@ -132,9 +131,6 @@ router.get('/nearby', async (req, res) => {
           dot: spot.dot,
           octant: spot.octant,
         },
-
-        price: priceForZone(spot.price_zone),
-        price_per_hour: priceForZone(spot.price_zone),
 
         max_duration_minutes: spot.max_time ? parseFloat(spot.max_time) : null,
       })),

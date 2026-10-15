@@ -1,13 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import { parkingAPI } from '../services/api';
 
-export function useParkingSpots(location, radius, filterType = 'all') {
+// How long the first search of a session waits before saying the server is
+// still starting up (see services/api.js).
+const WAKING_NOTICE_MS = 4000;
+
+// `reloadKey` lets a caller force a fresh fetch for the same inputs (e.g. a
+// "Try again" button or pull-to-refresh) by bumping a number. That fetch
+// bypasses the response cache, so the user actually gets new data.
+export function useParkingSpots(location, radius, filterType = 'all', reloadKey = 0) {
     const [spots, setSpots] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // 'offline' | 'slow' | 'server' — what went wrong, in terms a screen can
+    // explain (see services/api.js). Null when the last fetch worked.
+    const [errorKind, setErrorKind] = useState(null);
+    // When the most recent fetch finished (success or failure). Lets callers
+    // end a pull-to-refresh spinner exactly when fresh data lands.
+    const [lastUpdated, setLastUpdated] = useState(null);
+    // True while a search is waiting on a server that hasn't answered yet
+    // this session, past the first few seconds: it's probably waking up.
+    const [waking, setWaking] = useState(false);
 
     // track if component is mounted to prevent state updates after unmount
     const isMountedRef = useRef(true);
+    // Monotonic id of the most recent request. Responses can arrive out of
+    // order — a slow network call for the previous search center can land
+    // after an instant cache hit for the new one — so only the latest
+    // request is allowed to write state.
+    const latestRequestRef = useRef(0);
+    // A bumped reloadKey asks for one cache-bypassing fetch. Held in a ref
+    // until a fetch actually runs, so the request survives other inputs
+    // changing during the debounce.
+    const prevReloadKeyRef = useRef(reloadKey);
+    const forceNextFetchRef = useRef(false);
 
     useEffect(() => {
         return () => {
@@ -16,18 +42,33 @@ export function useParkingSpots(location, radius, filterType = 'all') {
     }, []);
 
     useEffect(() => {
+        if (reloadKey !== prevReloadKeyRef.current) {
+            prevReloadKeyRef.current = reloadKey;
+            forceNextFetchRef.current = true;
+        }
+
         // do not fetch if no location
         if (!location?.latitude || !location?.longitude) {
             return;
         }
 
-        let timeoutId;
+        const requestId = ++latestRequestRef.current;
+        const isCurrent = () => isMountedRef.current && requestId === latestRequestRef.current;
+
+        // Mark loading as soon as a fetch is scheduled, not after the
+        // debounce — otherwise the first 300ms reads as "no spots here".
+        setLoading(true);
 
         const fetchSpots = async () => {
-            if (!isMountedRef.current) return;
+            if (!isCurrent()) return;
 
-            setLoading(true);
+            const force = forceNextFetchRef.current;
+            forceNextFetchRef.current = false;
             setError(null);
+            setErrorKind(null);
+            const wakingTimer = parkingAPI.serverAwake
+                ? null
+                : setTimeout(() => { if (isCurrent()) setWaking(true); }, WAKING_NOTICE_MS);
 
             try {
                 const params = filterType !== 'all' ? { type: filterType } : {};
@@ -35,34 +76,37 @@ export function useParkingSpots(location, radius, filterType = 'all') {
                     location.latitude,
                     location.longitude,
                     radius,
-                    params
+                    params,
+                    { force }
                 );
 
-                if (isMountedRef.current) {
+                if (isCurrent()) {
                     setSpots(response?.data || []);
                 }
             } catch (err) {
-                if (isMountedRef.current) {
+                if (isCurrent()) {
                     setError(err.message || 'Failed to load parking spots');
+                    setErrorKind(err.kind || 'offline');
                     setSpots([]);
                 }
             } finally {
-                if (isMountedRef.current) {
+                clearTimeout(wakingTimer);
+                if (isCurrent()) {
+                    setWaking(false);
                     setLoading(false);
+                    setLastUpdated(Date.now());
                 }
             }
         };
 
         // debounce the API call by 300ms
-        timeoutId = setTimeout(() => {
-            fetchSpots();
-        }, 300);
+        const timeoutId = setTimeout(fetchSpots, 300);
 
         // cleanup: cancel the timeout if dependencies change
         return () => {
             clearTimeout(timeoutId);
         };
-    }, [location?.latitude, location?.longitude, radius, filterType]);
+    }, [location?.latitude, location?.longitude, radius, filterType, reloadKey]);
 
-    return { spots, loading, error };
-}   
+    return { spots, loading, error, errorKind, lastUpdated, waking };
+}

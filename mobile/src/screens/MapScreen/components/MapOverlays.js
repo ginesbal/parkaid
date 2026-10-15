@@ -1,86 +1,96 @@
-import { memo } from 'react';
-import { Animated, View } from 'react-native';
-import { Circle, Marker } from 'react-native-maps';
+import { memo, useCallback } from 'react';
+import { View } from 'react-native';
+import { Circle, Marker } from '../../../components/Map';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
 
+// One memoized marker per spot. Selecting a spot re-renders only the two
+// markers whose `isSelected` flips, instead of all ~100 on the map.
+const SpotMarker = memo(function SpotMarker({ spot, isSelected, onSelectSpot }) {
+    const handlePress = useCallback(() => onSelectSpot(spot), [onSelectSpot, spot]);
+
+    return (
+        <Marker
+            coordinate={{
+                latitude: spot.coordinates.coordinates[1],
+                longitude: spot.coordinates.coordinates[0],
+            }}
+            onPress={handlePress}
+            tracksViewChanges={false}
+            anchor={{ x: 0.5, y: 0.5 }}
+        >
+            <View style={styles.marker}>
+                <View
+                    style={[
+                        isSelected ? styles.markerDotSelected : styles.markerDot,
+                        !isSelected && spot.no_stopping && { backgroundColor: TOKENS.danger },
+                    ]}
+                />
+            </View>
+        </Marker>
+    );
+});
+
 function MapOverlays({
     searchCenter,
+    placementCenter,
     searchRadius,
     searchMode,
     pinnedLocation,
-    pinDropAnim,
+    placingPin,
     spots,
     selectedSpot,
-    selScale,
-    selTranslateY,
     onSelectSpot,
 }) {
     return (
         <>
-            {searchCenter && (
+            {/* Radius ring — the settled current/pinned search area. While
+                placing, it previews the area under the reticle instead, and
+                only once the map stops moving (a map shape would trail the
+                drag). */}
+            {(placingPin ? placementCenter : searchCenter) && (
                 <Circle
-                    center={searchCenter}
+                    center={placingPin ? placementCenter : searchCenter}
                     radius={searchRadius}
-                    fillColor={alpha(
-                        searchMode === 'pinned' ? TOKENS.textMuted : TOKENS.primary,
-                        0.06
-                    )}
-                    strokeColor={alpha(
-                        searchMode === 'pinned' ? TOKENS.textMuted : TOKENS.primary,
-                        0.22
-                    )}
+                    fillColor={alpha(TOKENS.primary, 0.06)}
+                    strokeColor={alpha(TOKENS.primary, 0.22)}
                     strokeWidth={2}
-                    lineDashPattern={searchMode === 'pinned' ? [8, 4] : null}
                 />
             )}
 
-            {pinnedLocation && (
-                <Marker coordinate={pinnedLocation} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
-                    <Animated.View
-                        style={[
-                            styles.pinMarker,
-                            {
-                                transform: [
-                                    { scale: pinDropAnim },
-                                    { translateY: pinDropAnim.interpolate({ inputRange: [0, 1], outputRange: [-30, 0] }) },
-                                ],
-                            },
-                        ]}
-                    >
+            {/* Confirmed pin — a static marker (no entrance spring, so it is
+                safe with tracksViewChanges=false). The animated drop now lives
+                on the screen-fixed reticle, not here. */}
+            {!placingPin && pinnedLocation && searchMode === 'pinned' && (
+                <Marker
+                    coordinate={pinnedLocation}
+                    anchor={{ x: 0.5, y: 1 }}
+                    tracksViewChanges={false}
+                >
+                    <View style={styles.pinMarker}>
                         <View style={styles.pinHead}>
                             <View style={styles.pinInner} />
                         </View>
                         <View style={styles.pinStem} />
-                    </Animated.View>
+                    </View>
                 </Marker>
             )}
 
             {spots.map(spot => {
                 if (!spot.coordinates) return null;
-                const coords = {
-                    latitude: spot.coordinates.coordinates[1],
-                    longitude: spot.coordinates.coordinates[0],
-                };
                 const isSelected = selectedSpot?.id === spot.id;
 
+                // With tracksViewChanges={false} the native marker keeps the
+                // bitmap it snapshotted on mount, so a style change alone may
+                // never reach the screen. Keying on selection remounts just
+                // the affected marker so the selected dot actually redraws.
                 return (
-                    <Marker
-                        key={spot.id}
-                        coordinate={coords}
-                        onPress={() => onSelectSpot(spot)}
-                        tracksViewChanges={false}
-                        anchor={{ x: 0.5, y: 0.5 }}
-                    >
-                        <View style={styles.marker}>
-                            <View
-                                style={[
-                                    isSelected ? styles.markerDotSelected : styles.markerDot,
-                                    !isSelected && spot.no_stopping && { backgroundColor: TOKENS.danger },
-                                ]}
-                            />
-                        </View>
-                    </Marker>
+                    <SpotMarker
+                        key={isSelected ? `${spot.id}-selected` : String(spot.id)}
+                        spot={spot}
+                        isSelected={isSelected}
+                        onSelectSpot={onSelectSpot}
+                    />
                 );
             })}
         </>

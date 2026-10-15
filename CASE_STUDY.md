@@ -116,7 +116,7 @@ The new palette:
 ### Design Hierarchy
 
 - **Reading**: Prussian Blue on white. Not black (#1a1a1a) — the navy carries more personality while maintaining the same contrast ratio.
-- **Interaction**: Cerulean for everything tappable. Buttons, links, active filter chips, map markers. One color = one meaning.
+- **Interaction**: Cerulean for everything tappable. Buttons, links, the walk slider, map markers. One color = one meaning.
 - **Attention**: Amber for things that need a second look. Permit badges, time-limit warnings, the pinned-location marker on the map. Amber reads as "notice" without reading as "danger."
 - **Structure**: Yale Blue for the in-between — labels, dividers, inactive icons, borders. It's the color of "supporting cast."
 - **Surfaces**: White primary. Cream only as subtle tints (card backgrounds, progress bars). Using cream as a full-screen background would be overwhelming.
@@ -192,6 +192,6 @@ Not everything changed. The things that work well were left alone:
 The token-based design system was built with extensibility in mind:
 
 - **Dark mode**: Swap `TOKENS` values in a single file. Every component that uses `TOKENS.text`, `TOKENS.bg`, `TOKENS.surface` automatically updates. The PALETTE shade ramps (50-900) already have dark-friendly values at both ends.
-- **Push notifications**: Session expiry reminders. The timer logic already exists in ActiveSession — it needs a notification channel, not new timer code.
+- **Push notifications**: Timer reminders are now built as local notifications (expo-notifications), 10 minutes before the end and when time's up. The phone schedules them, so no server is involved. Server push would only be needed for alerts the phone can't schedule itself, like live occupancy changes.
 - **Favorites**: Supabase row-level security for per-user saved spots. The device ID system is already in place.
 - **Real-time occupancy**: Supabase Realtime subscriptions for live spot availability. The PostGIS query infrastructure supports this — it's a data source change, not an architecture change.

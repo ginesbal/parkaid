@@ -7,10 +7,19 @@ const CACHE_PREFIX = '@parkaid:';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const OFFLINE_TTL = 24 * 60 * 60 * 1000; // 24 hours for offline mode
 
+// The backend runs on Render's free plan, which puts the server to sleep
+// after a quiet spell; the first request then waits about a minute while it
+// wakes. So until the server has answered once, wait that long; after that,
+// a few seconds is plenty.
+const REQUEST_TIMEOUT_MS = 8000;
+const WAKE_TIMEOUT_MS = 75000;
+
 class ParkingAPI {
   constructor() {
     this.isOnline = true;
     this.pendingRequests = new Map();
+    // True once the server has answered anything this session.
+    this.serverAwake = false;
   }
 
   // generate cache key
@@ -42,7 +51,7 @@ class ParkingAPI {
 
       // return cached data if within TTL or offline
       if (age < maxAge || !this.isOnline) {
-        console.log(`Cache hit for ${key} (age: ${Math.round(age / 1000)}s)`);
+        if (__DEV__) console.log(`Cache hit for ${key} (age: ${Math.round(age / 1000)}s)`);
         return data;
       }
 
@@ -58,9 +67,13 @@ class ParkingAPI {
     const url = `${API_URL}${endpoint}`;
     const cacheKey = this.getCacheKey(endpoint, options.params);
 
-    // check cache first
-    const cached = await this.getCache(cacheKey);
-    if (cached) return cached;
+    // check cache first — unless the user explicitly asked for fresh data
+    // (pull-to-refresh, "Try again"). A successful response still re-caches,
+    // and a failed one still falls back to the stale copy.
+    if (!options.skipCache) {
+      const cached = await this.getCache(cacheKey);
+      if (cached) return cached;
+    }
 
     // deduplicate requests
     if (this.pendingRequests.has(cacheKey)) {
@@ -80,10 +93,13 @@ class ParkingAPI {
 
   async _performRequest(url, options, cacheKey, endpoint) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.serverAwake ? REQUEST_TIMEOUT_MS : WAKE_TIMEOUT_MS
+    );
 
     try {
-      console.log(`Fetching: ${url}`);
+      if (__DEV__) console.log(`Fetching: ${url}`);
 
       const response = await fetch(url, {
         method: options.method || 'GET',
@@ -96,6 +112,8 @@ class ParkingAPI {
       });
 
       clearTimeout(timeout);
+      // Any answer, even an error, means the server is up.
+      this.serverAwake = true;
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -116,15 +134,24 @@ class ParkingAPI {
       clearTimeout(timeout);
       console.error('Request failed:', error);
 
+      // What kind of failure, so screens can say what actually happened:
+      //   offline — the request never got a response (fetch's TypeError:
+      //             "Network request failed", or "Failed to fetch" on web)
+      //   slow    — no answer within the timeout above
+      //   server  — the server answered, but with an error
+      error.kind = error.name === 'AbortError' ? 'slow'
+        : error instanceof TypeError ? 'offline'
+        : 'server';
+
       // mark as offline
-      if (error.message === 'Network request failed' || error.name === 'AbortError') {
+      if (error.kind !== 'server') {
         this.isOnline = false;
       }
 
       // try to get stale cache data
       const staleCache = await this.getCache(cacheKey, OFFLINE_TTL);
       if (staleCache) {
-        console.log('Using stale cache due to network error');
+        if (__DEV__) console.log('Using stale cache due to network error');
         return staleCache;
       }
 
@@ -192,7 +219,8 @@ class ParkingAPI {
   }
 
   // API Methods
-  async findNearbySpots(lat, lng, radius = 500, params = {}) {
+  // `force` skips the 5-minute response cache for a user-requested refresh.
+  async findNearbySpots(lat, lng, radius = 500, params = {}, { force = false } = {}) {
     const queryParams = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
@@ -201,7 +229,7 @@ class ParkingAPI {
       ...(params.free ? { free: 'true' } : {})
     });
 
-    return this.request(`/api/parking/nearby?${queryParams}`);
+    return this.request(`/api/parking/nearby?${queryParams}`, { skipCache: force });
   }
 
   // utilities

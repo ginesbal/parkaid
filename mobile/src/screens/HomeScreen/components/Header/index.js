@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Animated, Text, View } from 'react-native';
+import { Animated, Pressable, Text, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import FilterBar from './FilterBar';
 import LocationSection from './LocationSection';
@@ -15,13 +15,14 @@ const Header = ({
     quickInfo,
     activeFilter,
     setActiveFilter,
-    searchRadius,
-    setSearchRadius,
+    walkMinutes,
+    setWalkMinutes,
     fadeAnim,
     slideAnim,
     onLocationPress,
     statusMessage,
     statusTone = 'info',
+    statusAction = null,
 }) => {
     return (
         <Animated.View
@@ -35,7 +36,7 @@ const Header = ({
         >
             <View style={styles.mainHeader}>
                 <LocationSection
-                    locationName={location?.name || 'Downtown Calgary'}
+                    locationName={location?.name || 'Your location'}
                     onPress={onLocationPress}
                 />
 
@@ -56,6 +57,16 @@ const Header = ({
                             color={statusTone === 'warning' ? TOKENS.warning : TOKENS.primary}
                         />
                         <Text style={styles.statusBannerText}>{statusMessage}</Text>
+                        {statusAction ? (
+                            <Pressable
+                                onPress={statusAction.onPress}
+                                hitSlop={12}
+                                style={({ pressed }) => pressed && styles.statusActionPressed}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.statusAction}>{statusAction.label}</Text>
+                            </Pressable>
+                        ) : null}
                     </View>
                 ) : null}
             </View>
@@ -63,8 +74,8 @@ const Header = ({
             <FilterBar
                 activeFilter={activeFilter}
                 setActiveFilter={setActiveFilter}
-                searchRadius={searchRadius}
-                setSearchRadius={setSearchRadius}
+                walkMinutes={walkMinutes}
+                setWalkMinutes={setWalkMinutes}
             />
         </Animated.View>
     );
