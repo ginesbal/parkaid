@@ -1,0 +1,196 @@
+// WelcomeScreen — first-run screen. Shown once, then the app opens on Home.
+// The pin carries the moment; the copy fades up once and nothing else loops.
+
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef } from 'react';
+import {
+    AccessibilityInfo,
+    Animated,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BrandPin from '../../components/BrandPin';
+import { MOTION, RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../constants/theme';
+import { markWelcomeSeen } from '../../utils/onboarding';
+
+// headline, body, footer
+const ENTRANCE_ITEMS = 3;
+
+export default function WelcomeScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
+    const { width, height } = useWindowDimensions();
+    const pinSize = Math.round(Math.min(width * 0.56, height * 0.3, 240));
+
+    const entrance = useRef(
+        Array.from({ length: ENTRANCE_ITEMS }, () => new Animated.Value(0))
+    ).current;
+    const pressScale = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        let cancelled = false;
+        const showAll = () => entrance.forEach((v) => v.setValue(1));
+
+        AccessibilityInfo.isReduceMotionEnabled()
+            .then((reduceMotion) => {
+                if (cancelled) return;
+                if (reduceMotion) {
+                    showAll();
+                    return;
+                }
+                Animated.stagger(
+                    MOTION.stagger,
+                    entrance.map((v) =>
+                        Animated.timing(v, {
+                            toValue: 1,
+                            duration: MOTION.duration.slow,
+                            easing: MOTION.easing,
+                            useNativeDriver: true,
+                        })
+                    )
+                ).start();
+            })
+            .catch(() => {
+                if (!cancelled) showAll();
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [entrance]);
+
+    const riseIn = (i) => ({
+        opacity: entrance[i],
+        transform: [
+            {
+                translateY: entrance[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [MOTION.rise, 0],
+                }),
+            },
+        ],
+    });
+
+    const pressTo = (toValue) => {
+        Animated.timing(pressScale, {
+            toValue,
+            duration: MOTION.duration.fast,
+            easing: MOTION.easing,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const handleExplore = () => {
+        markWelcomeSeen();
+        navigation.replace('Tabs');
+    };
+
+    return (
+        <View style={styles.container}>
+            <StatusBar style="dark" />
+            <ScrollView
+                contentContainerStyle={[
+                    styles.content,
+                    {
+                        paddingTop: insets.top + SPACING.lg,
+                        paddingBottom: insets.bottom + SPACING['2xl'],
+                    },
+                ]}
+                alwaysBounceVertical={false}
+                showsVerticalScrollIndicator={false}
+            >
+                <Text style={styles.brand}>ParkAid</Text>
+
+                <View style={styles.pinStage}>
+                    <BrandPin size={pinSize} />
+                </View>
+
+                <Animated.Text style={[styles.headline, riseIn(0)]} accessibilityRole="header">
+                    A little less circling.{'\n'}A little more city.
+                </Animated.Text>
+                <Animated.Text style={[styles.body, riseIn(1)]}>
+                    Find a place to park,{'\n'}then get on with your day.
+                </Animated.Text>
+
+                <Animated.View style={[styles.footer, riseIn(2)]}>
+                    <Pressable
+                        onPress={handleExplore}
+                        onPressIn={() => pressTo(MOTION.pressScale)}
+                        onPressOut={() => pressTo(1)}
+                        accessibilityRole="button"
+                        accessibilityHint="Opens nearby parking"
+                    >
+                        <Animated.View style={[styles.cta, { transform: [{ scale: pressScale }] }]}>
+                            <Text style={styles.ctaLabel}>Explore parking</Text>
+                        </Animated.View>
+                    </Pressable>
+                    <Text style={styles.footnote}>Browse first. No account needed.</Text>
+                </Animated.View>
+            </ScrollView>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: TOKENS.bg,
+    },
+    // Phone-width column, centred on tablets and desktop web.
+    content: {
+        flexGrow: 1,
+        width: '100%',
+        maxWidth: 480,
+        alignSelf: 'center',
+        paddingHorizontal: SPACING['2xl'],
+    },
+    brand: {
+        fontSize: 20,
+        lineHeight: 26,
+        fontWeight: '600',
+        letterSpacing: -0.4,
+        color: TOKENS.primary,
+    },
+    pinStage: {
+        flex: 1,
+        minHeight: 160,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: SPACING['2xl'],
+    },
+    headline: {
+        ...TYPOGRAPHY.hero,
+    },
+    body: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: TOKENS.textMuted,
+        marginTop: SPACING.md,
+    },
+    footer: {
+        marginTop: SPACING['3xl'],
+        gap: SPACING.md,
+    },
+    cta: {
+        height: 52,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    ctaLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: TOKENS.surface,
+    },
+    footnote: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+        textAlign: 'center',
+    },
+});
