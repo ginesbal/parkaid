@@ -1,25 +1,3 @@
-// calculate quick stats from parking spots
-export function calculateQuickInfo(spots) {
-    if (!Array.isArray(spots) || spots.length === 0) {
-        return { closest: null, cheapest: null, available: 0 };
-    }
-
-    const closest = spots.reduce(
-        (min, spot) => (spot.distance < min.distance ? spot : min),
-        spots[0]
-    );
-
-    const cheapest = [...spots].sort((a, b) =>
-        (a.price_per_hour || 0) - (b.price_per_hour || 0)
-    )[0];
-
-    return {
-        closest,
-        cheapest,
-        available: spots.length
-    };
-}
-
 // format price for display
 export const formatPrice = (price) => {
     if (!price || price === '0' || price === 0) return 'FREE';
@@ -41,8 +19,8 @@ export const getFilterIcon = (filter) => {
 // format distance label
 export const getDistanceLabel = (meters) => {
     if (!meters && meters !== 0) return '—';
-    if (meters < 1000) return `${meters}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
+    if (meters < 1000) return `${meters} m`;
+    return `${Number((meters / 1000).toFixed(1))} km`;
 };
 
 // calculate walking time from distance

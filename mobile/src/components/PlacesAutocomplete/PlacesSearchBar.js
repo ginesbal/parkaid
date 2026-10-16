@@ -105,8 +105,17 @@ export default function PlacesSearchBar({
   debounceMs = 250,
   containerStyle,
   style,
+  // Bump to focus the input, e.g. when another screen opens Map to search.
+  focusSignal = 0,
 }) {
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!focusSignal) return undefined;
+    // Wait for the tab transition to settle; focusing mid-transition can be dropped.
+    const t = setTimeout(() => inputRef.current?.focus(), 250);
+    return () => clearTimeout(t);
+  }, [focusSignal]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const {

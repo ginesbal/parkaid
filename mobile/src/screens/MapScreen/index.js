@@ -34,7 +34,7 @@ import { styles } from './styles';
 import { centerCamera, getMarkerScreenPosition } from './utils/camera';
 import { getCurrentPrice } from './utils/pricing';
 
-function MapScreen() {
+function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     // Compact header: ~70px content + safe area inset (collapsed filters)
     const [navigationHeight, setNavigationHeight] = useState(70 + insets.top);
@@ -72,6 +72,16 @@ function MapScreen() {
     const [searchRadius, setSearchRadius] = useState(150);
     const [selectedSpot, setSelectedSpot] = useState(null);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [searchFocusSignal, setSearchFocusSignal] = useState(0);
+
+    // Home's search row opens Map with { focusSearch: true }. Consume the param
+    // so returning to this tab later does not refocus the input.
+    const focusSearchParam = route?.params?.focusSearch;
+    useEffect(() => {
+        if (!focusSearchParam) return;
+        setSearchFocusSignal((n) => n + 1);
+        navigation?.setParams({ focusSearch: undefined });
+    }, [focusSearchParam, navigation]);
 
     // pin state
     const [pinnedLocation, setPinnedLocation] = useState(null);
@@ -398,6 +408,7 @@ function MapScreen() {
                     searchRadius={searchRadius}
                     setSearchRadius={setSearchRadius}
                     onPlaceSelected={handlePlaceSelected}
+                    searchFocusSignal={searchFocusSignal}
                 />
             </View>
 

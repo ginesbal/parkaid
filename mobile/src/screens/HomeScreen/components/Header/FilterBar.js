@@ -1,5 +1,6 @@
-import React, { useCallback } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
 const TYPE_FILTERS = [
@@ -9,84 +10,64 @@ const TYPE_FILTERS = [
     { key: 'residential', label: 'Permit' },
 ];
 
-const DISTANCE_OPTIONS = [150, 250, 500, 750, 1000];
+// Four stops so the row fits a phone without hiding the widest option.
+const DISTANCE_OPTIONS = [150, 250, 500, 1000];
 
-const FilterBar = ({
-    activeFilter,
-    setActiveFilter,
-    searchRadius,
-    setSearchRadius,
-}) => {
-    const formatDistance = useCallback((meters) => {
-        return meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${meters}m`;
-    }, []);
-
-    const handleFilterPress = useCallback((key) => {
-        setActiveFilter?.(key);
-    }, [setActiveFilter]);
-
-    const handleDistancePress = useCallback((distance) => {
-        setSearchRadius?.(distance);
-    }, [setSearchRadius]);
-
+function OptionRow({ label, options, selected, onSelect, renderLabel }) {
     return (
-        <View style={styles.filterBar}>
-            <View style={styles.filterRow}>
-                {TYPE_FILTERS.map((filter) => {
-                    const isActive = activeFilter === filter.key;
+        <View style={styles.filterGroup}>
+            <Text style={styles.filterGroupLabel}>{label}</Text>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterOptions}
+                accessibilityRole="radiogroup"
+                accessibilityLabel={label}
+            >
+                {options.map((value) => {
+                    const isSelected = selected === value;
                     return (
                         <Pressable
-                            key={filter.key}
-                            onPress={() => handleFilterPress(filter.key)}
+                            key={value}
+                            onPress={() => onSelect?.(value)}
                             style={({ pressed }) => [
-                                styles.filterChip,
-                                isActive && styles.filterChipActive,
-                                pressed && styles.filterChipPressed,
+                                styles.filterOption,
+                                isSelected && styles.filterOptionSelected,
+                                pressed && styles.pressed,
                             ]}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: isActive }}
+                            accessibilityRole="radio"
+                            aria-checked={isSelected}
                         >
-                            <Text style={[
-                                styles.filterChipText,
-                                isActive && styles.filterChipTextActive
-                            ]}>
-                                {filter.label}
+                            <Text style={[styles.filterOptionText, isSelected && styles.filterOptionTextSelected]}>
+                                {renderLabel(value)}
                             </Text>
                         </Pressable>
                     );
                 })}
-            </View>
-
-            <View style={styles.distanceRow}>
-                <Text style={styles.distanceLabel}>Radius</Text>
-                <View style={styles.distanceOptions}>
-                    {DISTANCE_OPTIONS.map((distance) => {
-                        const isActive = searchRadius === distance;
-                        return (
-                            <Pressable
-                                key={distance}
-                                style={({ pressed }) => [
-                                    styles.distanceOption,
-                                    isActive && styles.distanceOptionActive,
-                                    pressed && styles.distanceOptionPressed,
-                                ]}
-                                onPress={() => handleDistancePress(distance)}
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: isActive }}
-                            >
-                                <Text style={[
-                                    styles.distanceOptionText,
-                                    isActive && styles.distanceOptionTextActive
-                                ]}>
-                                    {formatDistance(distance)}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
-                </View>
-            </View>
+            </ScrollView>
         </View>
     );
-};
+}
+
+// Type and search radius. Lives behind the Filters button on Home.
+const FilterBar = ({ activeFilter, setActiveFilter, searchRadius, setSearchRadius, typeNote }) => (
+    <View style={styles.filterPanel}>
+        <OptionRow
+            label="Parking type"
+            options={TYPE_FILTERS.map((f) => f.key)}
+            selected={activeFilter}
+            onSelect={setActiveFilter}
+            renderLabel={(key) => TYPE_FILTERS.find((f) => f.key === key).label}
+        />
+        {typeNote ? <Text style={styles.filterNote}>{typeNote}</Text> : null}
+        <OptionRow
+            label="Distance"
+            options={DISTANCE_OPTIONS}
+            selected={searchRadius}
+            onSelect={setSearchRadius}
+            renderLabel={getDistanceLabel}
+        />
+    </View>
+);
 
 export default React.memo(FilterBar);

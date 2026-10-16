@@ -1,72 +1,128 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Animated, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import BrandPin from '../../../../components/BrandPin';
 import { TOKENS } from '../../../../constants/theme';
+import TopPick from '../TopPick';
 import FilterBar from './FilterBar';
-import LocationSection from './LocationSection';
-import QuickInfoBar from './QuickInfoBar';
+import ViewChips from './ViewChips';
 import { styles } from './styles';
 
 /**
- * header component - location, quick info, and filters
+ * Home header: greeting, search, view chips, optional filters, and the top pick.
+ * Everything above the list rows.
  */
 const Header = ({
-    location,
-    spots,
-    quickInfo,
+    greeting,
+    statusMessage,
+    statusTone = 'info',
+    onSearchPress,
+    view,
+    onViewChange,
+    filtersOpen,
+    onToggleFilters,
+    filterCount,
     activeFilter,
     setActiveFilter,
     searchRadius,
     setSearchRadius,
-    fadeAnim,
-    slideAnim,
-    onLocationPress,
-    statusMessage,
-    statusTone = 'info',
+    topPick,
+    onViewSpot,
+    moreCount,
+    isUpdating,
 }) => {
+    const filterLabel = filterCount > 0 ? `Filters, ${filterCount} active` : 'Filters';
+
     return (
-        <Animated.View
-            style={[
-                styles.header,
-                {
-                    opacity: fadeAnim,
-                    transform: [{ translateY: slideAnim }]
-                }
-            ]}
-        >
-            <View style={styles.mainHeader}>
-                <LocationSection
-                    locationName={location?.name || 'Downtown Calgary'}
-                    onPress={onLocationPress}
-                />
-
-                {spots.length > 0 && (
-                    <QuickInfoBar quickInfo={quickInfo} />
-                )}
-
-                {statusMessage ? (
-                    <View
-                        style={[
-                            styles.statusBanner,
-                            statusTone === 'warning' ? styles.statusBannerWarning : styles.statusBannerInfo,
-                        ]}
-                    >
-                        <MaterialCommunityIcons
-                            name={statusTone === 'warning' ? 'wifi-alert' : 'crosshairs-question'}
-                            size={16}
-                            color={statusTone === 'warning' ? TOKENS.warning : TOKENS.primary}
-                        />
-                        <Text style={styles.statusBannerText}>{statusMessage}</Text>
-                    </View>
-                ) : null}
+        <View style={styles.header}>
+            <View style={styles.greetingRow}>
+                <Text style={styles.greeting} accessibilityRole="header">
+                    {greeting.hello}{'\n'}{greeting.ask}
+                </Text>
+                <BrandPin size={52} style={styles.greetingPin} />
             </View>
 
-            <FilterBar
-                activeFilter={activeFilter}
-                setActiveFilter={setActiveFilter}
-                searchRadius={searchRadius}
-                setSearchRadius={setSearchRadius}
-            />
-        </Animated.View>
+            {statusMessage ? (
+                <View
+                    style={[
+                        styles.statusBanner,
+                        statusTone === 'warning' ? styles.statusBannerWarning : styles.statusBannerInfo,
+                    ]}
+                    accessibilityRole="alert"
+                >
+                    <MaterialCommunityIcons
+                        name={statusTone === 'warning' ? 'wifi-alert' : 'crosshairs-question'}
+                        size={16}
+                        color={statusTone === 'warning' ? TOKENS.warning : TOKENS.primary}
+                    />
+                    <Text style={styles.statusBannerText}>{statusMessage}</Text>
+                </View>
+            ) : null}
+
+            <View style={styles.searchRow}>
+                <Pressable
+                    onPress={onSearchPress}
+                    style={({ pressed }) => [styles.search, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search Calgary"
+                    accessibilityHint="Opens the map with search"
+                >
+                    <MaterialCommunityIcons name="magnify" size={20} color={TOKENS.textMuted} />
+                    <Text style={styles.searchText}>Search Calgary</Text>
+                </Pressable>
+
+                <Pressable
+                    onPress={onToggleFilters}
+                    style={({ pressed }) => [
+                        styles.filterButton,
+                        filtersOpen && styles.filterButtonOpen,
+                        pressed && styles.pressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={filterLabel}
+                    aria-expanded={filtersOpen}
+                >
+                    <MaterialCommunityIcons
+                        name="tune-variant"
+                        size={20}
+                        color={filtersOpen ? TOKENS.primaryInk : TOKENS.text}
+                    />
+                    {filterCount > 0 ? (
+                        <View style={styles.filterBadge}>
+                            <Text style={styles.filterBadgeText}>{filterCount}</Text>
+                        </View>
+                    ) : null}
+                </Pressable>
+            </View>
+
+            {filtersOpen ? (
+                <FilterBar
+                    activeFilter={view === 'covered' ? null : activeFilter}
+                    setActiveFilter={setActiveFilter}
+                    searchRadius={searchRadius}
+                    setSearchRadius={setSearchRadius}
+                    typeNote={view === 'covered' ? 'Covered shows parkades only. Pick a type to see the rest.' : null}
+                />
+            ) : null}
+
+            <ViewChips view={view} onChange={onViewChange} />
+
+            {topPick ? (
+                <>
+                    <View style={styles.sectionHead}>
+                        <Text style={styles.sectionTitle} accessibilityRole="header">
+                            A good place to start
+                        </Text>
+                        {isUpdating ? <Text style={styles.sectionNote}>Updating…</Text> : null}
+                    </View>
+                    <TopPick spot={topPick} view={view} onView={onViewSpot} />
+                    {moreCount > 0 ? (
+                        <Text style={styles.moreLabel}>
+                            {moreCount === 1 ? '1 more nearby' : `${moreCount} more nearby`}
+                        </Text>
+                    ) : null}
+                </>
+            ) : null}
+        </View>
     );
 };
 

@@ -35,6 +35,7 @@ function MapHeader({
     searchRadius,
     setSearchRadius,
     onPlaceSelected,
+    searchFocusSignal,
 }) {
     const [filtersExpanded, setFiltersExpanded] = useState(false);
 
@@ -132,6 +133,7 @@ function MapHeader({
             {/* Search bar — full width, below the quick actions. */}
             <PlacesSearchBar
                 onPlaceSelected={onPlaceSelected}
+                focusSignal={searchFocusSignal}
                 style={styles.searchContainer}
             />
 

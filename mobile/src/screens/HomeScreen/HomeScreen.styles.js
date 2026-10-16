@@ -8,5 +8,13 @@ export const styles = StyleSheet.create({
     },
     emptyList: {
         flexGrow: 1
-    }
+    },
+    // Shown in place of the list while a filter change refetches.
+    updating: {
+        paddingVertical: 48,
+        alignItems: 'center',
+    },
+    footer: {
+        height: 24,
+    },
 });

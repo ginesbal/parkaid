@@ -1,0 +1,142 @@
+import { StyleSheet } from 'react-native';
+import { RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../../../constants/theme';
+
+const THUMB = 88;
+
+export const styles = StyleSheet.create({
+    card: {
+        marginHorizontal: SPACING.xl,
+        padding: SPACING.lg,
+        borderRadius: RADIUS.xl,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairlineStrong,
+    },
+    top: {
+        flexDirection: 'row',
+        gap: SPACING.lg,
+    },
+    info: {
+        flex: 1,
+        minWidth: 0,
+    },
+    reason: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: RADIUS.pill,
+        backgroundColor: TOKENS.primarySoft,
+        marginBottom: SPACING.sm,
+    },
+    reasonText: {
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+    title: {
+        fontSize: 18,
+        lineHeight: 23,
+        fontWeight: '600',
+        letterSpacing: -0.2,
+        color: TOKENS.text,
+    },
+    detail: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+        marginTop: 2,
+    },
+    meta: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+        marginTop: 2,
+    },
+    price: {
+        ...TYPOGRAPHY.numMedium,
+        fontSize: 24,
+        lineHeight: 28,
+        fontWeight: '600',
+        marginTop: SPACING.sm,
+    },
+    priceUnit: {
+        fontSize: 13,
+        fontWeight: '400',
+        letterSpacing: 0,
+        color: TOKENS.textMuted,
+    },
+    rateNote: {
+        fontSize: 15,
+        lineHeight: 20,
+        fontWeight: '600',
+        color: TOKENS.text,
+        marginTop: SPACING.sm,
+    },
+
+    thumb: {
+        width: THUMB,
+        height: THUMB,
+        borderRadius: RADIUS.lg,
+        overflow: 'hidden',
+        backgroundColor: TOKENS.mapLand,
+    },
+    thumbWater: {
+        position: 'absolute',
+        left: -20,
+        right: -20,
+        top: 6,
+        height: 18,
+        backgroundColor: TOKENS.mapWater,
+        transform: [{ rotate: '-8deg' }],
+    },
+    thumbStreet: {
+        position: 'absolute',
+        backgroundColor: TOKENS.surface,
+    },
+    thumbStreetH: {
+        left: 0,
+        right: 0,
+        top: 50,
+        height: 5,
+    },
+    thumbStreetV: {
+        top: 0,
+        bottom: 0,
+        left: 30,
+        width: 5,
+    },
+    thumbPark: {
+        position: 'absolute',
+        right: 8,
+        bottom: 8,
+        width: 28,
+        height: 24,
+        borderRadius: 4,
+        backgroundColor: TOKENS.mapPark,
+    },
+    thumbMarker: {
+        position: 'absolute',
+        left: 29,
+        top: 24,
+    },
+
+    button: {
+        minHeight: 48,
+        marginTop: SPACING.lg,
+        paddingVertical: SPACING.md,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.primarySoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    buttonPressed: {
+        backgroundColor: TOKENS.primaryFill,
+    },
+    buttonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+        textAlign: 'center',
+    },
+});

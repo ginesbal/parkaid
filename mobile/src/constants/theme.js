@@ -109,6 +109,11 @@ export const TOKENS = {
     inkSurface: PALETTE.prussian[500],
     inkMuted: '#A3B1BF',                               // 8:1 on inkSurface
 
+    // map illustration — thumbnails and the web map preview, not the live map
+    mapLand: '#E3E9EE',
+    mapWater: '#CFE2EC',
+    mapPark: '#DCEADB',
+
     shadow: '#0F1A26',
     focus: alpha(PALETTE.cerulean[500], 0.22),
     focusRing: alpha(PALETTE.cerulean[500], 0.22),
