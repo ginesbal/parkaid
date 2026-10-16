@@ -89,3 +89,61 @@ export function sortByValue(spots) {
 export function sortByDistance(spots) {
     return [...spots].sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 }
+
+// "2 hour maximum", "90 minute maximum", or null.
+export function getMaxStayLabel(spot) {
+    const minutes = Number(spot?.max_duration_minutes ?? spot?.metadata?.max_time);
+    if (!Number.isFinite(minutes) || minutes <= 0) return null;
+    if (minutes % 60 === 0) {
+        const hours = minutes / 60;
+        return `${hours} hour maximum`;
+    }
+    return `${Math.round(minutes)} minute maximum`;
+}
+
+export function getMaxStayMinutes(spot) {
+    const minutes = Number(spot?.max_duration_minutes ?? spot?.metadata?.max_time);
+    return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+}
+
+const DAY_NAMES = { MON: 'Mon', TUE: 'Tue', WED: 'Wed', THU: 'Thu', FRI: 'Fri', SAT: 'Sat', SUN: 'Sun' };
+
+function clock(hhmm) {
+    const h = Number(hhmm.slice(0, 2));
+    const m = hhmm.slice(2);
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return m === '00' ? `${h12} ${suffix}` : `${h12}:${m} ${suffix}`;
+}
+
+// City format "0910-1750 MON-SAT, 0001-2359 SUN" -> "9:10 AM–5:50 PM, Mon–Sat; all day, Sun".
+// Anything it cannot read comes back unchanged.
+export function formatEnforceableTime(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
+    const out = parts.map((part) => {
+        const m = part.match(/^(\d{4})-(\d{4})\s+([A-Z]{3})(?:-([A-Z]{3}))?$/i);
+        if (!m) return null;
+        const [, from, to, d1, d2] = m;
+        const days = [d1, d2].filter(Boolean).map((d) => DAY_NAMES[d.toUpperCase()] || d).join('–');
+        const allDay = from === '0001' || from === '0000';
+        const hours = allDay && (to === '2359' || to === '2400') ? 'all day' : `${clock(from)}–${clock(to)}`;
+        return `${hours}, ${days}`;
+    });
+    if (out.some((o) => o === null)) return raw;
+    const text = out.join('; ');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function getCoordinates(spot) {
+    const c = spot?.coordinates?.coordinates;
+    if (!Array.isArray(c) || typeof c[0] !== 'number' || typeof c[1] !== 'number') return null;
+    return { latitude: c[1], longitude: c[0] };
+}
+
+export function getDirectionsUrl(spot) {
+    const coords = getCoordinates(spot);
+    return coords
+        ? `https://www.google.com/maps/dir/?api=1&destination=${coords.latitude},${coords.longitude}`
+        : null;
+}

@@ -1,8 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../../../constants/theme';
 
-const THUMB = 88;
-
 export const styles = StyleSheet.create({
     card: {
         marginHorizontal: SPACING.xl,
@@ -72,53 +70,6 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.text,
         marginTop: SPACING.sm,
-    },
-
-    thumb: {
-        width: THUMB,
-        height: THUMB,
-        borderRadius: RADIUS.lg,
-        overflow: 'hidden',
-        backgroundColor: TOKENS.mapLand,
-    },
-    thumbWater: {
-        position: 'absolute',
-        left: -20,
-        right: -20,
-        top: 6,
-        height: 18,
-        backgroundColor: TOKENS.mapWater,
-        transform: [{ rotate: '-8deg' }],
-    },
-    thumbStreet: {
-        position: 'absolute',
-        backgroundColor: TOKENS.surface,
-    },
-    thumbStreetH: {
-        left: 0,
-        right: 0,
-        top: 50,
-        height: 5,
-    },
-    thumbStreetV: {
-        top: 0,
-        bottom: 0,
-        left: 30,
-        width: 5,
-    },
-    thumbPark: {
-        position: 'absolute',
-        right: 8,
-        bottom: 8,
-        width: 28,
-        height: 24,
-        borderRadius: 4,
-        backgroundColor: TOKENS.mapPark,
-    },
-    thumbMarker: {
-        position: 'absolute',
-        left: 29,
-        top: 24,
     },
 
     button: {

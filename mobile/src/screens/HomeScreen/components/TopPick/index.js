@@ -1,7 +1,6 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
+import MapThumb from '../../../../components/MapThumb';
 import {
     getRateDisplay,
     getSpotKind,
@@ -16,19 +15,6 @@ const REASONS = {
     value: 'Best value nearby',
     covered: 'Covered',
 };
-
-// A stylised map tile, not a real map: it signals "place" at a glance.
-function MapThumb() {
-    return (
-        <View style={styles.thumb} accessible={false} importantForAccessibility="no-hide-descendants">
-            <View style={styles.thumbWater} />
-            <View style={[styles.thumbStreet, styles.thumbStreetH]} />
-            <View style={[styles.thumbStreet, styles.thumbStreetV]} />
-            <View style={styles.thumbPark} />
-            <MaterialCommunityIcons name="map-marker" size={30} color={TOKENS.primary} style={styles.thumbMarker} />
-        </View>
-    );
-}
 
 const TopPick = ({ spot, view, onView }) => {
     const { title, detail } = getSpotName(spot);

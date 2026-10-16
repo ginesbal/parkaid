@@ -59,8 +59,12 @@ class ParkingAPI {
     const cacheKey = this.getCacheKey(endpoint, options.params);
 
     // check cache first
-    const cached = await this.getCache(cacheKey);
-    if (cached) return cached;
+    // `fresh` skips the 5-minute cache (pull to refresh, Retry). A stale copy
+    // is still the fallback if the network fails.
+    if (!options.fresh) {
+      const cached = await this.getCache(cacheKey);
+      if (cached) return cached;
+    }
 
     // deduplicate requests
     if (this.pendingRequests.has(cacheKey)) {
@@ -192,7 +196,7 @@ class ParkingAPI {
   }
 
   // API Methods
-  async findNearbySpots(lat, lng, radius = 500, params = {}) {
+  async findNearbySpots(lat, lng, radius = 500, params = {}, { fresh = false } = {}) {
     const queryParams = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
@@ -201,7 +205,7 @@ class ParkingAPI {
       ...(params.free ? { free: 'true' } : {})
     });
 
-    return this.request(`/api/parking/nearby?${queryParams}`);
+    return this.request(`/api/parking/nearby?${queryParams}`, { fresh });
   }
 
   // utilities

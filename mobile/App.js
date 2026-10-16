@@ -16,6 +16,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import HomeScreen from './src/screens/HomeScreen/index';
 import MapScreen from './src/screens/MapScreen/index';
 import SessionScreen from './src/screens/SessionScreen/index';
+import DetailsScreen from './src/screens/DetailsScreen/index';
 import WelcomeScreen from './src/screens/WelcomeScreen/index';
 
 // services
@@ -176,6 +177,12 @@ function AppNavigation() {
             >
                 <Stack.Screen name="Welcome" component={WelcomeScreen} />
                 <Stack.Screen name="Tabs" component={MainTabs} options={{ animation: 'fade' }} />
+                {/* Pushed over the tabs, so the tab bar hides on this focus screen */}
+                <Stack.Screen
+                    name="Details"
+                    component={DetailsScreen}
+                    options={{ contentStyle: { backgroundColor: TOKENS.inkSurface } }}
+                />
             </Stack.Navigator>
         </NavigationContainer>
     );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { parkingAPI } from '../services/api';
 
 export function useParkingSpots(location, radius, filterType = 'all') {
@@ -11,6 +11,13 @@ export function useParkingSpots(location, radius, filterType = 'all') {
     // Only the newest request may write state; an older one finishing late
     // must not overwrite its spots or switch loading off.
     const requestIdRef = useRef(0);
+    // refetch() bumps the nonce; the next request skips the API cache.
+    const [nonce, setNonce] = useState(0);
+    const freshRef = useRef(false);
+    const refetch = useCallback(() => {
+        freshRef.current = true;
+        setNonce((n) => n + 1);
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -37,6 +44,11 @@ export function useParkingSpots(location, radius, filterType = 'all') {
         const fetchSpots = async () => {
             if (!isCurrent()) return;
 
+            // Read the refetch flag only when a request really goes out, so a
+            // debounced request that gets cancelled does not swallow it.
+            const fresh = freshRef.current;
+            freshRef.current = false;
+
             setLoading(true);
             setError(null);
 
@@ -46,7 +58,8 @@ export function useParkingSpots(location, radius, filterType = 'all') {
                     location.latitude,
                     location.longitude,
                     radius,
-                    params
+                    params,
+                    { fresh }
                 );
 
                 if (isCurrent()) {
@@ -73,7 +86,7 @@ export function useParkingSpots(location, radius, filterType = 'all') {
         return () => {
             clearTimeout(timeoutId);
         };
-    }, [location?.latitude, location?.longitude, radius, filterType]);
+    }, [location?.latitude, location?.longitude, radius, filterType, nonce]);
 
-    return { spots, loading, error };
+    return { spots, loading, error, refetch };
 }   

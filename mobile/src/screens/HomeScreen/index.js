@@ -55,7 +55,7 @@ export default function HomeScreen({ navigation }) {
     (searchRadius !== DEFAULT_SEARCH_RADIUS ? 1 : 0);
 
   // data fetching hook
-  const { spots, loading, error } = useParkingSpots(location, searchRadius, requestType);
+  const { spots, loading, error, refetch } = useParkingSpots(location, searchRadius, requestType);
 
   // local UI state
   const [refreshing, setRefreshing] = useState(false);
@@ -142,10 +142,7 @@ export default function HomeScreen({ navigation }) {
       address: spot?.address
     });
 
-    navigation.navigate('Map', {
-      initialSpot: spot,
-      fromList: true,
-    });
+    navigation.navigate('Details', { spot });
   }, [navigation]);
 
   const handleViewChange = useCallback((next) => {
@@ -176,20 +173,30 @@ export default function HomeScreen({ navigation }) {
     if (view !== 'covered') setActiveFilter('all');
   };
 
+  // Pull to refresh and Retry: refetch past the cache; the spinner stops when
+  // that request settles.
+  const refreshStartedRef = useRef(false);
   const handleRefresh = useCallback(() => {
+    if (!location) return;
     logger.log('home_refresh', {
       filter: requestType,
       radius: searchRadius
     });
 
+    refreshStartedRef.current = false;
     setRefreshing(true);
     setLastRefresh(new Date());
+    refetch();
+  }, [location, requestType, searchRadius, refetch]);
 
-    // reset refreshing after delay
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, [requestType, searchRadius]);
+  useEffect(() => {
+    if (!refreshing) return;
+    if (loading) {
+      refreshStartedRef.current = true;
+      return;
+    }
+    if (refreshStartedRef.current) setRefreshing(false);
+  }, [refreshing, loading]);
 
   // filter/radius changes
   useEffect(() => {
