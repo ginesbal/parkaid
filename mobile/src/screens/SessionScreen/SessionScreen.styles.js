@@ -6,4 +6,8 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: TOKENS.bg,
     },
+    loading: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
 });

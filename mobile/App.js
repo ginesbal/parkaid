@@ -19,6 +19,7 @@ import SessionScreen from './src/screens/SessionScreen/index';
 import WelcomeScreen from './src/screens/WelcomeScreen/index';
 
 // services
+import BrandLoader from './src/components/BrandLoader';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
 import { hasSeenWelcome } from './src/utils/onboarding';
@@ -155,8 +156,13 @@ function AppNavigation() {
         hasSeenWelcome().then((seen) => setInitialRoute(seen ? 'Tabs' : 'Welcome'));
     }, []);
 
+    // Usually resolves in a few ms; the loader only appears if storage is slow.
     if (!initialRoute) {
-        return <View style={navStyles.boot} />;
+        return (
+            <View style={navStyles.boot}>
+                <BrandLoader size={88} delay={400} />
+            </View>
+        );
     }
 
     return (
@@ -188,6 +194,8 @@ export default function App() {
 const navStyles = StyleSheet.create({
     boot: {
         flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: TOKENS.bg,
     },
     iconWrap: {

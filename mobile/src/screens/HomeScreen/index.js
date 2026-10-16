@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, LayoutAnimation, Platform, RefreshControl, UIManager, View } from 'react-native';
+import { FlatList, LayoutAnimation, Platform, RefreshControl, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BrandLoader from '../../components/BrandLoader';
 import Header from './components/Header';
 import ParkingList from './components/ParkingList';
 import EmptyState from './components/ParkingList/EmptyState';
@@ -205,7 +206,7 @@ export default function HomeScreen({ navigation }) {
 
   // initial loading state
   if (isLoadingLocation || (!hasFetched && !error)) {
-    return <LoadingState searchRadius={searchRadius} />;
+    return <LoadingState searchRadius={searchRadius} phase={isLoadingLocation ? 'location' : 'spots'} />;
   }
 
   const renderSpot = ({ item }) => (
@@ -214,7 +215,7 @@ export default function HomeScreen({ navigation }) {
 
   const emptyComponent = loading ? (
     <View style={styles.updating}>
-      <ActivityIndicator color={TOKENS.primary} accessibilityLabel="Loading parking" />
+      <BrandLoader size={56} label="Updating the list" delay={150} />
     </View>
   ) : (
     <EmptyState

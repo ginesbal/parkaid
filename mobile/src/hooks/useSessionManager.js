@@ -8,6 +8,8 @@ import { calculateProgress, calculateSessionState } from '../utils/sessionHelper
 export const useSessionManager = () => {
     // core state
     const [session, setSession] = useState(null);
+    // false until storage has been read, so the screen does not flash the setup form
+    const [isLoaded, setIsLoaded] = useState(false);
     const [now, setNow] = useState(Date.now()); // ms
 
     // form state for new sessions
@@ -27,6 +29,8 @@ export const useSessionManager = () => {
         } catch (error) {
             console.error('Failed to load session:', error);
             setSession(null);
+        } finally {
+            setIsLoaded(true);
         }
     }, []);
 
@@ -206,6 +210,7 @@ export const useSessionManager = () => {
     return {
         // session data
         session,
+        isLoaded,
         sessionState,
         timeRemaining,      // minutes
         timeRemainingMs,    // ms

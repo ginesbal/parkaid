@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BrandLoader from '../../../components/BrandLoader';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { MOTION, TOKENS, alpha } from '../../../constants/theme';
 import { SCREEN_HEIGHT } from '../constants';
@@ -30,6 +31,7 @@ const EXPANDED_Y = 0;
 
 const ParkingBottomSheet = forwardRef(({
     spots,
+    loading = false,
     selectedSpot,
     searchMode,
     getCurrentPrice,
@@ -250,7 +252,9 @@ const ParkingBottomSheet = forwardRef(({
 
                         <View style={styles.headerInfo}>
                             <Text style={styles.headerTitle}>
-                                {spots.length} {spots.length === 1 ? 'spot' : 'spots'} nearby
+                                {loading && spots.length === 0
+                                    ? 'Finding spots\u2026'
+                                    : `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} nearby`}
                             </Text>
                             <Text style={styles.headerSubtitle} numberOfLines={1}>
                                 {selectedSpot?.address
@@ -285,7 +289,11 @@ const ParkingBottomSheet = forwardRef(({
                 </View>
             </View>
 
-            {spots.length === 0 ? (
+            {loading && spots.length === 0 ? (
+                <View style={styles.emptyState}>
+                    <BrandLoader size={56} label="Finding spots around here" delay={150} />
+                </View>
+            ) : spots.length === 0 ? (
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
                         <MaterialCommunityIcons

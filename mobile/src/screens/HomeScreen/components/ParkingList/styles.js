@@ -13,67 +13,6 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
     },
-    loadingIcon: {
-        width: 64,
-        height: 64,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    loadingText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: TOKENS.text,
-        marginBottom: 4,
-        letterSpacing: -0.1,
-    },
-    loadingSubtext: {
-        fontSize: 14,
-        color: TOKENS.textMuted,
-        marginBottom: 24,
-    },
-    loadingSkeletonStack: {
-        width: '100%',
-        gap: 0,
-    },
-    loadingSkeletonCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-        width: '100%',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: TOKENS.hairline,
-    },
-    loadingSkeletonBadge: {
-        width: 44,
-        height: 44,
-        borderRadius: 6,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
-    loadingSkeletonContent: {
-        flex: 1,
-        gap: 8,
-    },
-    loadingSkeletonLineWide: {
-        width: '78%',
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
-    loadingSkeletonLine: {
-        width: '56%',
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
-    loadingSkeletonPrice: {
-        width: 50,
-        height: 16,
-        borderRadius: 4,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
 
     // Empty State
     emptyContainer: {

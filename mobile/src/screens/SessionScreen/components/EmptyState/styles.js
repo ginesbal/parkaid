@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
     },
     iconContainer: {
         width: 64,
-        height: 44,
+        height: 64,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,

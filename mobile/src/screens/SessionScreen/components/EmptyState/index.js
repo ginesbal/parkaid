@@ -1,6 +1,5 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScrollView, Text, View } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
+import BrandPin from '../../../../components/BrandPin';
 import InfoCard from '../shared/InfoCard';
 import SetupCard from './SetupCard';
 import { styles } from './styles';
@@ -26,11 +25,7 @@ const EmptyState = ({
             {/* Header Section */}
             <View style={styles.header}>
                 <View style={styles.iconContainer}>
-                    <MaterialCommunityIcons
-                        name="car-clock"
-                        size={32}
-                        color={TOKENS.primary}
-                    />
+                    <BrandPin size={64} />
                 </View>
                 <Text style={styles.title}>You're not parked yet</Text>
                 <Text style={styles.subtitle}>Set up a session for downtown Calgary</Text>

@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BrandLoader from '../../components/BrandLoader';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { logger } from '../../utils/loggers';
 import ActiveSession from './components/ActiveSession';
@@ -13,6 +14,7 @@ import { styles } from './SessionScreen.styles';
 export default function SessionScreen() {
   const {
     session,
+    isLoaded,
     sessionState,
     timeRemaining,
     elapsedTime,
@@ -104,6 +106,15 @@ export default function SessionScreen() {
       prev.duration = selectedDuration;
     }
   }, [vehiclePlate, selectedRate, selectedDuration]);
+
+  if (!isLoaded) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.container, styles.loading]}>
+        <StatusBar style="dark" />
+        <BrandLoader size={88} label="Checking your session" delay={250} />
+      </SafeAreaView>
+    );
+  }
 
   if (!hasSession) {
     return (
