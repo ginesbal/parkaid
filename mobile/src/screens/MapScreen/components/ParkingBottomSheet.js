@@ -3,7 +3,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
-import { TOKENS, alpha } from '../../../constants/theme';
+import { MOTION, TOKENS, alpha } from '../../../constants/theme';
 import { SCREEN_HEIGHT } from '../constants';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -68,8 +68,7 @@ const ParkingBottomSheet = forwardRef(({
         Animated.spring(translateY, {
             toValue: EXPANDED_Y,
             velocity,
-            tension: 68,
-            friction: 9,
+            ...MOTION.spring,
             useNativeDriver: true,
         }).start();
     }, [translateY]);

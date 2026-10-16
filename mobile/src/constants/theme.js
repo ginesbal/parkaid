@@ -4,8 +4,11 @@
 //   - One accent (cerulean), no competing color ramps
 //   - Hairline borders instead of heavy shadows
 //   - Tinted near-black ink (never pure #000)
-//   - 3 weights total: 400 body, 500 numerics, 600 titles
+//   - 3 weights total: 400 body, 500 numerics, 600 titles (700 only for TYPOGRAPHY.hero)
 //   - Tokens kept backward-compatible by name; values simplified
+//   - bg matches the Spline scene background so the brand pin stills have no edge
+
+import { Easing } from 'react-native';
 
 export function alpha(hex, a) {
     const h = hex.replace('#', '');
@@ -52,8 +55,8 @@ export const PALETTE = {
 // (header, active chips, numeric blocks) so information is visibly grouped without
 // competing with the content. Stay below alpha 0.18 to preserve the calm brand voice.
 export const TOKENS = {
-    // canvas
-    bg: '#F6F8FA',
+    // canvas — #F7F8FA is the Spline scene background; keep them equal
+    bg: '#F7F8FA',
     surface: '#FFFFFF',
     surfaceMuted: '#F1F4F8',
     surfaceRaised: '#FFFFFF',
@@ -77,8 +80,9 @@ export const TOKENS = {
     // text
     text: '#0F1A26',
     textMuted: '#5B6B7C',
-    textLight: '#90A0B0',
-    textFaint: '#90A0B0',
+    // 4.5:1 or better on every light surface above (white, bg, surfaceMuted, surfaceTint)
+    textLight: '#617183',
+    textFaint: '#617183',
 
     // primary (single accent) — 5 tint steps, low → medium → solid
     primary: PALETTE.cerulean[500],
@@ -100,6 +104,10 @@ export const TOKENS = {
     successSoft: 'rgba(44, 122, 107, 0.08)',
     warning: '#B8832D',
     warningSoft: 'rgba(184, 131, 45, 0.08)',
+
+    // ink canvas — focus screens (Details, Session) sit on prussian instead of bg
+    inkSurface: PALETTE.prussian[500],
+    inkMuted: '#A3B1BF',                               // 8:1 on inkSurface
 
     shadow: '#0F1A26',
     focus: alpha(PALETTE.cerulean[500], 0.22),
@@ -166,6 +174,14 @@ export const SHADOWS = {
 // Deliberate 5-step type scale. Three weights only: 400 body, 500 numerics, 600 titles.
 // All numeric displays use tabular-nums for alignment.
 export const TYPOGRAPHY = {
+    // Welcome headline only. The one place the scale goes to 700.
+    hero: {
+        fontSize: 28,
+        lineHeight: 32,
+        fontWeight: '700',
+        letterSpacing: -0.6,
+        color: TOKENS.text,
+    },
     display: {
         fontSize: 28,
         lineHeight: 32,
@@ -230,4 +246,25 @@ export const TYPOGRAPHY = {
         fontVariant: ['tabular-nums'],
         color: TOKENS.text,
     },
+};
+
+// Motion — three durations, one easing curve, one spring. Use these instead of
+// literal numbers so every screen moves alike. Pair with reduce-motion checks:
+// when the OS asks for less motion, skip entrance animations entirely.
+export const MOTION = {
+    duration: {
+        fast: 180,   // presses, small state changes
+        base: 240,   // fades, crossfades
+        slow: 320,   // entrances, larger moves
+    },
+    easing: Easing.out(Easing.exp),
+    // The map sheet's expand spring; reuse it for anything that springs.
+    spring: {
+        tension: 68,
+        friction: 9,
+    },
+    pressScale: 0.97,
+    // Entrance: rise this many points while fading in, items staggered by `stagger`.
+    rise: 12,
+    stagger: 60,
 };
