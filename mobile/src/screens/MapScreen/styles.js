@@ -56,10 +56,6 @@ export const styles = StyleSheet.create({
 
     // Used to fade out the quick actions while keeping them mounted, so we
     // never reflow the header layout mid-animation.
-    quickActionsHidden: {
-        opacity: 0,
-    },
-
     quickAction: {
         width: 44,
         height: 44,
@@ -176,49 +172,6 @@ export const styles = StyleSheet.create({
         fontSize: 12,
         color: '#fff',
         lineHeight: 16,
-    },
-
-    // ===== Markers =====
-    marker: {
-        width: 20,
-        height: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    markerDot: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: TOKENS.primary,
-        borderWidth: 2,
-        borderColor: '#fff',
-    },
-
-    markerDotSelected: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: TOKENS.primary,
-        borderWidth: 2,
-        borderColor: '#fff',
-    },
-
-    markerSelected: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    markerPulse: {
-        position: 'absolute',
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: alpha(TOKENS.primary, 0.12),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: alpha(TOKENS.primary, 0.22),
     },
 
     // ===== Pin marker =====

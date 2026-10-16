@@ -4,7 +4,14 @@ import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BrandLoader from '../../../components/BrandLoader';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
-import { MOTION, TOKENS, alpha } from '../../../constants/theme';
+import { MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
+import { getDistanceLabel } from '../../../utils/parkingHelpers';
+import {
+    getRateDisplay,
+    getSpotName,
+    getWalkLabel,
+    getZoneLabel,
+} from '../../../utils/spotPresentation';
 import { SCREEN_HEIGHT } from '../constants';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -33,9 +40,11 @@ const ParkingBottomSheet = forwardRef(({
     spots,
     loading = false,
     selectedSpot,
+    featuredSpot,
     searchMode,
-    getCurrentPrice,
+    searchRadius,
     onItemPress,
+    onViewSpot,
     onClearPin,
     onPeekHeightChange,
     tabBarHeight = 80,
@@ -136,31 +145,6 @@ const ParkingBottomSheet = forwardRef(({
         });
     }, [PEEK_Y, translateY]);
 
-    // When a marker is tapped, expand the sheet first, then scroll to the item.
-    // Without this, the scroll fires behind the collapsed sheet — invisible.
-    useEffect(() => {
-        if (!selectedSpot?.id || !spots.length) {
-            return;
-        }
-
-        const selectedIndex = spots.findIndex((spot) => spot?.id === selectedSpot.id);
-        if (selectedIndex < 0) {
-            return;
-        }
-
-        // Expand sheet, then scroll after the spring has mostly settled
-        expandTo();
-        const timer = setTimeout(() => {
-            listRef.current?.scrollToIndex({
-                index: selectedIndex,
-                animated: true,
-                viewPosition: 0.45,
-            });
-        }, 280);
-
-        return () => clearTimeout(timer);
-    }, [selectedSpot?.id, spots, expandTo]);
-
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
@@ -217,11 +201,28 @@ const ParkingBottomSheet = forwardRef(({
     const renderItem = useCallback(({ item }) => (
         <ParkingListItem
             spot={item}
-            price={getCurrentPrice(item)}
             isSelected={selectedSpot?.id === item.id}
             onPress={() => onItemPress(item)}
         />
-    ), [getCurrentPrice, onItemPress, selectedSpot?.id]);
+    ), [onItemPress, selectedSpot?.id]);
+
+    const pinned = searchMode === 'pinned';
+    const within = getDistanceLabel(searchRadius);
+    let countLine;
+    if (loading && spots.length === 0) countLine = 'Finding spots\u2026';
+    else if (loading) countLine = 'Updating for this area\u2026';
+    else if (spots.length === 0) countLine = `No places within ${within}`;
+    else countLine = `${spots.length} ${spots.length === 1 ? 'place' : 'places'} within ${within}`;
+
+    const featured = featuredSpot ? {
+        reason: selectedSpot?.id === featuredSpot.id ? 'Selected' : 'Closest to you',
+        name: getSpotName(featuredSpot).title,
+        // Zone and walk fit one line; the maximum stay is on Details.
+        meta: [getZoneLabel(featuredSpot), getWalkLabel(featuredSpot)]
+            .filter(Boolean)
+            .join(' \u00B7 '),
+        rate: getRateDisplay(featuredSpot),
+    } : null;
 
     return (
         <Animated.View
@@ -238,37 +239,16 @@ const ParkingBottomSheet = forwardRef(({
                 <View style={styles.handle} />
 
                 <View style={styles.headerContent}>
-                    <View style={styles.headerLeft}>
-                        <View style={[
-                            styles.searchModeIndicator,
-                            searchMode === 'pinned' && styles.searchModeIndicatorPinned
-                        ]}>
-                            <MaterialCommunityIcons
-                                name={searchMode === 'pinned' ? 'map-marker' : 'crosshairs-gps'}
-                                size={14}
-                                color="#fff"
-                            />
-                        </View>
-
-                        <View style={styles.headerInfo}>
-                            <Text style={styles.headerTitle}>
-                                {loading && spots.length === 0
-                                    ? 'Finding spots\u2026'
-                                    : `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} nearby`}
-                            </Text>
-                            <Text style={styles.headerSubtitle} numberOfLines={1}>
-                                {loading && spots.length > 0
-                                    ? 'Updating for this area\u2026'
-                                    : selectedSpot?.address
-                                    ? `Selected: ${selectedSpot.address}`
-                                    : searchMode === 'pinned'
-                                        ? 'Around your pinned location'
-                                        : 'Near your current location'}
-                            </Text>
-                        </View>
+                    <View style={styles.headerInfo}>
+                        <Text style={styles.headerTitle} accessibilityRole="header">
+                            {pinned ? 'Parking around your pin' : 'Parking around you'}
+                        </Text>
+                        <Text style={styles.headerSubtitle} numberOfLines={1}>
+                            {countLine}
+                        </Text>
                     </View>
 
-                    {searchMode === 'pinned' && onClearPin && (
+                    {pinned && onClearPin && (
                         <Pressable
                             style={({ pressed }) => [
                                 styles.clearButton,
@@ -283,12 +263,47 @@ const ParkingBottomSheet = forwardRef(({
                                 name="close-circle"
                                 size={14}
                                 color={TOKENS.primary}
-                                shadowColor={TOKENS.primary}
                             />
                             <Text style={styles.clearButtonText}>Clear pin</Text>
                         </Pressable>
                     )}
                 </View>
+
+                {/* Featured spot: the selected marker, else the closest suggestion.
+                    Part of the measured peek, so it shows while collapsed. */}
+                {featured ? (
+                    <View style={styles.featuredWrap}>
+                        <View
+                            style={styles.featured}
+                            accessible
+                            accessibilityLabel={`${featured.reason}. ${featured.name}. ${featured.meta}. ${featured.rate.amount ? `${featured.rate.amount} per hour` : featured.rate.note}.`}
+                        >
+                            <View style={styles.featuredInfo}>
+                                <Text style={styles.featuredReason}>{featured.reason}</Text>
+                                <Text style={styles.featuredName} numberOfLines={1}>{featured.name}</Text>
+                                {featured.meta ? (
+                                    <Text style={styles.featuredMeta} numberOfLines={1}>{featured.meta}</Text>
+                                ) : null}
+                            </View>
+                            {featured.rate.amount ? (
+                                <Text style={styles.featuredPrice}>
+                                    {featured.rate.amount}
+                                    <Text style={styles.featuredUnit}>{'\n'}{featured.rate.unit}</Text>
+                                </Text>
+                            ) : (
+                                <Text style={styles.featuredNote}>{featured.rate.short}</Text>
+                            )}
+                        </View>
+                        <Pressable
+                            onPress={() => onViewSpot(featuredSpot)}
+                            style={({ pressed }) => [styles.viewButton, pressed && styles.viewButtonPressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`View parking at ${featured.name}`}
+                        >
+                            <Text style={styles.viewButtonText}>View parking</Text>
+                        </Pressable>
+                    </View>
+                ) : null}
             </View>
 
             {loading && spots.length === 0 ? (
@@ -357,6 +372,8 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     header: {
+        // Dragging the header moves the sheet; never start a text selection (web).
+        userSelect: 'none',
         paddingTop: 12,
         paddingBottom: 14,
         backgroundColor: TOKENS.surface,
@@ -380,24 +397,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         gap: 12,
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        gap: 10,
-    },
-    // Calmer indicator — smaller, less dominant. Color carries the meaning, size doesn't need to.
-    searchModeIndicator: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
-        backgroundColor: TOKENS.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    searchModeIndicatorPinned: {
-        backgroundColor: TOKENS.primaryAlt,
     },
     headerInfo: {
         gap: 4,
@@ -426,8 +425,9 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
     },
     headerTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 18,
+        lineHeight: 24,
+        fontWeight: '600',
         color: TOKENS.text,
         letterSpacing: -0.2,
     },
@@ -436,6 +436,74 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         color: TOKENS.textMuted,
         lineHeight: 18,
+    },
+    featuredWrap: {
+        paddingHorizontal: 20,
+        paddingTop: SPACING.md,
+        gap: SPACING.md,
+    },
+    featured: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
+        padding: SPACING.md,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.surfaceMuted,
+    },
+    featuredInfo: {
+        flex: 1,
+        minWidth: 0,
+    },
+    featuredReason: {
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+    featuredName: {
+        fontSize: 16,
+        lineHeight: 21,
+        fontWeight: '600',
+        color: TOKENS.text,
+    },
+    featuredMeta: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+    },
+    featuredPrice: {
+        fontSize: 20,
+        lineHeight: 24,
+        fontWeight: '600',
+        color: TOKENS.text,
+        textAlign: 'right',
+        fontVariant: ['tabular-nums'],
+    },
+    featuredUnit: {
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: '400',
+        color: TOKENS.textMuted,
+    },
+    featuredNote: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: TOKENS.textMuted,
+    },
+    viewButton: {
+        minHeight: 48,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    viewButtonPressed: {
+        opacity: 0.85,
+    },
+    viewButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: TOKENS.surface,
     },
     listContent: {
         paddingTop: 4,

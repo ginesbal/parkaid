@@ -3,6 +3,7 @@ import { Animated, View } from 'react-native';
 import { Circle, Marker } from 'react-native-maps';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
+import SpotMarker from './SpotMarker';
 
 function MapOverlays({
     searchCenter,
@@ -12,8 +13,6 @@ function MapOverlays({
     pinDropAnim,
     spots,
     selectedSpot,
-    selScale,
-    selTranslateY,
     onSelectSpot,
 }) {
     return (
@@ -56,31 +55,16 @@ function MapOverlays({
                 </Marker>
             )}
 
-            {spots.map(spot => {
-                if (!spot.coordinates) return null;
-                const coords = {
-                    latitude: spot.coordinates.coordinates[1],
-                    longitude: spot.coordinates.coordinates[0],
-                };
+            {spots.map((spot) => {
                 const isSelected = selectedSpot?.id === spot.id;
-
+                // Key on selection so the marker remounts and re-snapshots its new look.
                 return (
-                    <Marker
-                        key={spot.id}
-                        coordinate={coords}
-                        onPress={() => onSelectSpot(spot)}
-                        tracksViewChanges={false}
-                        anchor={{ x: 0.5, y: 0.5 }}
-                    >
-                        <View style={styles.marker}>
-                            <View
-                                style={[
-                                    isSelected ? styles.markerDotSelected : styles.markerDot,
-                                    !isSelected && spot.no_stopping && { backgroundColor: TOKENS.danger },
-                                ]}
-                            />
-                        </View>
-                    </Marker>
+                    <SpotMarker
+                        key={`${spot.id}:${isSelected ? 'on' : 'off'}`}
+                        spot={spot}
+                        selected={isSelected}
+                        onPress={onSelectSpot}
+                    />
                 );
             })}
         </>

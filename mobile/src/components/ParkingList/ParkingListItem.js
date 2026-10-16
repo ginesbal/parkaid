@@ -10,41 +10,21 @@ import {
 } from 'react-native';
 import { TOKENS, TYPOGRAPHY, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
+import { getRateDisplay, getSpotKind, getSpotName } from '../../utils/spotPresentation';
 
-const TYPE_LABELS = {
-    on_street: 'Street',
-    off_street: 'Lot',
-    residential: 'Resident',
-    school: 'Campus',
-};
-
-function formatPrice(val) {
-    if (!val || val === '0' || val === 0 || val === 'FREE') return 'FREE';
-    if (typeof val === 'string') {
-        const match = val.match(/[\d.]+/);
-        if (match) {
-            const num = parseFloat(match[0]);
-            return Number.isNaN(num) ? val : `$${num.toFixed(2)}`;
-        }
-        return val;
-    }
-    const num = parseFloat(val);
-    return Number.isNaN(num) ? 'FREE' : `$${num.toFixed(2)}`;
-}
-
+// One row in the Map sheet: walk time, name and kind, rate.
 export default function ParkingListItem({
     spot,
-    price,
     onPress,
     isSelected = false,
 }) {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    const typeLabel = TYPE_LABELS[spot.spot_type] || 'Street';
-    const displayPrice = formatPrice(price);
-    const isFree = displayPrice === 'FREE';
-    const isCheckSigns = displayPrice === 'Check signs';
-    const lowCapacity = spot.capacity > 0 && spot.capacity <= 5;
+    const { title } = getSpotName(spot);
+    const kind = getSpotKind(spot);
+    const rate = getRateDisplay(spot);
+    const walk = Number(spot?.walkingTime);
+    const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
     const handlePressIn = () => {
         Animated.timing(scaleAnim, {
@@ -69,18 +49,16 @@ export default function ParkingListItem({
                 address: spot?.address,
                 distance: spot?.distance,
                 walkingTime: spot?.walkingTime,
-                price: displayPrice,
+                rate: rate.amount || rate.short,
             },
             'UI_EVENT'
         );
-        onPress?.(spot, { stayInList: true });
+        onPress?.(spot);
     };
 
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            {/* Selected stripe — a 3px primary ink rail on the leading edge.
-                Emil: "Color is a signal. Make it earn its place." Selection needs
-                to register at a glance without tinting the whole row. */}
+            {/* Selected stripe — a 3px primary ink rail on the leading edge. */}
             {isSelected && <View style={styles.selectedStripe} pointerEvents="none" />}
             <Pressable
                 onPress={handleRowPress}
@@ -89,58 +67,46 @@ export default function ParkingListItem({
                 android_ripple={{ color: alpha(TOKENS.text, 0.04), borderless: false }}
                 style={[styles.row, isSelected && styles.rowSelected]}
                 accessibilityRole="button"
-                accessibilityLabel={`Parking at ${spot.address}, ${spot.distance} meters away, ${isFree ? 'free' : `price ${displayPrice} per hour`}`}
+                accessibilityLabel={`${title}. ${kind}. ${Number.isFinite(walk) ? `${walk} minute walk. ` : ''}${rateSpoken}.`}
+                aria-selected={isSelected}
                 hitSlop={4}
             >
                 {/* Walking time */}
                 <View style={styles.walkBlock}>
-                    <Text style={styles.walkValue}>{spot.walkingTime}</Text>
+                    <Text style={styles.walkValue}>{Number.isFinite(walk) ? walk : '\u2013'}</Text>
                     <Text style={styles.walkUnit}>min</Text>
                 </View>
 
-                {/* Quiet vertical rule — just enough to say "these are related but distinct".
-                    Emil: "Elements should only take the space they need." 28px tall, not full row. */}
                 <View style={styles.sectionDivider} />
 
                 {/* Primary content */}
                 <View style={styles.content}>
                     <Text style={styles.address} numberOfLines={1}>
-                        {spot.address}
+                        {title}
                     </Text>
-
                     <View style={styles.metaRow}>
-                        <Text style={styles.metaText}>{typeLabel}</Text>
-                        <Text style={styles.metaDivider}>·</Text>
-                        <Text style={styles.metaTextNum}>{spot.distance}m</Text>
-
-                        {lowCapacity && (
+                        <Text style={styles.metaText}>{kind}</Text>
+                        {Number.isFinite(spot?.distance) ? (
                             <>
-                                <Text style={styles.metaDivider}>·</Text>
-                                <View style={styles.typeGroup}>
-                                    <View style={[styles.typeDot, styles.typeDotWarning]} />
-                                    <Text style={styles.metaTextWarning}>
-                                        {spot.capacity} left
-                                    </Text>
-                                </View>
+                                <Text style={styles.metaDivider}>{'\u00B7'}</Text>
+                                <Text style={styles.metaTextNum}>{spot.distance} m</Text>
                             </>
-                        )}
+                        ) : null}
                     </View>
                 </View>
 
                 <View style={styles.sectionDivider} />
 
-                {/* Price */}
+                {/* Rate */}
                 <View style={styles.priceBlock}>
-                    {isFree ? (
-                        <Text style={styles.freeLabel}>FREE</Text>
-                    ) : isCheckSigns ? (
-                        <Text style={styles.priceNote} numberOfLines={1}>
-                            Check signs
+                    {rate.amount ? (
+                        <Text style={styles.priceValue} numberOfLines={1}>
+                            {rate.amount}
+                            <Text style={styles.priceUnit}> /hr</Text>
                         </Text>
                     ) : (
-                        <Text style={styles.priceValue} numberOfLines={1}>
-                            {displayPrice}
-                            <Text style={styles.priceUnit}> /hr</Text>
+                        <Text style={styles.priceNote} numberOfLines={1}>
+                            {rate.short}
                         </Text>
                     )}
                 </View>
@@ -230,30 +196,11 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         fontVariant: ['tabular-nums'],
     },
-    metaTextWarning: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: TOKENS.warning,
-    },
     metaDivider: {
         fontSize: 13,
         color: TOKENS.textFaint,
     },
 
-    // Kept for the warning dot only — decorative type dots were removed.
-    typeGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    typeDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    typeDotWarning: {
-        backgroundColor: TOKENS.warning,
-    },
 
     priceBlock: {
         alignItems: 'flex-end',
@@ -271,12 +218,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '400',
         color: TOKENS.textMuted,
-    },
-    freeLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.success,
-        letterSpacing: 0.2,
     },
     priceNote: {
         fontSize: 12,

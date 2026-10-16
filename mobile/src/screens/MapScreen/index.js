@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
     Keyboard,
-    Linking,
     Pressable,
     StatusBar,
     Text,
@@ -15,24 +14,20 @@ import {
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// shared components
-import FlippableParkingCard from '../../components/ParkingCard/FlippableParkingCard';
-
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
 
 // logs
 import { logger } from '../../utils/loggers';
+import { pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
 
 // files specific to this screen
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import MapHeader from './components/MapHeader';
 import MapOverlays from './components/MapOverlays';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from './constants';
 import { styles } from './styles';
-import { centerCamera, getMarkerScreenPosition } from './utils/camera';
-import { getCurrentPrice } from './utils/pricing';
+import { centerCamera } from './utils/camera';
 
 function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
@@ -42,11 +37,7 @@ function MapScreen({ route, navigation }) {
 
     // Get ACTUAL tab bar height from React Navigation (includes padding + safe areas)
     const tabBarHeight = useBottomTabBarHeight();
-    const CARD_ESTIMATED_HEIGHT = 220;
-    const SURFACE_STACK_GAP = 12;
     const BOTTOM_UI_OFFSET = tabBarHeight + sheetPeekHeight + 16;
-    const detailCardTopBoundary = navigationHeight + SURFACE_STACK_GAP;
-    const detailCardBottomBoundary = SCREEN_HEIGHT - BOTTOM_UI_OFFSET - SURFACE_STACK_GAP;
 
     // refs
     const mapRef = useRef(null);
@@ -62,7 +53,6 @@ function MapScreen({ route, navigation }) {
     // animations
     const controlsOpacity = useRef(new Animated.Value(1)).current;
     const controlsTranslateY = useRef(new Animated.Value(0)).current;
-    const selectedAnim = useRef(new Animated.Value(0)).current;
     const pinDropAnim = useRef(new Animated.Value(0)).current;
 
     // data state
@@ -87,11 +77,6 @@ function MapScreen({ route, navigation }) {
     const [pinnedLocation, setPinnedLocation] = useState(null);
     const [searchMode, setSearchMode] = useState('current'); // 'current' | 'pinned'
     const [showPinInstructions, setShowPinInstructions] = useState(false);
-
-    // flippable card state
-    const [flippableCardVisible, setFlippableCardVisible] = useState(false);
-    const [flippableCardPosition, setFlippableCardPosition] = useState({ x: 0, y: 0 });
-    const [flippableCardSpot, setFlippableCardSpot] = useState(null);
 
     // calculate search spots
     const searchLocation = (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
@@ -211,81 +196,37 @@ function MapScreen({ route, navigation }) {
         logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
     };
 
-    const selectSpot = async (spot, fromList = false) => {
+    // Select a spot: highlight its marker, centre it, and show it as the
+    // featured card in the sheet's peek. "View parking" there opens Details.
+    const selectSpot = useCallback((spot, fromList = false) => {
         // important: deep snapshot of the chosen spot for diagnostics
         logger.logSpotData(spot, `Selected from ${fromList ? 'LIST' : 'MAP'}`);
         setSelectedSpot(spot);
-        setFlippableCardVisible(false);
         bottomSheetRef.current?.dismiss();
 
-        if (spot?.coordinates) {
-            const lat = spot.coordinates.coordinates[1];
-            const lng = spot.coordinates.coordinates[0];
-
-            await centerCamera(mapRef, region, lat, lng, 140);
+        const coords = spot?.coordinates?.coordinates;
+        if (Array.isArray(coords)) {
+            centerCamera(mapRef, region, coords[1], coords[0], 140);
             // important: confirm camera move for traceability
-            logger.log('camera_centered_on_spot', { id: spot?.id, lat, lng }, 'INFO');
-
-            setTimeout(async () => {
-                const delay = fromList ? 400 : 200;
-                setTimeout(async () => {
-                    const screenPos = await getMarkerScreenPosition(mapRef, spot);
-                    const yCap = Math.max(
-                        detailCardTopBoundary,
-                        detailCardBottomBoundary - CARD_ESTIMATED_HEIGHT
-                    );
-
-                    if (screenPos) {
-                        setFlippableCardPosition({
-                            x: screenPos.x,
-                            y: Math.min(screenPos.y, yCap),
-                        });
-                        setFlippableCardSpot(spot);
-                        setFlippableCardVisible(true);
-                    } else {
-                        setFlippableCardPosition({
-                            x: SCREEN_WIDTH / 2,
-                            y: Math.min(SCREEN_HEIGHT / 3, yCap),
-                        });
-                        setFlippableCardSpot(spot);
-                        setFlippableCardVisible(true);
-                    }
-                }, delay);
-            }, 0);
+            logger.log('camera_centered_on_spot', { id: spot?.id, lat: coords[1], lng: coords[0] }, 'INFO');
         }
+    }, [region]);
 
-        selectedAnim.setValue(0);
-        Animated.spring(selectedAnim, {
-            toValue: 1,
-            tension: 88,
-            friction: 8,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    const onNavigate = (spot) => {
+    const handleViewSpot = useCallback((spot) => {
         if (!spot) return;
-        const lat = spot?.coordinates?.coordinates?.[1];
-        const lng = spot?.coordinates?.coordinates?.[0];
-        if (typeof lat === 'number' && typeof lng === 'number') {
-            // important: record external handoff to maps
-            logger.log('open_external_navigation', { lat, lng, provider: 'google' }, 'UI_EVENT');
-            Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
-        }
-    };
+        logger.log('map_view_spot', { spotId: spot.id }, 'UI_EVENT');
+        navigation?.navigate('Details', { spot });
+    }, [navigation]);
+
+    // Selected spot, else the closest worthwhile suggestion.
+    const featuredSpot = useMemo(
+        () => selectedSpot || pickTopSpot(sortByDistance(spots || []), filterType),
+        [selectedSpot, spots, filterType]
+    );
 
     const searchCenter = useMemo(() => (
         (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation
     ), [pinnedLocation, searchMode, userLocation]);
-
-    const selScale = selectedAnim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [0.92, 1.12, 1]
-    });
-    const selTranslateY = selectedAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [6, 0]
-    });
 
     const dynamicStyles = useMemo(() => ({
         topNavigation: { ...styles.topNavigation, paddingTop: insets.top + 4 },
@@ -317,12 +258,10 @@ function MapScreen({ route, navigation }) {
         if (dtSinceFocus < 400) return;
         if (isSearchFocused) Keyboard.dismiss();
         setSelectedSpot(null);
-        setFlippableCardVisible(false);
     }, [isSearchFocused]);
 
     const handleMapPanDrag = useCallback(() => {
         handleMapInteraction();
-        setFlippableCardVisible(false);
     }, [handleMapInteraction]);
 
     // Stable setSearchMode wrapper for MapHeader — keeps memo(MapHeader) intact.
@@ -383,8 +322,6 @@ function MapScreen({ route, navigation }) {
                     pinDropAnim={pinDropAnim}
                     spots={spots}
                     selectedSpot={selectedSpot}
-                    selScale={selScale}
-                    selTranslateY={selTranslateY}
                     onSelectSpot={selectSpot}
                 />
             </MapView>
@@ -394,7 +331,6 @@ function MapScreen({ route, navigation }) {
             <View style={dynamicStyles.topNavigation} onLayout={handleNavigationLayout}>
                 <MapHeader
                     isSearchFocused={isSearchFocused}
-                    isDetailActive={flippableCardVisible}
                     setIsSearchFocused={handleSearchFocusChange}
                     pinnedLocation={pinnedLocation}
                     setPinnedLocation={setPinnedLocation}
@@ -448,7 +384,6 @@ function MapScreen({ route, navigation }) {
                                 { duration: 180 }
                             );
                             setSelectedSpot(null);
-                            setFlippableCardVisible(false);
                         }
                     }}
                 >
@@ -467,40 +402,22 @@ function MapScreen({ route, navigation }) {
                 // Waiting for a location counts as loading, not as "no spots".
                 loading={spotsLoading || !searchLocation}
                 selectedSpot={selectedSpot}
+                featuredSpot={featuredSpot}
                 searchMode={searchMode}
-                getCurrentPrice={getCurrentPrice}
+                searchRadius={searchRadius}
                 onPeekHeightChange={setSheetPeekHeight}
                 tabBarHeight={tabBarHeight}
                 topInset={navigationHeight}
-                onItemPress={(spot) => {
-                    selectSpot(spot, true);
-                    bottomSheetRef.current?.dismiss();
-                }}
+                onItemPress={(spot) => selectSpot(spot, true)}
+                onViewSpot={handleViewSpot}
                 onClearPin={() => {
                     logger.log('clear_pin_button_pressed', {}, 'UI_EVENT');
                     setPinnedLocation(null);
                     setSearchMode('current');
                     setSelectedSpot(null);
-                    setFlippableCardVisible(false);
                 }}
-            />
-
-            {/* flippable card */}
-            <FlippableParkingCard
-                visible={flippableCardVisible}
-                spot={flippableCardSpot}
-                position={flippableCardPosition}
-                topBoundary={detailCardTopBoundary}
-                bottomBoundary={detailCardBottomBoundary}
-                onClose={() => {
-                    setFlippableCardVisible(false);
-                    setSelectedSpot(null);
-                }}
-                onNavigate={() => onNavigate(flippableCardSpot)}
             />
         </View>
-
-
     );
 }
 

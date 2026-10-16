@@ -15,7 +15,7 @@ import { useParkingSpots } from '../../hooks/useParkingSpots';
 
 import { getGreeting } from '../../utils/greeting';
 import { logger } from '../../utils/loggers';
-import { isCovered, sortByDistance, sortByValue } from '../../utils/spotPresentation';
+import { isCovered, pickTopSpot, sortByDistance, sortByValue } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
@@ -23,12 +23,6 @@ import { styles } from './HomeScreen.styles';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-// Permit-only blocks are a poor first suggestion unless the driver asked for them.
-function pickTopSpot(spots, activeFilter) {
-  if (activeFilter === 'residential') return spots[0];
-  return spots.find((s) => s.spot_type !== 'residential') || spots[0];
 }
 
 export default function HomeScreen({ navigation }) {

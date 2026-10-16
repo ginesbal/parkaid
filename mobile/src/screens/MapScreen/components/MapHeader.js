@@ -24,7 +24,6 @@ const DISTANCE_PRESETS = [
 ];
 
 function MapHeader({
-    isDetailActive,
     pinnedLocation,
     showPinInstructions,
     setShowPinInstructions,
@@ -59,17 +58,8 @@ function MapHeader({
     return (
         <View style={styles.headerBar}>
             {/* Quick actions row — filter + pin buttons sit above the search
-                bar, right-aligned. Hidden while the flippable detail card is
-                open so the header stays minimal. */}
-            <View
-                style={[
-                    styles.quickActions,
-                    isDetailActive && styles.quickActionsHidden,
-                ]}
-                pointerEvents={isDetailActive ? 'none' : 'auto'}
-                accessibilityElementsHidden={isDetailActive}
-                importantForAccessibility={isDetailActive ? 'no-hide-descendants' : 'auto'}
-            >
+                bar, right-aligned. */}
+            <View style={styles.quickActions}>
                 {/* Filter toggle */}
                 <Pressable
                     style={({ pressed }) => [
@@ -138,7 +128,7 @@ function MapHeader({
             />
 
             {/* Expandable filters — single inline row */}
-            {filtersExpanded && !isDetailActive && (
+            {filtersExpanded && (
                 <View style={styles.filtersInline}>
                     {/* Type chips */}
                     {TYPE_FILTERS.map(f => (

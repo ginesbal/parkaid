@@ -65,13 +65,14 @@ export function getHourlyRate(spot) {
     return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-// { amount: "$5.00", unit: "/ hour" } or { note: "Rates posted at lot" }
+// { amount: "$5.00", unit: "/ hour" } or { note: "Rates posted at lot", short: "At lot" }.
+// `short` fits a narrow price column.
 export function getRateDisplay(spot) {
     const rate = getHourlyRate(spot);
     if (rate !== null) return { amount: `$${rate.toFixed(2)}`, unit: '/ hour' };
-    if (spot?.spot_type === 'residential') return { note: 'Permit holders only' };
-    if (spot?.spot_type === 'off_street') return { note: 'Rates posted at lot' };
-    return { note: 'Check posted signs' };
+    if (spot?.spot_type === 'residential') return { note: 'Permit holders only', short: 'Permit' };
+    if (spot?.spot_type === 'off_street') return { note: 'Rates posted at lot', short: 'At lot' };
+    return { note: 'Check posted signs', short: 'See signs' };
 }
 
 // Cheapest known rate first, ties and unknown rates by distance.
@@ -88,6 +89,14 @@ export function sortByValue(spots) {
 
 export function sortByDistance(spots) {
     return [...spots].sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+}
+
+// The first spot worth suggesting from an already-sorted list. Permit-only
+// blocks are a poor first suggestion unless the driver asked for them.
+export function pickTopSpot(spots, activeFilter = 'all') {
+    if (!spots?.length) return null;
+    if (activeFilter === 'residential') return spots[0];
+    return spots.find((s) => s.spot_type !== 'residential') || spots[0];
 }
 
 // "2 hour maximum", "90 minute maximum", or null.
