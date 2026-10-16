@@ -1,18 +1,22 @@
 // BrandLoader — the ParkAid pin as a loading indicator.
 // The pin crouches, hops and lands with a squash, after the idle beat in the
 // Spline scene; its shadow shrinks as it rises. Under reduce motion it only
-// breathes (opacity), with no movement.
+// breathes (opacity), with no movement. Until the setting is known it rests.
 //
 // `delay` keeps fast loads from flashing a loader: nothing shows until the
 // wait has lasted that long.
 
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 import { MOTION, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { PIN } from '../BrandPin';
 
 const LOOP_MS = 1400;
+
+// react-native-web has no native animation module: a natively driven
+// Animated.loop plays once there and stops. Drive it in JS on web.
+const NATIVE = Platform.OS !== 'web';
 
 // t: fraction of the loop. hop: height as a fraction of the pin size (negative is up).
 const KEYFRAMES = [
@@ -73,7 +77,7 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
             toValue: 1,
             duration: MOTION.duration.base,
             easing: MOTION.easing,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE,
         }).start();
     }, [visible, fade]);
 
@@ -83,14 +87,16 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
         const loop = reduceMotion
             ? Animated.loop(
                 Animated.sequence([
-                    Animated.timing(breathe, { toValue: 0.45, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(breathe, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(breathe, { toValue: 0.45, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: NATIVE }),
+                    Animated.timing(breathe, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: NATIVE }),
                 ])
             )
             : Animated.loop(
-                Animated.timing(progress, { toValue: 1, duration: LOOP_MS, easing: Easing.linear, useNativeDriver: true })
+                Animated.timing(progress, { toValue: 1, duration: LOOP_MS, easing: Easing.linear, useNativeDriver: NATIVE })
             );
 
+        // Rest pose for whichever value this mode leaves idle: progress 0 is an
+        // identity transform, breathe 1 is full opacity.
         progress.setValue(0);
         breathe.setValue(1);
         loop.start();
@@ -99,8 +105,9 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
 
     if (!visible) return null;
 
+    // Same style shape in both modes. Swapping animated props in and out leaves
+    // natively driven views stuck on their last frame, so the idle value rests.
     const { pin, shadowScale, shadowOpacity } = transforms.current;
-    const still = reduceMotion !== false;
 
     return (
         <Animated.View
@@ -119,8 +126,8 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
                     style={{
                         width: size,
                         height: size,
-                        opacity: still ? breathe : 1,
-                        transform: still ? [] : pin,
+                        opacity: breathe,
+                        transform: pin,
                     }}
                 />
                 <Animated.View
@@ -130,8 +137,8 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
                             width: size * 0.42,
                             height: Math.max(4, size * 0.07),
                             marginTop: -size * 0.12,
-                            opacity: still ? 1 : shadowOpacity,
-                            transform: still ? [] : [{ scaleX: shadowScale }],
+                            opacity: shadowOpacity,
+                            transform: [{ scaleX: shadowScale }],
                         },
                     ]}
                 />

@@ -8,6 +8,9 @@ export function useParkingSpots(location, radius, filterType = 'all') {
 
     // track if component is mounted to prevent state updates after unmount
     const isMountedRef = useRef(true);
+    // Only the newest request may write state; an older one finishing late
+    // must not overwrite its spots or switch loading off.
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
         return () => {
@@ -16,15 +19,23 @@ export function useParkingSpots(location, radius, filterType = 'all') {
     }, []);
 
     useEffect(() => {
+        const requestId = ++requestIdRef.current;
+        const isCurrent = () => isMountedRef.current && requestId === requestIdRef.current;
+
         // do not fetch if no location
         if (!location?.latitude || !location?.longitude) {
+            setLoading(false);
             return;
         }
+
+        // Loading starts when the fetch is scheduled, not after the debounce,
+        // so screens never read "no spots" while a search is about to run.
+        setLoading(true);
 
         let timeoutId;
 
         const fetchSpots = async () => {
-            if (!isMountedRef.current) return;
+            if (!isCurrent()) return;
 
             setLoading(true);
             setError(null);
@@ -38,16 +49,16 @@ export function useParkingSpots(location, radius, filterType = 'all') {
                     params
                 );
 
-                if (isMountedRef.current) {
+                if (isCurrent()) {
                     setSpots(response?.data || []);
                 }
             } catch (err) {
-                if (isMountedRef.current) {
+                if (isCurrent()) {
                     setError(err.message || 'Failed to load parking spots');
                     setSpots([]);
                 }
             } finally {
-                if (isMountedRef.current) {
+                if (isCurrent()) {
                     setLoading(false);
                 }
             }

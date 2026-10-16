@@ -257,7 +257,9 @@ const ParkingBottomSheet = forwardRef(({
                                     : `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} nearby`}
                             </Text>
                             <Text style={styles.headerSubtitle} numberOfLines={1}>
-                                {selectedSpot?.address
+                                {loading && spots.length > 0
+                                    ? 'Updating for this area\u2026'
+                                    : selectedSpot?.address
                                     ? `Selected: ${selectedSpot.address}`
                                     : searchMode === 'pinned'
                                         ? 'Around your pinned location'
