@@ -175,8 +175,11 @@ const styles = StyleSheet.create({
         marginTop: SPACING['3xl'],
         gap: SPACING.md,
     },
+    // minHeight, not height: the pill grows with the label at large text sizes.
     cta: {
-        height: 52,
+        minHeight: 52,
+        paddingVertical: SPACING.md,
+        paddingHorizontal: SPACING.lg,
         borderRadius: RADIUS.lg,
         backgroundColor: TOKENS.primary,
         alignItems: 'center',
@@ -186,6 +189,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: TOKENS.surface,
+        textAlign: 'center',
     },
     footnote: {
         fontSize: 13,
