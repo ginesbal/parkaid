@@ -2,7 +2,7 @@
 // Home and Map. "Start session" hands the spot to the Park tab.
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapThumb from '../../components/MapThumb';
@@ -122,7 +122,7 @@ export default function DetailsScreen({ route, navigation }) {
 
     return (
         <View style={styles.screen}>
-            <StatusBar style="light" />
+            <ScreenStatusBar style="light" />
             <ScrollView
                 contentContainerStyle={[styles.scroll, { paddingTop: insets.top }]}
                 bounces={false}

@@ -30,7 +30,8 @@ const ActiveSession = ({
     // null max means no posted limit; otherwise extend by what is left of it.
     const step = maxExtendMinutes === null ? EXTEND_STEP : Math.min(EXTEND_STEP, maxExtendMinutes);
     const atMax = maxExtendMinutes !== null && maxExtendMinutes <= 0;
-    const extendCost = formatMoney(calculateCost(step, session.hourlyRate));
+    // No price when the spot's rate is unknown; never a made-up one.
+    const extendCost = session.hourlyRate === null ? null : formatMoney(calculateCost(step, session.hourlyRate));
 
     return (
         <ScrollView
@@ -58,10 +59,10 @@ const ActiveSession = ({
                         activeOpacity={0.9}
                         style={styles.extend}
                         accessibilityRole="button"
-                        accessibilityLabel={`Extend ${formatDuration(step)} for ${extendCost}`}
+                        accessibilityLabel={extendCost ? `Extend ${formatDuration(step)} for ${extendCost}` : `Extend ${formatDuration(step)}`}
                     >
                         <Text style={styles.extendText}>
-                            Extend {formatDuration(step)} {'·'} {extendCost}
+                            Extend {formatDuration(step)}{extendCost ? ` · ${extendCost}` : ''}
                         </Text>
                     </TouchableOpacity>
                 ) : null}

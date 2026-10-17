@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS, RATE_OPTIONS } from '../../../../constants/session';
@@ -7,13 +7,23 @@ import { formatMoney } from '../../../../utils/formatters';
 import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
 
-// Quick picks that fit the spot's maximum stay. If even the shortest is too
-// long, offer the maximum itself.
+// Quick picks that fit the spot's maximum stay, plus the maximum itself when
+// it is not already one of them (45 min, 90 min, 8 h…).
 export function durationsFor(maxMinutes) {
     const quick = DURATION_OPTIONS.filter((opt) => opt.quickSelect);
     if (!maxMinutes) return quick;
     const fit = quick.filter((opt) => opt.value <= maxMinutes);
-    return fit.length ? fit : [{ value: maxMinutes, label: formatDuration(maxMinutes) }];
+    return fit.some((opt) => opt.value === maxMinutes)
+        ? fit
+        : [...fit, { value: maxMinutes, label: formatDuration(maxMinutes) }];
+}
+
+// The offered option to use for a selection: itself if offered, else the
+// longest offered option under it, else the shortest offered.
+export function snapDuration(options, selected) {
+    if (options.some((opt) => opt.value === selected)) return selected;
+    const under = options.filter((opt) => opt.value <= selected);
+    return under.length ? under[under.length - 1].value : options[0].value;
 }
 
 /**
@@ -31,14 +41,23 @@ const SetupCard = ({
     setSelectedDuration,
     onStartSession,
     fixedRate = null,
+    rateNote = null,
     maxMinutes = null,
     zoneLabel = null,
     now = Date.now(),
 }) => {
-    const rate = fixedRate ?? selectedRate;
+    // fixedRate: the spot's rate. rateNote: the spot has no known rate, so no
+    // price is shown or made up. Neither: the demo flow with its rate picker.
+    const rate = fixedRate ?? (rateNote ? null : selectedRate);
+    const showRatePicker = fixedRate === null && !rateNote;
     const durations = useMemo(() => durationsFor(maxMinutes), [maxMinutes]);
-    const duration = maxMinutes ? Math.min(selectedDuration, maxMinutes) : selectedDuration;
-    const totalCost = calculateCost(duration, rate);
+    const duration = snapDuration(durations, selectedDuration);
+    const totalCost = rate === null ? null : calculateCost(duration, rate);
+
+    // Keep the stored choice on an offered option, so Start uses what is shown.
+    useEffect(() => {
+        if (duration !== selectedDuration) setSelectedDuration(duration);
+    }, [duration, selectedDuration, setSelectedDuration]);
     const endsAt = formatClock(now + duration * 60000);
     const isValid = vehiclePlate.trim().length > 0;
 
@@ -83,7 +102,9 @@ const SetupCard = ({
                                     style={[styles.durationOption, selected && styles.durationOptionActive]}
                                     accessibilityRole="radio"
                                     aria-checked={selected}
-                                    accessibilityLabel={`${formatDuration(option.value)}, ${formatMoney(calculateCost(option.value, rate))}`}
+                                    accessibilityLabel={rate === null
+                                        ? formatDuration(option.value)
+                                        : `${formatDuration(option.value)}, ${formatMoney(calculateCost(option.value, rate))}`}
                                 >
                                     <Text
                                         style={[styles.durationTime, selected && styles.durationTimeActive]}
@@ -93,12 +114,14 @@ const SetupCard = ({
                                     >
                                         {formatDuration(option.value)}
                                     </Text>
-                                    <Text
-                                        style={[styles.durationCost, selected && styles.durationCostActive]}
-                                        numberOfLines={1}
-                                    >
-                                        {formatMoney(calculateCost(option.value, rate))}
-                                    </Text>
+                                    {rate !== null ? (
+                                        <Text
+                                            style={[styles.durationCost, selected && styles.durationCostActive]}
+                                            numberOfLines={1}
+                                        >
+                                            {formatMoney(calculateCost(option.value, rate))}
+                                        </Text>
+                                    ) : null}
                                 </TouchableOpacity>
                             );
                         })}
@@ -111,7 +134,7 @@ const SetupCard = ({
                 </View>
             </View>
 
-            {fixedRate === null ? (
+            {showRatePicker ? (
                 <View style={styles.setupSection}>
                     <View style={styles.stepIndicator}>
                         <Text style={styles.stepNumber}>3</Text>
@@ -152,14 +175,20 @@ const SetupCard = ({
                 <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>Rate</Text>
                     <Text style={styles.summaryValue}>
-                        {formatMoney(rate)} / hour{zoneLabel ? ` · ${zoneLabel}` : ''}
+                        {rate === null
+                            ? rateNote
+                            : `${formatMoney(rate)} / hour${zoneLabel ? ` · ${zoneLabel}` : ''}`}
                     </Text>
                 </View>
-                <View style={styles.summaryDivider} />
-                <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Total for {formatDuration(duration)}</Text>
-                    <Text style={styles.summaryValueLarge}>{formatMoney(totalCost)}</Text>
-                </View>
+                {totalCost !== null ? (
+                    <>
+                        <View style={styles.summaryDivider} />
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Total for {formatDuration(duration)}</Text>
+                            <Text style={styles.summaryValueLarge}>{formatMoney(totalCost)}</Text>
+                        </View>
+                    </>
+                ) : null}
             </View>
 
             <TouchableOpacity
@@ -168,7 +197,7 @@ const SetupCard = ({
                 style={[styles.primaryButton, !isValid && styles.primaryButtonDisabled]}
                 disabled={!isValid}
                 accessibilityRole="button"
-                accessibilityLabel={`Start session: ${formatDuration(duration)}, ${formatMoney(totalCost)}, ends at ${endsAt}`}
+                accessibilityLabel={`Start session: ${formatDuration(duration)}${totalCost !== null ? `, ${formatMoney(totalCost)}` : ''}, ends at ${endsAt}`}
                 accessibilityHint={isValid ? undefined : 'Enter your license plate first'}
                 accessibilityState={{ disabled: !isValid }}
             >
@@ -178,7 +207,8 @@ const SetupCard = ({
                     color={isValid ? TOKENS.surface : TOKENS.textMuted}
                 />
                 <Text style={[styles.primaryButtonText, !isValid && styles.primaryButtonTextDisabled]}>
-                    Start {'·'} {formatDuration(duration)} {'·'} {formatMoney(totalCost)}
+                    Start {'·'} {formatDuration(duration)}
+                    {totalCost !== null ? ` · ${formatMoney(totalCost)}` : ''}
                 </Text>
             </TouchableOpacity>
             {!isValid ? <Text style={styles.disabledHint}>Add your plate to start.</Text> : null}

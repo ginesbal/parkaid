@@ -1,6 +1,6 @@
-import { calculateSessionState, formatDuration, formatRemaining } from '../sessionHelpers';
+import { calculateSessionState, formatDuration, formatRemaining, getWarnAtMinutes } from '../sessionHelpers';
 import { getGreeting } from '../greeting';
-import { durationsFor } from '../../screens/SessionScreen/components/EmptyState/SetupCard';
+import { durationsFor, snapDuration } from '../../screens/SessionScreen/components/EmptyState/SetupCard';
 
 describe('formatRemaining', () => {
     it('says time left the way people do', () => {
@@ -29,14 +29,40 @@ describe('calculateSessionState', () => {
     });
 });
 
+describe('getWarnAtMinutes', () => {
+    it('is the walk back plus the buffer on normal sessions', () => {
+        expect(getWarnAtMinutes(4, 120)).toBe(14);
+        expect(getWarnAtMinutes(null, 120)).toBe(15);
+    });
+
+    it('never warns for most of a short session', () => {
+        // A 10 minute zone, 2 minutes away: warn with 5 left, not from the start.
+        expect(getWarnAtMinutes(2, 10)).toBe(5);
+        // A long walk still gets at least the walk plus a minute.
+        expect(getWarnAtMinutes(8, 10)).toBe(9);
+    });
+});
+
 describe('durationsFor', () => {
-    it('offers only durations within the posted maximum', () => {
+    it('offers durations within the posted maximum, and the maximum itself', () => {
         expect(durationsFor(120).map((d) => d.value)).toEqual([30, 60, 120]);
+        expect(durationsFor(90).map((d) => d.value)).toEqual([30, 60, 90]);
+        expect(durationsFor(45).map((d) => d.value)).toEqual([30, 45]);
         expect(durationsFor(null).map((d) => d.value)).toEqual([30, 60, 120, 180]);
     });
 
     it('offers the maximum itself when even 30 minutes is too long', () => {
         expect(durationsFor(20).map((d) => d.value)).toEqual([20]);
+    });
+});
+
+describe('snapDuration', () => {
+    it('keeps the choice on an offered option', () => {
+        const opts = durationsFor(90); // 30, 60, 90
+        expect(snapDuration(opts, 60)).toBe(60);
+        expect(snapDuration(opts, 120)).toBe(90);
+        expect(snapDuration(opts, 45)).toBe(30);
+        expect(snapDuration(durationsFor(20), 60)).toBe(20);
     });
 });
 

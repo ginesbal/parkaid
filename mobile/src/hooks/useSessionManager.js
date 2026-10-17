@@ -8,10 +8,12 @@ import {
     calculateSessionState,
     formatClock,
     formatDuration,
+    getWarnAtMinutes,
 } from '../utils/sessionHelpers';
 import {
     getHourlyRate,
     getMaxStayMinutes,
+    getRateDisplay,
     getSpotKind,
     getSpotName,
     getZoneLabel,
@@ -110,6 +112,8 @@ export const useSessionManager = () => {
 
     const totalCost = useMemo(() => {
         if (!session) return 0;
+        // Spots without a known rate (lots, unpriced blocks) have no total.
+        if (session.hourlyRate === null) return null;
         const totalMin = session.duration || 60;
         const hours = totalMin / 60;
         return Number((hours * session.hourlyRate).toFixed(2));
@@ -120,8 +124,13 @@ export const useSessionManager = () => {
         [elapsedTime, session]
     );
 
-    // "Head back" starts when the walk back plus a buffer is all that is left.
-    const warnAtMinutes = (session?.walkMinutes ?? DEFAULT_WALK_MINUTES) + HEAD_BACK_BUFFER;
+    // "Head back" starts when the walk back plus a buffer is all that is left,
+    // scaled down for short sessions.
+    const warnAtMinutes = getWarnAtMinutes(
+        session?.walkMinutes ?? DEFAULT_WALK_MINUTES,
+        session?.duration,
+        HEAD_BACK_BUFFER
+    );
 
     // Rounded up, so the last seconds still count as time left, not expired.
     const sessionState = useMemo(
@@ -149,7 +158,9 @@ export const useSessionManager = () => {
 
         const plate = vehiclePlate.trim().toUpperCase();
         const spotRate = spot ? getHourlyRate(spot) : null;
-        const hourlyRate = spotRate ?? selectedRate;
+        // A real spot uses its own rate, or none when the data has none; only
+        // the demo flow uses the picked rate.
+        const hourlyRate = spot ? spotRate : selectedRate;
         const maxDuration = spot ? getMaxStayMinutes(spot) : null;
         const duration = maxDuration ? Math.min(selectedDuration, maxDuration) : selectedDuration;
         const startTime = new Date();
@@ -169,7 +180,8 @@ export const useSessionManager = () => {
             startedAt: startTime.toISOString(),
             scheduledEnd: endTime.toISOString(),
             vehiclePlate: plate,
-            totalCost: (duration / 60) * hourlyRate,
+            totalCost: hourlyRate === null ? null : (duration / 60) * hourlyRate,
+            rateNote: spot && hourlyRate === null ? getRateDisplay(spot).note : null,
         };
 
         await saveSession(newSession);
@@ -187,13 +199,13 @@ export const useSessionManager = () => {
         const currentEnd = new Date(session.scheduledEnd);
         const newEnd = new Date(currentEnd.getTime() + additionalMinutes * 60000);
         const newDuration = session.duration + additionalMinutes;
-        const additionalCost = (additionalMinutes / 60) * session.hourlyRate;
-
         const updatedSession = {
             ...session,
             scheduledEnd: newEnd.toISOString(),
             duration: newDuration,
-            totalCost: session.totalCost + additionalCost,
+            totalCost: session.hourlyRate === null
+                ? null
+                : session.totalCost + (additionalMinutes / 60) * session.hourlyRate,
         };
 
         await saveSession(updatedSession);

@@ -89,6 +89,54 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: TOKENS.surface,
     },
+
+    badge: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
+    },
+    badgeSelected: {
+        backgroundColor: TOKENS.inkSurface,
+        borderColor: TOKENS.surface,
+        borderWidth: 2,
+    },
+    badgePin: {
+        width: 18,
+        height: 18,
+    },
+    badgeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
+    },
+    badgeTextSelected: {
+        color: TOKENS.surface,
+    },
+});
+
+// Android (react-native-maps 1.20.1 on the new architecture) draws custom
+// markers into a 100x100 px bitmap, whatever the view's size. A 28dp badge
+// fits that at up to 3.5x density; a price pill would be cropped. Whole-dollar
+// rates fit as text ("$5"); anything else shows the pin, and the rate is in
+// the sheet's featured card once selected.
+export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onImageLoad }) {
+    const rate = getHourlyRate(spot);
+    const text = rate !== null && rate % 1 === 0 && rate < 10 ? `$${rate}` : null;
+    return (
+        <View style={[styles.badge, selected && styles.badgeSelected]}>
+            {text ? (
+                <Text style={[styles.badgeText, selected && styles.badgeTextSelected]}>{text}</Text>
+            ) : (
+                <Image source={PIN} style={styles.badgePin} resizeMode="contain" onLoad={onImageLoad} />
+            )}
+        </View>
+    );
 });
 
 export default memo(SpotPill);

@@ -104,8 +104,15 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
 
             <Row label="Vehicle" value={session.vehiclePlate} />
             <Row label="Started" value={formatClock(session.startedAt)} />
-            <Row label="Rate" value={`${formatMoney(session.hourlyRate)} / hour`} />
-            <Row label={`Total for ${formatDuration(session.duration)}`} value={formatMoney(totalCost)} />
+            <Row
+                label="Rate"
+                value={session.hourlyRate === null
+                    ? (session.rateNote || 'Posted at the spot')
+                    : `${formatMoney(session.hourlyRate)} / hour`}
+            />
+            {totalCost !== null ? (
+                <Row label={`Total for ${formatDuration(session.duration)}`} value={formatMoney(totalCost)} />
+            ) : null}
         </View>
     );
 }

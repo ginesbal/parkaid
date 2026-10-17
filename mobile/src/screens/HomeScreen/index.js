@@ -1,4 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
+import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, FlatList, LayoutAnimation, Platform, RefreshControl, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -238,7 +238,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <ScreenStatusBar style="dark" />
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
         <Animated.View style={[styles.content, contentIn]}>
         <FlatList

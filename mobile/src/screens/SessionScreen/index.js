@@ -1,4 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
+import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../components/BrandLoader';
@@ -47,12 +47,13 @@ export default function SessionScreen({ route, navigation }) {
   React.useEffect(() => {
     if (!routeSpot || !isLoaded) return;
     navigation?.setParams({ spot: undefined });
+    // Keep the new spot either way: if a session is running, it is set up
+    // as soon as that session ends, as the notice promises.
+    setPendingSpot(routeSpot);
     if (session) {
       setNotice(
         `You\u2019re already parked at ${session.locationName}. End this session to park at ${getSpotName(routeSpot).title}.`
       );
-    } else {
-      setPendingSpot(routeSpot);
     }
   }, [routeSpot, isLoaded, session, navigation]);
 
@@ -141,7 +142,7 @@ export default function SessionScreen({ route, navigation }) {
   if (!isLoaded) {
     return (
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.container, styles.loading]}>
-        <StatusBar style="dark" />
+        <ScreenStatusBar style="dark" />
         <BrandLoader size={88} label="Checking your session" delay={250} />
       </SafeAreaView>
     );
@@ -150,7 +151,7 @@ export default function SessionScreen({ route, navigation }) {
   if (!hasSession) {
     return (
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
-        <StatusBar style="dark" />
+        <ScreenStatusBar style="dark" />
         <EmptyState
           spot={pendingSpot}
           now={Date.now()}
@@ -169,7 +170,7 @@ export default function SessionScreen({ route, navigation }) {
   // A running session is a focus moment: ink canvas, like Details.
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, styles.ink]}>
-      <StatusBar style="light" />
+      <ScreenStatusBar style="light" />
       <ActiveSession
         session={session}
         sessionState={sessionState}

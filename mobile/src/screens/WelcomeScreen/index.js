@@ -1,7 +1,7 @@
 // WelcomeScreen — first-run screen. Shown once, then the app opens on Home.
 // The pin carries the moment; the copy fades up once and nothing else loops.
 
-import { StatusBar } from 'expo-status-bar';
+import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { useRef } from 'react';
 import {
     Animated,
@@ -45,7 +45,7 @@ export default function WelcomeScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar style="dark" />
+            <ScreenStatusBar style="dark" />
             <ScrollView
                 contentContainerStyle={[
                     styles.content,

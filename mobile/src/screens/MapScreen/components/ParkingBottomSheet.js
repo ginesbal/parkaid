@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BrandLoader from '../../../components/BrandLoader';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
@@ -50,8 +49,10 @@ const ParkingBottomSheet = forwardRef(({
     onPeekHeightChange,
     tabBarHeight = 80,
     topInset = 0,
+    // Height of the screen area the sheet lives in (the tab scene, above the
+    // tab bar). Falls back to the window minus the tab bar until measured.
+    containerHeight = null,
 }, ref) => {
-    const insets = useSafeAreaInsets();
     const listRef = useRef(null);
     // Start conservatively low — onLayout will set the real height on first
     // paint. Undershooting is safer than overshooting: a slightly-too-short
@@ -63,12 +64,18 @@ const ParkingBottomSheet = forwardRef(({
 
     const peekHeight = headerHeight;
     const maxHeight = useMemo(() => {
+        const sceneHeight = containerHeight ?? (SCREEN_HEIGHT - tabBarHeight);
         const availableHeight = Math.max(
             peekHeight,
-            SCREEN_HEIGHT - topInset - SHEET_EXPANDED_TOP_GAP - SHEET_BOTTOM_OFFSET
+            sceneHeight - topInset - SHEET_EXPANDED_TOP_GAP - SHEET_BOTTOM_OFFSET
         );
         return Math.min(Math.round(peekHeight + 420), availableHeight);
-    }, [peekHeight, topInset]);
+    }, [peekHeight, topInset, containerHeight, tabBarHeight]);
+
+    // The featured block's last measured height, reserved while loading or
+    // empty so the peek (and the map padding that follows it) does not jump.
+    // 151 = top gap 12 + card 79 + gap 12 + button 48, until first measured.
+    const [featuredHeight, setFeaturedHeight] = useState(151);
 
     const PEEK_Y = Math.max(0, maxHeight - peekHeight);
     const HIDDEN_Y = maxHeight + 48;
@@ -167,7 +174,8 @@ const ParkingBottomSheet = forwardRef(({
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: (_, g) =>
-                Math.abs(g.dy) > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+                // 10pt, about a touch slop: a tap that wobbles a little stays a tap.
+                Math.abs(g.dy) > 10 && Math.abs(g.dy) > Math.abs(g.dx),
             onPanResponderGrant: () => {
                 // Multi-touch protection: ignore if already dragging
                 if (isDragging.current) return;
@@ -233,7 +241,9 @@ const ParkingBottomSheet = forwardRef(({
     else countLine = `${spots.length} ${spots.length === 1 ? 'place' : 'places'} within ${within}`;
 
     const featured = featuredSpot ? {
-        reason: selectedSpot?.id === featuredSpot.id ? 'Selected' : 'Closest to you',
+        reason: selectedSpot?.id === featuredSpot.id
+            ? 'Selected'
+            : pinned ? 'Closest to your pin' : 'Closest to you',
         name: getSpotName(featuredSpot).title,
         // Zone and walk fit one line; the maximum stay is on Details.
         meta: [getZoneLabel(featuredSpot), getWalkLabel(featuredSpot)]
@@ -290,7 +300,13 @@ const ParkingBottomSheet = forwardRef(({
                 {/* Featured spot: the selected marker, else the closest suggestion.
                     Part of the measured peek, so it shows while collapsed. */}
                 {featured ? (
-                    <View style={styles.featuredWrap}>
+                    <View
+                        style={styles.featuredWrap}
+                        onLayout={(e) => {
+                            const h = Math.ceil(e.nativeEvent.layout.height);
+                            if (h > 0) setFeaturedHeight((cur) => (Math.abs(cur - h) > 1 ? h : cur));
+                        }}
+                    >
                         <View
                             style={styles.featured}
                             accessible
@@ -321,52 +337,46 @@ const ParkingBottomSheet = forwardRef(({
                             <Text style={styles.viewButtonText}>View parking</Text>
                         </Pressable>
                     </View>
-                ) : null}
+                ) : (
+                    <View style={[styles.featuredWrap, styles.statusSlot, { minHeight: featuredHeight }]}>
+                        {loading ? (
+                            <BrandLoader size={40} label="Finding spots around here" delay={150} />
+                        ) : (
+                            <>
+                                <Text style={styles.emptyTitle}>No spots in this area</Text>
+                                <Text style={styles.emptyHint}>
+                                    {pinned
+                                        ? 'Move your pin or widen the radius'
+                                        : 'Pan or zoom the map to search elsewhere'}
+                                </Text>
+                            </>
+                        )}
+                    </View>
+                )}
             </View>
 
-            {loading && spots.length === 0 ? (
-                <View style={styles.emptyState}>
-                    <BrandLoader size={56} label="Finding spots around here" delay={150} />
-                </View>
-            ) : spots.length === 0 ? (
-                <View style={styles.emptyState}>
-                    <View style={styles.emptyIconContainer}>
-                        <MaterialCommunityIcons
-                            name={searchMode === 'pinned' ? 'map-marker-remove' : 'parking'}
-                            size={28}
-                            color={TOKENS.textFaint}
-                        />
-                    </View>
-                    <Text style={styles.emptyTitle}>No spots in this area</Text>
-                    <Text style={styles.emptyHint}>
-                        {searchMode === 'pinned'
-                            ? 'Move your pin or widen the radius'
-                            : 'Pan or zoom the map to search elsewhere'}
-                    </Text>
-                </View>
-            ) : (
-                <Animated.FlatList
-                    ref={listRef}
-                    data={spots}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={renderItem}
-                    ItemSeparatorComponent={RowSeparator}
-                    contentContainerStyle={[
-                        styles.listContent,
-                        { paddingBottom: insets.bottom + tabBarHeight + 16 },
-                    ]}
-                    showsVerticalScrollIndicator={false}
-                    onScrollToIndexFailed={({ index }) => {
-                        setTimeout(() => {
-                            listRef.current?.scrollToIndex({
-                                index,
-                                animated: true,
-                                viewPosition: 0.45,
-                            });
-                        }, 120);
-                    }}
-                />
-            )}
+            <Animated.FlatList
+                ref={listRef}
+                data={spots}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderItem}
+                ItemSeparatorComponent={RowSeparator}
+                contentContainerStyle={[
+                    styles.listContent,
+                    // The scene already ends above the tab bar.
+                    { paddingBottom: SHEET_BOTTOM_OFFSET + 16 },
+                ]}
+                showsVerticalScrollIndicator={false}
+                onScrollToIndexFailed={({ index }) => {
+                    setTimeout(() => {
+                        listRef.current?.scrollToIndex({
+                            index,
+                            animated: true,
+                            viewPosition: 0.45,
+                        });
+                    }, 120);
+                }}
+            />
         </Animated.View>
     );
 });
@@ -533,20 +543,9 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.divider,
         marginLeft: 74,
     },
-    emptyState: {
+    statusSlot: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 48,
-        paddingHorizontal: 32,
-    },
-    emptyIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        backgroundColor: TOKENS.surfaceMuted,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 14,
     },
     emptyTitle: {
         fontSize: 15,

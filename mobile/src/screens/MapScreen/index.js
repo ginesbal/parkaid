@@ -7,7 +7,6 @@ import {
     Animated,
     Keyboard,
     Pressable,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
@@ -15,6 +14,7 @@ import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // app constants/services
+import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { DEFAULT_LOCATION } from '../../constants/config';
 import { MOTION } from '../../constants/theme';
 
@@ -39,7 +39,14 @@ function MapScreen({ route, navigation }) {
 
     // Get ACTUAL tab bar height from React Navigation (includes padding + safe areas)
     const tabBarHeight = useBottomTabBarHeight();
-    const BOTTOM_UI_OFFSET = tabBarHeight + sheetPeekHeight + 16;
+    // The Map scene ends at the top of the tab bar, so only the sheet's peek
+    // (sitting 10pt above that edge) and a small gap sit below the map's view.
+    const BOTTOM_UI_OFFSET = sheetPeekHeight + 16;
+    const [containerHeight, setContainerHeight] = useState(null);
+    // Never pad the map so much that no visible strip is left to centre on.
+    const mapBottomPadding = containerHeight
+        ? Math.max(0, Math.min(BOTTOM_UI_OFFSET, containerHeight - navigationHeight - 120))
+        : BOTTOM_UI_OFFSET;
 
     // refs
     const mapRef = useRef(null);
@@ -286,8 +293,14 @@ function MapScreen({ route, navigation }) {
     }, [cameraMs]);
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View
+            style={styles.container}
+            onLayout={(e) => {
+                const h = Math.round(e.nativeEvent.layout.height);
+                setContainerHeight((cur) => (cur === h ? cur : h));
+            }}
+        >
+            <ScreenStatusBar style="dark" />
 
             {/* map — rendered FIRST so iOS hitTest routes taps on later siblings
                 (header, FAB, bottom sheet) to those overlays instead of leaking
@@ -309,7 +322,7 @@ function MapScreen({ route, navigation }) {
                     left: 0,
                     right: 0,
                     top: navigationHeight,
-                    bottom: BOTTOM_UI_OFFSET,
+                    bottom: mapBottomPadding,
                 }}
             >
                 <MapOverlays
@@ -406,6 +419,7 @@ function MapScreen({ route, navigation }) {
                 onPeekHeightChange={setSheetPeekHeight}
                 tabBarHeight={tabBarHeight}
                 topInset={navigationHeight}
+                containerHeight={containerHeight}
                 onItemPress={(spot) => selectSpot(spot, true)}
                 onViewSpot={handleViewSpot}
                 onClearPin={() => {

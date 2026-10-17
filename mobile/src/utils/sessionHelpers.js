@@ -24,6 +24,20 @@ export const calculateSessionState = (remainingMinutes, warnAtMinutes = 10) => {
 };
 
 /**
+ * minutes left at which to say "head back": the walk back plus a buffer, but
+ * never most of a short session (a 10 minute zone should not warn from the start)
+ * @param {number|null} walkMinutes - walk back to the car; null for unknown
+ * @param {number} durationMinutes - the session's total length
+ * @param {number} buffer - extra minutes on top of the walk
+ */
+export const getWarnAtMinutes = (walkMinutes, durationMinutes, buffer = 10) => {
+    const walk = Number.isFinite(walkMinutes) ? walkMinutes : 5;
+    const base = walk + buffer;
+    if (!durationMinutes) return base;
+    return Math.min(base, Math.max(walk + 1, Math.floor(durationMinutes / 2)));
+};
+
+/**
  * time left, as people say it: "54 min", "1 h 54 min", "Less than a minute"
  * @param {number} ms - milliseconds remaining
  */

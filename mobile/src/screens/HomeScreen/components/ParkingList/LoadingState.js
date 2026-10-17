@@ -1,4 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
+import ScreenStatusBar from '../../../../components/ScreenStatusBar';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../../../components/BrandLoader';
@@ -11,7 +11,7 @@ import { styles } from './styles';
  */
 const LoadingState = ({ searchRadius, phase = 'spots' }) => (
     <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right', 'bottom']}>
-        <StatusBar style="dark" />
+        <ScreenStatusBar style="dark" />
         <View style={styles.loadingContainer}>
             {phase === 'location' ? (
                 <BrandLoader size={96} label="Finding where you are" />

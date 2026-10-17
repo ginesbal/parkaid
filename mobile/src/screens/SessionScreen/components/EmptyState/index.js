@@ -3,6 +3,7 @@ import BrandPin from '../../../../components/BrandPin';
 import {
     getHourlyRate,
     getMaxStayMinutes,
+    getRateDisplay,
     getSpotKind,
     getSpotName,
     getZoneLabel,
@@ -57,6 +58,7 @@ const EmptyState = ({
                 setSelectedDuration={setSelectedDuration}
                 onStartSession={onStartSession}
                 fixedRate={spot ? getHourlyRate(spot) : null}
+                rateNote={spot && getHourlyRate(spot) === null ? getRateDisplay(spot).note : null}
                 maxMinutes={spot ? getMaxStayMinutes(spot) : null}
                 zoneLabel={zone}
                 now={now}

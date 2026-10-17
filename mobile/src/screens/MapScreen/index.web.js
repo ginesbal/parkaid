@@ -116,6 +116,7 @@ export default function MapScreen({ navigation }) {
                 onPeekHeightChange={setPeek}
                 tabBarHeight={tabBarHeight}
                 topInset={topInset}
+                containerHeight={size.height || null}
                 onItemPress={setSelectedSpot}
                 onViewSpot={handleViewSpot}
             />

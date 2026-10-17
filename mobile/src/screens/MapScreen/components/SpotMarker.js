@@ -6,9 +6,13 @@
 // re-snapshots with its new look.
 
 import { memo, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { getCoordinates, getSpotName } from '../../../utils/spotPresentation';
-import SpotPill, { getPillLabel } from './SpotPill';
+import SpotPill, { SpotBadge, getPillLabel } from './SpotPill';
+
+// See SpotBadge: Android crops custom markers to 100x100 px.
+const MarkerBody = Platform.OS === 'android' ? SpotBadge : SpotPill;
 
 // Fallback in case onLoad never fires (cached images on some Android builds).
 const READY_FALLBACK_MS = 600;
@@ -36,7 +40,7 @@ function SpotMarker({ spot, selected, onPress }) {
             zIndex={selected ? 10 : 1}
             accessibilityLabel={`${title}${label ? `, ${label} per hour` : ''}`}
         >
-            <SpotPill spot={spot} selected={selected} onImageLoad={() => setReady(true)} />
+            <MarkerBody spot={spot} selected={selected} onImageLoad={() => setReady(true)} />
         </Marker>
     );
 }
