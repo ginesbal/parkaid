@@ -256,8 +256,37 @@
       margin-top: 32px;
     }
 
+    /* ── Screens gallery ──────────────────────────── */
+    .screens {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 18px 0 8px;
+    }
+    .screens figure {
+      margin: 0;
+    }
+    .screens img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 14px;
+      border: 1px solid #e3e7ec;
+      background: #f7f8fa;
+    }
+    .screens figcaption {
+      font-size: 0.85rem;
+      color: #5b6b7c;
+      margin-top: 8px;
+    }
+    .note {
+      font-size: 0.85rem;
+      color: #5b6b7c;
+    }
+
     /* ── Responsive ───────────────────────────────── */
     @media (max-width: 640px) {
+      .screens { grid-template-columns: 1fr 1fr; }
       .hero h1 { font-size: 2rem; }
       .hero { padding: 56px 20px 44px; }
       .card-grid { grid-template-columns: 1fr; }
@@ -316,6 +345,42 @@
     <!-- ════════════════ 2. DESIGN PROCESS ════════════════ -->
     <section id="design">
       <h2>2. Design Process</h2>
+
+      <h3>Current design</h3>
+      <p>
+        After the capstone, the app was redesigned around one calm accent colour and the ParkAid pin, a 3D logo built in Spline. The flow is the same three tabs, with a details page in between and a session that states its cost and end time before it starts.
+      </p>
+      <div class="screens">
+        <figure><img src="../docs/screens/01-welcome.png" alt="Welcome screen with the ParkAid pin and an Explore parking button" loading="lazy"><figcaption>Welcome, shown once</figcaption></figure>
+        <figure><img src="../docs/screens/02-home.png" alt="Home with a greeting, search, sort chips and a suggested spot" loading="lazy"><figcaption>Home: one suggestion first</figcaption></figure>
+        <figure><img src="../docs/screens/03-map.png" alt="Map with priced pins and a selected spot in the bottom sheet" loading="lazy"><figcaption>Map: prices on the pins</figcaption></figure>
+        <figure><img src="../docs/screens/04-details.png" alt="Details for a street block: rate, zone, walk and maximum stay" loading="lazy"><figcaption>Details: zone, hours, limits</figcaption></figure>
+        <figure><img src="../docs/screens/05-park-setup.png" alt="Session setup with plate, duration, end time and total" loading="lazy"><figcaption>Park: end time and total up front</figcaption></figure>
+        <figure><img src="../docs/screens/06-session.png" alt="Running session with time left, end time and an Extend button" loading="lazy"><figcaption>Session: minutes left, priced extend</figcaption></figure>
+      </div>
+      <p class="note">Captured from the web build with sample data. On web the map is a drawn preview; the live Google map runs on iOS and Android.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>A suggestion before a list</h4>
+          <p>Home leads with one good place to park, chosen by distance, price or cover, and skips permit-only blocks unless you ask for them.</p>
+        </div>
+        <div class="card">
+          <h4>Honest prices</h4>
+          <p>Pins and rows show the hourly rate where the City data has one. Where it does not, they say so ("Rates posted at lot") instead of showing "Free".</p>
+        </div>
+        <div class="card">
+          <h4>No blind commitments</h4>
+          <p>Starting a session shows the end time and total first, keeps durations within the posted maximum, and warns you when it is time to walk back.</p>
+        </div>
+        <div class="card">
+          <h4>Calm motion</h4>
+          <p>The pin hops while data loads, and screens fade up once. With Reduce Motion on, everything appears without movement.</p>
+        </div>
+      </div>
+
+      <h3>Original capstone design</h3>
+      <p>The sections below describe the design as the capstone team first built it.</p>
 
       <h3>User Flow Design</h3>
       <p>

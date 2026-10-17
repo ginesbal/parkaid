@@ -13,14 +13,33 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
 ## What it does
 
-- Search for parking near your current location, or drop a pin to search
-  somewhere else. There's a radius selector from 250m up to 2km.
-- See spots on a map with markers you can tap for details (price, zone,
-  restrictions, capacity).
-- See a list of nearby spots sorted by distance, with a rough walking time and
-  filters by type (street, lot, residential, school, or free).
-- Keep working when the network drops. Responses are cached on the phone, so
+- Suggests a good place to park near you, then lists the rest. Sort by
+  closest or by best value, or show covered parkades only. Filters narrow it
+  to street, lot or permit parking within 150 m to 1 km.
+- Shows spots on a map as pins with their hourly rate, so you can compare
+  without tapping each one. Drop a pin or search an address to look
+  somewhere else.
+- Opens a details page for each spot: the rate and when it is charged, the
+  ParkPlus zone to pay at, the maximum stay, the walk, and directions.
+- Runs a demo parking session for that spot. You see the end time and total
+  before you start, durations stay within the posted maximum, and it tells
+  you when it is time to walk back.
+- Keeps working when the network drops. Responses are cached on the phone, so
   the app shows the last data it had instead of an error.
+- Respects the phone's Reduce Motion setting and screen reader labels.
+
+## Screens
+
+| Welcome | Home | Map |
+| --- | --- | --- |
+| <img src="docs/screens/01-welcome.png" width="240" alt="Welcome screen with the ParkAid pin and an Explore parking button"> | <img src="docs/screens/02-home.png" width="240" alt="Home with a greeting, search, sort chips and a suggested spot"> | <img src="docs/screens/03-map.png" width="240" alt="Map with priced pins and a selected spot in the bottom sheet"> |
+
+| Details | Park | Session |
+| --- | --- | --- |
+| <img src="docs/screens/04-details.png" width="240" alt="Details for a street block: rate, zone, walk and maximum stay"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate, duration, end time and total"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, end time and an Extend button"> |
+
+Captured from the web build with sample data. On web the map is a drawn
+preview; the live Google map runs on iOS and Android.
 
 ## Tech stack
 
@@ -45,6 +64,7 @@ Database and data
 Hosting and testing
 - Render hosts the backend and redeploys when you push to GitHub
 - Jest and Supertest for the backend tests
+- Jest (jest-expo) for the app's hooks and formatters: `cd mobile && npm test`
 
 There's no Redis and no ORM. The backend is small on purpose: just Express
 routes running SQL.
@@ -69,12 +89,12 @@ the server and is never shipped inside the app.
 parkaid/
   mobile/                  React Native (Expo) app
     src/
-      components/          reusable UI (cards, search bar, and so on)
-      screens/             HomeScreen, MapScreen, SessionScreen
-      hooks/               useParkingSpots, usePlacesAutocomplete, and so on
+      components/          reusable UI (brand pin and loader, list rows, search bar)
+      screens/             Welcome, Home, Map, Details, Session
+      hooks/               useParkingSpots, useSessionManager, useReduceMotion, and so on
       services/            api.js, the single API client
       constants/           config.js, the single place the API URL is set
-      utils/               helpers
+      utils/               helpers, including how a spot is named and priced
 
   backend/                 Node and Express API
     config/                env.js, sets up the DB connection and checks env vars
@@ -86,6 +106,7 @@ parkaid/
     utils/                 logger
     server.js              starts the app
 
+  docs/                    design plan, concept mockups and screenshots
   render.yaml              Render config for auto-deploy
   README.md
 ```
