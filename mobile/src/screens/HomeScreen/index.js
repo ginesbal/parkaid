@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, LayoutAnimation, Platform, RefreshControl, UIManager, View } from 'react-native';
+import { Animated, FlatList, LayoutAnimation, Platform, RefreshControl, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BrandLoader from '../../components/BrandLoader';
@@ -11,7 +11,9 @@ import LoadingState from './components/ParkingList/LoadingState';
 
 import { useFilterState } from '../../hooks/useFilterState';
 import { useLocationManager } from '../../hooks/useLocationManager';
+import { useEntrance } from '../../hooks/useEntrance';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 
 import { getGreeting } from '../../utils/greeting';
 import { logger } from '../../utils/loggers';
@@ -150,10 +152,11 @@ export default function HomeScreen({ navigation }) {
     if (view === 'covered') setView('near');
   }, [view, setActiveFilter]);
 
+  const reduceMotion = useReduceMotion();
   const toggleFilters = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setFiltersOpen((open) => !open);
-  }, []);
+  }, [reduceMotion]);
 
   const handleExpandSearch = () => {
     logger.log('expand_search', {
@@ -205,8 +208,12 @@ export default function HomeScreen({ navigation }) {
     }
   }, [searchRadius]);
 
+  // The loader hands over to the list with one soft rise, not a hard cut.
+  const showLoader = isLoadingLocation || (!hasFetched && !error);
+  const [contentIn] = useEntrance(1, !showLoader);
+
   // initial loading state
-  if (isLoadingLocation || (!hasFetched && !error)) {
+  if (showLoader) {
     return <LoadingState searchRadius={searchRadius} phase={isLoadingLocation ? 'location' : 'spots'} />;
   }
 
@@ -233,6 +240,7 @@ export default function HomeScreen({ navigation }) {
     <>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+        <Animated.View style={[styles.content, contentIn]}>
         <FlatList
           data={restSpots}
           renderItem={renderSpot}
@@ -271,6 +279,7 @@ export default function HomeScreen({ navigation }) {
           contentContainerStyle={visibleSpots.length === 0 ? styles.emptyList : null}
           keyboardShouldPersistTaps="handled"
         />
+        </Animated.View>
       </SafeAreaView>
     </>
   );

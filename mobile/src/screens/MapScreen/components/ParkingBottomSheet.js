@@ -3,6 +3,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BrandLoader from '../../../components/BrandLoader';
+import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
@@ -74,32 +75,49 @@ const ParkingBottomSheet = forwardRef(({
     const translateY = useRef(new Animated.Value(PEEK_Y)).current;
     const dragStartY = useRef(PEEK_Y);
 
+    // Under reduce motion the sheet snaps instead of springing.
+    const reduceMotion = useReduceMotion();
+
     // Tighter spring for expand (user is waiting to see content)
     const expandTo = useCallback((velocity = 0) => {
+        if (reduceMotion) {
+            translateY.stopAnimation();
+            translateY.setValue(EXPANDED_Y);
+            return;
+        }
         Animated.spring(translateY, {
             toValue: EXPANDED_Y,
             velocity,
             ...MOTION.spring,
             useNativeDriver: true,
         }).start();
-    }, [translateY]);
+    }, [translateY, reduceMotion]);
 
     // Slightly faster spring for collapse — exit should feel snappier than enter
     const collapseTo = useCallback((velocity = 0) => {
-        Animated.spring(translateY, {
-            toValue: PEEK_Y,
-            velocity,
-            tension: 76,
-            friction: 10,
-            useNativeDriver: true,
-        }).start();
+        if (reduceMotion) {
+            translateY.stopAnimation();
+            translateY.setValue(PEEK_Y);
+        } else {
+            Animated.spring(translateY, {
+                toValue: PEEK_Y,
+                velocity,
+                ...MOTION.springExit,
+                useNativeDriver: true,
+            }).start();
+        }
 
         // Coordinate scroll-to-top with collapse — slight delay so both
         // motions feel like one gesture, not a jump-then-slide
         setTimeout(() => {
             listRef.current?.scrollToOffset({ offset: 0, animated: true });
         }, 80);
-    }, [translateY, PEEK_Y]);
+    }, [translateY, PEEK_Y, reduceMotion]);
+
+    // The pan responder is created once; it reads these through a ref so it
+    // always snaps to the measured peek, not the first render's estimate.
+    const latest = useRef({});
+    latest.current = { PEEK_Y, HIDDEN_Y, expandTo, collapseTo };
 
     useImperativeHandle(ref, () => ({
         present: () => expandTo(),
@@ -156,7 +174,7 @@ const ParkingBottomSheet = forwardRef(({
                 isDragging.current = true;
 
                 translateY.stopAnimation((cur) => {
-                    dragStartY.current = cur ?? PEEK_Y;
+                    dragStartY.current = cur ?? latest.current.PEEK_Y;
                 });
             },
             onPanResponderMove: (_, g) => {
@@ -168,31 +186,31 @@ const ParkingBottomSheet = forwardRef(({
                     const damped = EXPANDED_Y - (overPull * RUBBER_BAND_FACTOR);
                     translateY.setValue(damped);
                 } else {
-                    translateY.setValue(clamp(raw, EXPANDED_Y, HIDDEN_Y));
+                    translateY.setValue(clamp(raw, EXPANDED_Y, latest.current.HIDDEN_Y));
                 }
             },
             onPanResponderRelease: (_, g) => {
                 isDragging.current = false;
 
-                const finalY = clamp(dragStartY.current + g.dy, EXPANDED_Y, HIDDEN_Y);
+                const finalY = clamp(dragStartY.current + g.dy, EXPANDED_Y, latest.current.HIDDEN_Y);
                 const velocity = Math.abs(g.vy);
 
                 // Momentum-based snap: a quick flick should decide regardless of position
                 if (velocity > VELOCITY_THRESHOLD) {
                     if (g.vy < 0) {
-                        expandTo(g.vy);
+                        latest.current.expandTo(g.vy);
                     } else {
-                        collapseTo(g.vy);
+                        latest.current.collapseTo(g.vy);
                     }
                     return;
                 }
 
                 // Position-based snap for slow drags
-                const mid = (PEEK_Y + EXPANDED_Y) / 2;
+                const mid = (latest.current.PEEK_Y + EXPANDED_Y) / 2;
                 if (finalY <= mid) {
-                    expandTo(g.vy);
+                    latest.current.expandTo(g.vy);
                 } else {
-                    collapseTo(g.vy);
+                    latest.current.collapseTo(g.vy);
                 }
             },
         })

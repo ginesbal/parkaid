@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: TOKENS.bg,
     },
+    content: {
+        flex: 1,
+    },
     emptyList: {
         flexGrow: 1
     },

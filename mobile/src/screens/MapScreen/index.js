@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // app constants/services
 import { DEFAULT_LOCATION } from '../../constants/config';
+import { MOTION } from '../../constants/theme';
 
 // logs
 import { logger } from '../../utils/loggers';
@@ -23,6 +24,7 @@ import { pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
 
 // files specific to this screen
 import { useParkingSpots } from '../../hooks/useParkingSpots';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 import MapHeader from './components/MapHeader';
 import MapOverlays from './components/MapOverlays';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
@@ -130,35 +132,26 @@ function MapScreen({ route, navigation }) {
     }, []);
 
 
-    const showControls = useCallback(() => {
+    // Map controls fade; they also slide unless reduce motion is on.
+    const reduceMotion = useReduceMotion();
+    const fadeControls = useCallback((visible) => {
+        const timing = (value, toValue) => Animated.timing(value, {
+            toValue,
+            duration: MOTION.duration.base,
+            easing: MOTION.easing,
+            useNativeDriver: true,
+        });
         Animated.parallel([
-            Animated.timing(controlsOpacity, {
-                toValue: 1,
-                duration: 200,
-                useNativeDriver: true
-            }),
-            Animated.timing(controlsTranslateY, {
-                toValue: 0,
-                duration: 200,
-                useNativeDriver: true
-            }),
+            timing(controlsOpacity, visible ? 1 : 0),
+            timing(controlsTranslateY, visible || reduceMotion ? 0 : -50),
         ]).start();
-    }, [controlsOpacity, controlsTranslateY]);
+    }, [controlsOpacity, controlsTranslateY, reduceMotion]);
 
-    const hideControls = useCallback(() => {
-        Animated.parallel([
-            Animated.timing(controlsOpacity, {
-                toValue: 0,
-                duration: 200,
-                useNativeDriver: true
-            }),
-            Animated.timing(controlsTranslateY, {
-                toValue: -50,
-                duration: 200,
-                useNativeDriver: true
-            }),
-        ]).start();
-    }, [controlsOpacity, controlsTranslateY]);
+    // Camera moves are big motion; under reduce motion they jump instead.
+    const cameraMs = useCallback((ms) => (reduceMotion ? 0 : ms), [reduceMotion]);
+
+    const showControls = useCallback(() => fadeControls(true), [fadeControls]);
+    const hideControls = useCallback(() => fadeControls(false), [fadeControls]);
 
     const handleMapInteraction = useCallback(() => {
         lastMapInteraction.current = Date.now();
@@ -181,13 +174,18 @@ function MapScreen({ route, navigation }) {
             longitudeDelta: 0.01,
         });
 
-        pinDropAnim.setValue(0);
-        Animated.spring(pinDropAnim, {
-            toValue: 1,
-            tension: 40,
-            friction: 6,
-            useNativeDriver: true,
-        }).start();
+        // A playful drop, looser than MOTION.spring on purpose; none under reduce motion.
+        if (reduceMotion) {
+            pinDropAnim.setValue(1);
+        } else {
+            pinDropAnim.setValue(0);
+            Animated.spring(pinDropAnim, {
+                toValue: 1,
+                tension: 40,
+                friction: 6,
+                useNativeDriver: true,
+            }).start();
+        }
 
         setSearchMode('pinned');
         setShowPinInstructions(false);
@@ -206,11 +204,11 @@ function MapScreen({ route, navigation }) {
 
         const coords = spot?.coordinates?.coordinates;
         if (Array.isArray(coords)) {
-            centerCamera(mapRef, region, coords[1], coords[0], 140);
+            centerCamera(mapRef, region, coords[1], coords[0], cameraMs(MOTION.duration.fast));
             // important: confirm camera move for traceability
             logger.log('camera_centered_on_spot', { id: spot?.id, lat: coords[1], lng: coords[0] }, 'INFO');
         }
-    }, [region]);
+    }, [region, cameraMs]);
 
     const handleViewSpot = useCallback((spot) => {
         if (!spot) return;
@@ -280,12 +278,12 @@ function MapScreen({ route, navigation }) {
                 longitudeDelta: 0.005,
             };
             setRegion(newRegion);
-            mapRef.current?.animateToRegion(newRegion, 300);
+            mapRef.current?.animateToRegion(newRegion, cameraMs(MOTION.duration.slow));
             setPinnedLocation(newRegion);
             setSearchMode('pinned');
             logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
         }
-    }, []);
+    }, [cameraMs]);
 
     return (
         <View style={styles.container}>
@@ -381,7 +379,7 @@ function MapScreen({ route, navigation }) {
                         if (targetLocation) {
                             mapRef.current?.animateCamera(
                                 { center: { latitude: targetLocation.latitude, longitude: targetLocation.longitude } },
-                                { duration: 180 }
+                                { duration: cameraMs(MOTION.duration.fast) }
                             );
                             setSelectedSpot(null);
                         }

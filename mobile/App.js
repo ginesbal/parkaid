@@ -23,6 +23,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen/index';
 import BrandLoader from './src/components/BrandLoader';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
+import { useReduceMotion } from './src/hooks/useReduceMotion';
 import { hasSeenWelcome } from './src/utils/onboarding';
 
 const Stack = createNativeStackNavigator();
@@ -155,6 +156,7 @@ function MainTabs() {
 function AppNavigation() {
     // null until the first-run flag is read; then 'Welcome' or 'Tabs'
     const [initialRoute, setInitialRoute] = useState(null);
+    const reduceMotion = useReduceMotion();
 
     useEffect(() => {
         hasSeenWelcome().then((seen) => setInitialRoute(seen ? 'Tabs' : 'Welcome'));
@@ -184,7 +186,11 @@ function AppNavigation() {
                 <Stack.Screen
                     name="Details"
                     component={DetailsScreen}
-                    options={{ contentStyle: { backgroundColor: TOKENS.inkSurface } }}
+                    options={{
+                        contentStyle: { backgroundColor: TOKENS.inkSurface },
+                        // Crossfade instead of a sideways push under reduce motion.
+                        animation: reduceMotion ? 'fade' : 'default',
+                    }}
                 />
             </Stack.Navigator>
         </NavigationContainer>

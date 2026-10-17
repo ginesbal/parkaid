@@ -83,7 +83,7 @@ Follow the .env.example file and make the APIs required are set up
 After completing the above steps, run the verification test:
 
 ```bash
-node tests/verify-all-apis.js
+node scripts/verify-google-apis.js
 ```
 
 Expected output when properly configured:
@@ -203,8 +203,8 @@ mobile/
 ├── components/
 │   └── PlacesAutocomplete/
 │       └── PlacesSearchBar.js   # Uses legacy Places API
-└── tests/
-    └── verify-all-apis.js       # Verification script
+└── scripts/
+    └── verify-google-apis.js    # Verification script
 ```
 
 ## Billing Requirements
@@ -230,13 +230,13 @@ Free tier limits (per month):
 
 ```bash
 # Verify API setup
-node tests/verify-all-apis.js
+node scripts/verify-google-apis.js
 
 # Start Expo with clean cache
 npx expo start --clear
 
 # Check environment variables are loaded
-node tests/test-env.js
+node scripts/check-env.js
 ```
 
 ## Summary Checklist

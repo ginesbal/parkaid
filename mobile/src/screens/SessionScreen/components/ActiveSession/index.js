@@ -1,6 +1,7 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EXTEND_STEP } from '../../../../constants/session';
+import { useEntrance } from '../../../../hooks/useEntrance';
 import { formatMoney } from '../../../../utils/formatters';
 import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
@@ -22,6 +23,8 @@ const ActiveSession = ({
     onEnd,
 }) => {
     const insets = useSafeAreaInsets();
+    // Card, then actions: a quiet "you're parked" moment when a session starts.
+    const [cardIn, actionsIn] = useEntrance(2);
     const expired = sessionState === 'expired';
 
     // null max means no posted limit; otherwise extend by what is left of it.
@@ -38,15 +41,17 @@ const ActiveSession = ({
 
             {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
-            <TimerCard
-                session={session}
-                sessionState={sessionState}
-                timeRemainingMs={timeRemainingMs}
-                endTime={endTime}
-                totalCost={totalCost}
-            />
+            <Animated.View style={cardIn}>
+                <TimerCard
+                    session={session}
+                    sessionState={sessionState}
+                    timeRemainingMs={timeRemainingMs}
+                    endTime={endTime}
+                    totalCost={totalCost}
+                />
+            </Animated.View>
 
-            <View style={styles.actions}>
+            <Animated.View style={[styles.actions, actionsIn]}>
                 {!expired && !atMax ? (
                     <TouchableOpacity
                         onPress={() => onExtend(step)}
@@ -79,7 +84,7 @@ const ActiveSession = ({
                 >
                     <Text style={[styles.endText, expired && styles.endTextPrimary]}>End session</Text>
                 </TouchableOpacity>
-            </View>
+            </Animated.View>
         </ScrollView>
     );
 };

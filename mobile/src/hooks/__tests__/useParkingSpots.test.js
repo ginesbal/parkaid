@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react-hooks';
+import { act, renderHook } from '@testing-library/react-native';
 import { parkingAPI } from '../../services/api';
 import { useParkingSpots } from '../useParkingSpots';
 
@@ -7,6 +7,8 @@ jest.mock('../../services/api', () => ({
         findNearbySpots: jest.fn(),
     },
 }));
+
+const CALGARY = { latitude: 51.0, longitude: -114.0 };
 
 describe('useParkingSpots', () => {
     beforeEach(() => {
@@ -49,8 +51,24 @@ describe('useParkingSpots', () => {
             51.05,
             -114.0,
             500,
-            {}
+            {},
+            { fresh: false }
         );
+    });
+
+    it('reports loading from the moment a search is scheduled', async () => {
+        parkingAPI.findNearbySpots.mockResolvedValue({ data: [] });
+
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
+
+        // Inside the debounce window: no request yet, but not "no spots" either.
+        expect(result.current.loading).toBe(true);
+
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+
+        expect(result.current.loading).toBe(false);
     });
 
     it('handles errors properly', async () => {
@@ -66,5 +84,53 @@ describe('useParkingSpots', () => {
 
         expect(result.current.error).toBe('Network error');
         expect(result.current.spots).toEqual([]);
+    });
+
+    it('refetch() asks past the cache', async () => {
+        parkingAPI.findNearbySpots.mockResolvedValue({ data: [{ id: 1 }] });
+
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: false });
+
+        await act(async () => {
+            result.current.refetch();
+        });
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+
+        expect(parkingAPI.findNearbySpots).toHaveBeenCalledTimes(2);
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true });
+    });
+
+    it('ignores a slower, older response', async () => {
+        let resolveOld;
+        parkingAPI.findNearbySpots
+            .mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }))
+            .mockResolvedValueOnce({ data: [{ id: 'new' }] });
+
+        const { result, rerender } = renderHook(
+            ({ radius }) => useParkingSpots(CALGARY, radius),
+            { initialProps: { radius: 150 } }
+        );
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+
+        rerender({ radius: 500 });
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.spots).toEqual([{ id: 'new' }]);
+
+        // The first request finishes last; it must not overwrite the newer result.
+        await act(async () => {
+            resolveOld({ data: [{ id: 'old' }] });
+        });
+        expect(result.current.spots).toEqual([{ id: 'new' }]);
+        expect(result.current.loading).toBe(false);
     });
 });

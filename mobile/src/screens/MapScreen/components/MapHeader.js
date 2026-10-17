@@ -3,6 +3,7 @@ import { memo, useCallback, useState } from 'react';
 import { LayoutAnimation, Platform, Pressable, Text, UIManager, View } from 'react-native';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
 import { TOKENS } from '../../../constants/theme';
+import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import { styles } from '../styles';
 
 // Enable LayoutAnimation on Android
@@ -46,10 +47,11 @@ function MapHeader({
         setSearchRadius(distance);
     }, [setSearchRadius]);
 
+    const reduceMotion = useReduceMotion();
     const toggleFilters = useCallback(() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setFiltersExpanded(prev => !prev);
-    }, []);
+    }, [reduceMotion]);
 
     // Active filter count for the badge
     const activeFilterCount =

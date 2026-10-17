@@ -263,11 +263,18 @@ export const MOTION = {
         base: 240,   // fades, crossfades
         slow: 320,   // entrances, larger moves
     },
-    easing: Easing.out(Easing.exp),
+    // Ease-out-expo as a bezier: same feel as Easing.out(Easing.exp), but it
+    // lands exactly on 1 (Easing.exp stops at 0.999, leaving faint opacity/offset).
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
     // The map sheet's expand spring; reuse it for anything that springs.
     spring: {
         tension: 68,
         friction: 9,
+    },
+    // Slightly firmer, for things leaving: exits should feel quicker than entries.
+    springExit: {
+        tension: 76,
+        friction: 10,
     },
     pressScale: 0.97,
     // Entrance: rise this many points while fading in, items staggered by `stagger`.

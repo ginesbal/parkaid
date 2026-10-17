@@ -2,9 +2,8 @@
 // The pin carries the moment; the copy fades up once and nothing else loops.
 
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import {
-    AccessibilityInfo,
     Animated,
     Pressable,
     ScrollView,
@@ -16,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BrandPin from '../../components/BrandPin';
 import { MOTION, RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../constants/theme';
+import { useEntrance } from '../../hooks/useEntrance';
 import { markWelcomeSeen } from '../../utils/onboarding';
 
 // headline, body, footer
@@ -26,54 +26,8 @@ export default function WelcomeScreen({ navigation }) {
     const { width, height } = useWindowDimensions();
     const pinSize = Math.round(Math.min(width * 0.56, height * 0.3, 240));
 
-    const entrance = useRef(
-        Array.from({ length: ENTRANCE_ITEMS }, () => new Animated.Value(0))
-    ).current;
+    const rise = useEntrance(ENTRANCE_ITEMS);
     const pressScale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        let cancelled = false;
-        const showAll = () => entrance.forEach((v) => v.setValue(1));
-
-        AccessibilityInfo.isReduceMotionEnabled()
-            .then((reduceMotion) => {
-                if (cancelled) return;
-                if (reduceMotion) {
-                    showAll();
-                    return;
-                }
-                Animated.stagger(
-                    MOTION.stagger,
-                    entrance.map((v) =>
-                        Animated.timing(v, {
-                            toValue: 1,
-                            duration: MOTION.duration.slow,
-                            easing: MOTION.easing,
-                            useNativeDriver: true,
-                        })
-                    )
-                ).start();
-            })
-            .catch(() => {
-                if (!cancelled) showAll();
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [entrance]);
-
-    const riseIn = (i) => ({
-        opacity: entrance[i],
-        transform: [
-            {
-                translateY: entrance[i].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [MOTION.rise, 0],
-                }),
-            },
-        ],
-    });
 
     const pressTo = (toValue) => {
         Animated.timing(pressScale, {
@@ -109,14 +63,14 @@ export default function WelcomeScreen({ navigation }) {
                     <BrandPin size={pinSize} />
                 </View>
 
-                <Animated.Text style={[styles.headline, riseIn(0)]} accessibilityRole="header">
+                <Animated.Text style={[styles.headline, rise[0]]} accessibilityRole="header">
                     A little less circling.{'\n'}A little more city.
                 </Animated.Text>
-                <Animated.Text style={[styles.body, riseIn(1)]}>
+                <Animated.Text style={[styles.body, rise[1]]}>
                     Find a place to park,{'\n'}then get on with your day.
                 </Animated.Text>
 
-                <Animated.View style={[styles.footer, riseIn(2)]}>
+                <Animated.View style={[styles.footer, rise[2]]}>
                     <Pressable
                         onPress={handleExplore}
                         onPressIn={() => pressTo(MOTION.pressScale)}

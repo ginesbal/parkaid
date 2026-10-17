@@ -8,7 +8,7 @@ import {
     Text,
     View,
 } from 'react-native';
-import { TOKENS, TYPOGRAPHY, alpha } from '../../constants/theme';
+import { MOTION, TOKENS, TYPOGRAPHY, alpha } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
 import { getRateDisplay, getSpotKind, getSpotName } from '../../utils/spotPresentation';
 
@@ -29,14 +29,14 @@ export default function ParkingListItem({
     const handlePressIn = () => {
         Animated.timing(scaleAnim, {
             toValue: 0.98,
-            duration: 120,
+            duration: MOTION.duration.fast,
             useNativeDriver: true,
         }).start();
     };
     const handlePressOut = () => {
         Animated.timing(scaleAnim, {
             toValue: 1,
-            duration: 200,
+            duration: MOTION.duration.fast,
             useNativeDriver: true,
         }).start();
     };

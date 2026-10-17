@@ -8,7 +8,7 @@
  * - Enable/disable APIs in Google Cloud Console
  * - Encounter API errors in the application
  * 
- * Usage: node tests/verify-all-apis.js
+ * Usage: node scripts/verify-google-apis.js
  */
 
 require('dotenv').config();
