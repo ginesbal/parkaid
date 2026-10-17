@@ -1,84 +1,86 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import StatusBadge from '../shared/StatusBadge';
-import QuickExtend from './QuickExtend';
-import SessionDetails from './SessionDetails';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EXTEND_STEP } from '../../../../constants/session';
+import { formatMoney } from '../../../../utils/formatters';
+import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
 import TimerCard from './TimerCard';
 
 /**
- * ActiveSession - Displays and manages an active parking session
+ * ActiveSession - the running session on the ink canvas. One clear way to add
+ * time (priced, and capped at the spot's maximum stay), and End kept apart.
  */
 const ActiveSession = ({
     session,
     sessionState,
-    timeRemaining,
-    elapsedTime,
-    progress,
+    timeRemainingMs,
     totalCost,
     endTime,
+    maxExtendMinutes,
+    notice,
     onExtend,
     onEnd,
 }) => {
-    const sessionLabel = [session?.spotId, session?.locationName].filter(Boolean).join(' • ');
+    const insets = useSafeAreaInsets();
+    const expired = sessionState === 'expired';
+
+    // null max means no posted limit; otherwise extend by what is left of it.
+    const step = maxExtendMinutes === null ? EXTEND_STEP : Math.min(EXTEND_STEP, maxExtendMinutes);
+    const atMax = maxExtendMinutes !== null && maxExtendMinutes <= 0;
+    const extendCost = formatMoney(calculateCost(step, session.hourlyRate));
 
     return (
-        <>
-            <View style={styles.header}>
-                <View style={styles.statusBar}>
-                    <StatusBadge state={sessionState} />
-                    <Text style={styles.locationText} numberOfLines={1}>
-                        {sessionLabel}
-                    </Text>
-                </View>
-            </View>
+        <ScrollView
+            contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
+            showsVerticalScrollIndicator={false}
+        >
+            <Text style={styles.screenTitle} accessibilityRole="header">Parking session</Text>
 
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                <TimerCard
-                    sessionState={sessionState}
-                    timeRemaining={timeRemaining}
-                    progress={progress}
-                    endTime={endTime}
-                    totalCost={totalCost}
-                />
+            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
-                <QuickExtend
-                    onExtend={onExtend}
-                    hourlyRate={session.hourlyRate}
-                    disabled={sessionState === 'expired'}
-                />
+            <TimerCard
+                session={session}
+                sessionState={sessionState}
+                timeRemainingMs={timeRemainingMs}
+                endTime={endTime}
+                totalCost={totalCost}
+            />
 
-                <SessionDetails
-                    session={session}
-                    elapsedTime={elapsedTime}
-                />
-            </ScrollView>
+            <View style={styles.actions}>
+                {!expired && !atMax ? (
+                    <TouchableOpacity
+                        onPress={() => onExtend(step)}
+                        activeOpacity={0.9}
+                        style={styles.extend}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Extend ${formatDuration(step)} for ${extendCost}`}
+                    >
+                        <Text style={styles.extendText}>
+                            Extend {formatDuration(step)} {'·'} {extendCost}
+                        </Text>
+                    </TouchableOpacity>
+                ) : null}
 
-            <SafeAreaView edges={['bottom']} style={styles.bottomActions}>
+                {atMax && !expired ? (
+                    <View style={styles.capped} accessibilityRole="text">
+                        <Text style={styles.cappedTitle}>
+                            {formatDuration(session.maxDuration)} maximum reached
+                        </Text>
+                        <Text style={styles.cappedBody}>Move your car by {formatClock(endTime)}.</Text>
+                    </View>
+                ) : null}
+
                 <TouchableOpacity
                     onPress={onEnd}
-                    activeOpacity={0.9}
-                    style={styles.endButton}
+                    activeOpacity={0.85}
+                    style={[styles.end, expired && styles.endPrimary]}
                     accessibilityRole="button"
-                    accessibilityLabel="End parking session"
-                    accessibilityHint="Stops your current parking session"
+                    accessibilityHint="Asks before ending"
                 >
-                    <MaterialCommunityIcons
-                        name="stop-circle"
-                        size={20}
-                        color="#fff"
-                    />
-                    <Text style={styles.endButtonText}>End session</Text>
+                    <Text style={[styles.endText, expired && styles.endTextPrimary]}>End session</Text>
                 </TouchableOpacity>
-                <Text style={styles.bottomHint}>
-                    Ending early will stop the demo timer immediately.
-                </Text>
-            </SafeAreaView>
-        </>
+            </View>
+        </ScrollView>
     );
 };
 

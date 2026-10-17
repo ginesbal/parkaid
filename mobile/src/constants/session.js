@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
     SESSION: 'parking_session_v2',
     USER_PREFERENCES: 'user_preferences',
     HISTORY: 'session_history',
+    LAST_PLATE: 'parkaid.lastPlate',
 };
 
 export const DEFAULT_VALUES = {
@@ -40,6 +41,13 @@ export const SESSION_STATES = {
     EXPIRING: 'expiring',
     EXPIRED: 'expired',
 };
+
+// Minutes of buffer, on top of the walk back, before we say "head back".
+export const HEAD_BACK_BUFFER = 10;
+// Default walk when a session has no spot (the demo flow).
+export const DEFAULT_WALK_MINUTES = 5;
+// The one-tap extension on the active session.
+export const EXTEND_STEP = 30;
 
 export const ALERTS = {
     EXPIRING_THRESHOLD: 10, // minutes

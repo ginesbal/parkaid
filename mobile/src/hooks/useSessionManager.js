@@ -1,9 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Animated } from 'react-native';
-import { DEFAULT_VALUES, STORAGE_KEYS } from '../constants/session.js';
-import { formatEndTime, formatTime } from '../utils/formatters';
-import { calculateProgress, calculateSessionState } from '../utils/sessionHelpers';
+import { AccessibilityInfo, Alert } from 'react-native';
+import { DEFAULT_VALUES, DEFAULT_WALK_MINUTES, HEAD_BACK_BUFFER, STORAGE_KEYS } from '../constants/session.js';
+import { confirm } from '../utils/confirm';
+import {
+    calculateProgress,
+    calculateSessionState,
+    formatClock,
+    formatDuration,
+} from '../utils/sessionHelpers';
+import {
+    getHourlyRate,
+    getMaxStayMinutes,
+    getSpotKind,
+    getSpotName,
+    getZoneLabel,
+} from '../utils/spotPresentation';
 
 export const useSessionManager = () => {
     // core state
@@ -17,15 +29,18 @@ export const useSessionManager = () => {
     const [selectedRate, setSelectedRate] = useState(DEFAULT_VALUES.RATE);
     const [selectedDuration, setSelectedDuration] = useState(DEFAULT_VALUES.DURATION);
 
-    // animation values
-    const pulseAnim = useState(new Animated.Value(1))[0];
 
     // load session from storage on mount
     const loadSession = useCallback(async () => {
         try {
-            const raw = await AsyncStorage.getItem(STORAGE_KEYS.SESSION);
+            const [raw, lastPlate] = await Promise.all([
+                AsyncStorage.getItem(STORAGE_KEYS.SESSION),
+                AsyncStorage.getItem(STORAGE_KEYS.LAST_PLATE),
+            ]);
             const parsed = raw ? JSON.parse(raw) : null;
             setSession(parsed);
+            // Prefill the plate from last time; the driver can still change it.
+            if (lastPlate) setVehiclePlate((current) => current || lastPlate);
         } catch (error) {
             console.error('Failed to load session:', error);
             setSession(null);
@@ -105,61 +120,65 @@ export const useSessionManager = () => {
         [elapsedTime, session]
     );
 
+    // "Head back" starts when the walk back plus a buffer is all that is left.
+    const warnAtMinutes = (session?.walkMinutes ?? DEFAULT_WALK_MINUTES) + HEAD_BACK_BUFFER;
+
+    // Rounded up, so the last seconds still count as time left, not expired.
     const sessionState = useMemo(
-        () => calculateSessionState(timeRemaining),
-        [timeRemaining]
+        () => calculateSessionState(Math.ceil(timeRemainingMs / 60000), warnAtMinutes),
+        [timeRemainingMs, warnAtMinutes]
     );
 
-    // handle expiring animation
-    useEffect(() => {
-        if (sessionState === 'expiring') {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 1.05,
-                        duration: 1000,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 1000,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-        } else {
-            pulseAnim.setValue(1);
-        }
-    }, [sessionState, pulseAnim]);
+    // How much more the spot's maximum stay allows; null when it has none.
+    const maxExtendMinutes = useMemo(() => {
+        if (!session?.maxDuration) return null;
+        return Math.max(0, session.maxDuration - session.duration);
+    }, [session]);
+
 
     // action handlers
-    const startSession = useCallback(async () => {
+    // `spot` is the spot handed over from Details; without one this is the demo flow.
+    const startSession = useCallback(async (spot = null) => {
         if (!vehiclePlate.trim()) {
             Alert.alert(
                 'License Plate Required',
                 'Please enter your vehicle license plate to continue.'
             );
-            return;
+            return false;
         }
 
+        const plate = vehiclePlate.trim().toUpperCase();
+        const spotRate = spot ? getHourlyRate(spot) : null;
+        const hourlyRate = spotRate ?? selectedRate;
+        const maxDuration = spot ? getMaxStayMinutes(spot) : null;
+        const duration = maxDuration ? Math.min(selectedDuration, maxDuration) : selectedDuration;
         const startTime = new Date();
-        const endTime = new Date(startTime.getTime() + selectedDuration * 60000);
+        const endTime = new Date(startTime.getTime() + duration * 60000);
+        const name = spot ? getSpotName(spot) : null;
 
         const newSession = {
             id: `session_${Date.now()}`,
-            locationName: 'Downtown Calgary',
-            locationAddress: '4th Avenue SW',
-            spotId: 'Meter 217',
-            hourlyRate: selectedRate,
-            duration: selectedDuration, // minutes
+            locationName: name?.title || 'Downtown Calgary',
+            locationAddress: spot ? (name.detail || getSpotKind(spot)) : '4th Avenue SW',
+            spotId: spot ? (getZoneLabel(spot) || getSpotKind(spot)) : 'Meter 217',
+            parkingSpotId: spot?.id ?? null,
+            hourlyRate,
+            duration, // minutes
+            maxDuration, // minutes, from the spot's posted maximum
+            walkMinutes: Number.isFinite(Number(spot?.walkingTime)) ? Number(spot.walkingTime) : null,
             startedAt: startTime.toISOString(),
             scheduledEnd: endTime.toISOString(),
-            vehiclePlate: vehiclePlate.trim().toUpperCase(),
-            totalCost: (selectedDuration / 60) * selectedRate,
+            vehiclePlate: plate,
+            totalCost: (duration / 60) * hourlyRate,
         };
 
         await saveSession(newSession);
-        setVehiclePlate('');
+        try {
+            await AsyncStorage.setItem(STORAGE_KEYS.LAST_PLATE, plate);
+        } catch (error) {
+            console.warn('Failed to remember plate:', error);
+        }
+        return true;
     }, [vehiclePlate, selectedRate, selectedDuration, saveSession]);
 
     const extendSession = useCallback(async (additionalMinutes) => {
@@ -179,32 +198,24 @@ export const useSessionManager = () => {
 
         await saveSession(updatedSession);
 
-        Alert.alert(
-            'Time Extended! ✓',
-            `Added ${formatTime(additionalMinutes)}\nNew end time: ${formatEndTime(newEnd)}`,
-            [{ text: 'Got it', style: 'default' }]
+        // The card updates in place; tell screen readers what changed.
+        AccessibilityInfo.announceForAccessibility?.(
+            `Added ${formatDuration(additionalMinutes)}. Now ends at ${formatClock(newEnd)}.`
         );
     }, [session, saveSession]);
 
     const endSession = useCallback(() => {
         if (!session) return;
 
-        Alert.alert(
-            'End Parking Session?',
-            timeRemaining > 0
-                ? `You still have ${formatTime(timeRemaining)} remaining.\nAre you sure you want to end now?`
-                : 'Are you sure you want to end this session?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'End Session',
-                    style: 'destructive',
-                    onPress: async () => {
-                        await saveSession(null);
-                    },
-                },
-            ]
-        );
+        confirm({
+            title: 'End this session?',
+            message: timeRemaining > 0
+                ? `You still have ${formatDuration(timeRemaining)} left.`
+                : undefined,
+            confirmText: 'End session',
+            destructive: true,
+            onConfirm: () => saveSession(null),
+        });
     }, [session, timeRemaining, saveSession]);
 
     return {
@@ -212,6 +223,8 @@ export const useSessionManager = () => {
         session,
         isLoaded,
         sessionState,
+        warnAtMinutes,
+        maxExtendMinutes,
         timeRemaining,      // minutes
         timeRemainingMs,    // ms
         elapsedTime,        // minutes
@@ -233,7 +246,5 @@ export const useSessionManager = () => {
         setSelectedRate,
         selectedDuration,
         setSelectedDuration,
-
-        pulseAnim,
     };
 };

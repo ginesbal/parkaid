@@ -7,7 +7,7 @@
  * @param {number|null} remainingMinutes - mins remaining, null if unknown
  * @returns {string} session state: 'active', 'expiring', 'expired'
  */
-export const calculateSessionState = (remainingMinutes) => {
+export const calculateSessionState = (remainingMinutes, warnAtMinutes = 10) => {
     if (remainingMinutes === null || remainingMinutes === undefined) {
         return 'active';
     }
@@ -16,11 +16,44 @@ export const calculateSessionState = (remainingMinutes) => {
         return 'expired';
     }
 
-    if (remainingMinutes <= 10) {
+    if (remainingMinutes <= warnAtMinutes) {
         return 'expiring';
     }
 
     return 'active';
+};
+
+/**
+ * time left, as people say it: "54 min", "1 h 54 min", "Less than a minute"
+ * @param {number} ms - milliseconds remaining
+ */
+export const formatRemaining = (ms) => {
+    if (!ms || ms <= 0) return 'Time\u2019s up';
+    if (ms < 60000) return 'Less than a minute';
+    return formatDuration(Math.floor(ms / 60000));
+};
+
+/**
+ * a duration in minutes: "30 min", "2 h", "1 h 30 min"
+ */
+export const formatDuration = (minutes) => {
+    const m = Math.max(0, Math.round(minutes || 0));
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    return rest ? `${h} h ${rest} min` : `${h} h`;
+};
+
+/**
+ * clock time without a leading zero: "4:30 PM"
+ */
+export const formatClock = (date) => {
+    if (!date) return '';
+    try {
+        return new Date(date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    } catch {
+        return '';
+    }
 };
 
 /**

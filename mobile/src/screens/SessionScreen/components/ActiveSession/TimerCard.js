@@ -1,115 +1,111 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Text, View } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
-import { formatEndTime, formatMoney } from '../../../../utils/formatters';
+import { useEffect, useRef } from 'react';
+import { Animated, Platform, Text, View } from 'react-native';
+import { MOTION, TOKENS } from '../../../../constants/theme';
+import { formatMoney } from '../../../../utils/formatters';
+import { formatClock, formatDuration, formatRemaining } from '../../../../utils/sessionHelpers';
+import StatusBadge from '../shared/StatusBadge';
 import { styles } from './styles';
 
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const toNumber = (v) => (typeof v === 'number' ? v : new Date(v).getTime() || 0);
+const NATIVE = Platform.OS !== 'web';
 
-const toHMS = (ms) => {
-    const totalSeconds = Math.max(0, Math.floor((ms ?? 0) / 1000));
-    const hh = Math.floor(totalSeconds / 3600);
-    const mm = Math.floor((totalSeconds % 3600) / 60);
-    const ss = totalSeconds % 60;
-    return [hh, mm, ss].map((n) => String(n).padStart(2, '0')).join(':');
-};
+function Row({ label, value }) {
+    return (
+        <View style={styles.kv}>
+            <Text style={styles.kvLabel}>{label}</Text>
+            <Text style={styles.kvValue}>{value}</Text>
+        </View>
+    );
+}
 
-export default function TimerCard({
-    sessionState,
-    timeRemaining,
-    timeRemainingMs,
-    progress,
-    endTime,
-    totalCost,
-}) {
-    const pulseAnim = useRef(new Animated.Value(1)).current;
+/**
+ * TimerCard - the white card on the ink canvas: time left as people say it,
+ * when it ends, where, and a plain-text warning when it is time to head back.
+ */
+export default function TimerCard({ session, sessionState, timeRemainingMs, endTime, totalCost }) {
+    const total = Math.max(1, (session?.duration || 1) * 60000);
+    const left = Math.max(0, Math.min(1, timeRemainingMs / total));
 
-    const [now, setNow] = useState(Date.now());
+    // Time-left bar, scaled from the left on the native driver.
+    const bar = useRef(new Animated.Value(left)).current;
     useEffect(() => {
-        if (typeof timeRemainingMs === 'number') return;
-        if (sessionState === 'expired') return;
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
-    }, [sessionState, timeRemainingMs]);
+        Animated.timing(bar, {
+            toValue: left,
+            duration: MOTION.duration.base,
+            easing: MOTION.easing,
+            useNativeDriver: NATIVE,
+        }).start();
+    }, [left, bar]);
 
-    useEffect(() => {
-        if (sessionState === 'expiring') {
-            const anim = Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, { toValue: 1.02, duration: 900, useNativeDriver: true }),
-                    Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-                ])
-            );
-            anim.start();
-            return () => anim.stop();
-        }
+    const expired = sessionState === 'expired';
+    const expiring = sessionState === 'expiring';
+    const walk = session?.walkMinutes;
+    const remaining = formatRemaining(timeRemainingMs);
+    const endsAt = formatClock(endTime);
 
-        pulseAnim.setValue(1);
-    }, [sessionState, pulseAnim]);
-
-    const endMs = toNumber(endTime);
-    const derivedRemaining =
-        typeof timeRemainingMs === 'number'
-            ? Math.max(0, timeRemainingMs)
-            : (endMs ? Math.max(0, endMs - now) : Math.max(0, (timeRemaining ?? 0) * 60000));
-
-    const [initialRemaining, setInitialRemaining] = useState(null);
-    useEffect(() => {
-        if (initialRemaining == null || derivedRemaining > initialRemaining) {
-            setInitialRemaining(derivedRemaining);
-        }
-        if (sessionState === 'expired') setInitialRemaining(0);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [derivedRemaining, sessionState]);
-
-    const baseInitial = initialRemaining ?? (derivedRemaining || 0);
-    const remainingRatioFromTime =
-        baseInitial > 0 ? clamp01(derivedRemaining / baseInitial) : undefined;
-    const remainingRatio =
-        typeof remainingRatioFromTime === 'number'
-            ? remainingRatioFromTime
-            : clamp01(1 - clamp01(progress || 0));
-
-    const baseStyles = [styles.timerCard];
-    const valueStyles = [styles.timerValue];
-    const progressStyles = [styles.progressBar];
-    if (sessionState === 'expiring') {
-        baseStyles.push(styles.timerCardWarning);
-        valueStyles.push(styles.timerValueWarning);
-        progressStyles.push(styles.progressBarWarning);
-    } else if (sessionState === 'expired') {
-        baseStyles.push(styles.timerCardDanger);
-        valueStyles.push(styles.timerValueDanger);
-        progressStyles.push(styles.progressBarDanger);
+    let warning = null;
+    if (expired) {
+        warning = 'Your time is up. Move your car to avoid a ticket.';
+    } else if (expiring) {
+        warning = walk
+            ? `Time to head back. It’s about a ${walk} minute walk to your car.`
+            : 'Time to head back to your car.';
     }
 
-    const timeText = sessionState === 'expired' ? '00:00:00' : toHMS(derivedRemaining);
-
     return (
-        <Animated.View style={[...baseStyles, { transform: [{ scale: pulseAnim }] }]}>
-            <Text style={styles.timerLabel}>
-                {sessionState === 'expired' ? 'Session expired' : 'Time remaining'}
+        <View style={styles.card}>
+            <View style={styles.cardTop}>
+                <StatusBadge state={sessionState} />
+                <Text style={styles.demo}>Demo</Text>
+            </View>
+
+            <Text style={styles.timeLabel}>{expired ? 'Session ended' : 'Time left'}</Text>
+            <Text
+                style={[styles.time, expiring && styles.timeWarning, expired && styles.timeDanger]}
+                accessibilityLabel={expired ? 'Time is up' : `${remaining} left, ends at ${endsAt}`}
+            >
+                {remaining}
             </Text>
 
-            <Text style={valueStyles}>{timeText}</Text>
+            <View
+                style={styles.track}
+                accessibilityRole="progressbar"
+                accessibilityLabel="Time left"
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(left * 100) }}
+            >
+                <Animated.View
+                    style={[
+                        styles.fill,
+                        expiring && styles.fillWarning,
+                        expired && styles.fillDanger,
+                        { transform: [{ scaleX: bar }] },
+                    ]}
+                />
+            </View>
+            <Text style={styles.endsAt}>{expired ? `Ended at ${endsAt}` : `Ends at ${endsAt}`}</Text>
 
-            <View style={styles.progressContainer}>
-                <View style={styles.progressBackground} />
-                <View style={[...progressStyles, { width: `${(remainingRatio || 0) * 100}%` }]} />
+            {warning ? (
+                <View style={[styles.warning, expired && styles.warningDanger]} accessibilityRole="alert">
+                    <MaterialCommunityIcons
+                        name={expired ? 'alert-circle-outline' : 'walk'}
+                        size={18}
+                        color={expired ? TOKENS.danger : TOKENS.warningInk}
+                    />
+                    <Text style={[styles.warningText, expired && styles.warningTextDanger]}>{warning}</Text>
+                </View>
+            ) : null}
+
+            <View style={styles.place}>
+                <Text style={styles.placeName}>{session.locationName}</Text>
+                <Text style={styles.placeDetail}>
+                    {[session.locationAddress, session.spotId].filter(Boolean).join(' · ')}
+                </Text>
             </View>
 
-            <View style={styles.timerMeta}>
-                <View style={styles.timerMetaItem}>
-                    <MaterialCommunityIcons name="timer-sand" size={14} color={TOKENS.textMuted} />
-                    <Text style={styles.timerMetaText}>Ends at {formatEndTime(endTime)}</Text>
-                </View>
-                <View style={styles.timerMetaItem}>
-                    <MaterialCommunityIcons name="cash" size={14} color={TOKENS.textMuted} />
-                    <Text style={styles.timerMetaText}>{formatMoney(totalCost)} total</Text>
-                </View>
-            </View>
-        </Animated.View>
+            <Row label="Vehicle" value={session.vehiclePlate} />
+            <Row label="Started" value={formatClock(session.startedAt)} />
+            <Row label="Rate" value={`${formatMoney(session.hourlyRate)} / hour`} />
+            <Row label={`Total for ${formatDuration(session.duration)}`} value={formatMoney(totalCost)} />
+        </View>
     );
 }

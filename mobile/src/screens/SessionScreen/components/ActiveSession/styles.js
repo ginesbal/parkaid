@@ -1,271 +1,208 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS, alpha } from '../../../../constants/theme';
+import { RADIUS, SPACING, TOKENS, TYPOGRAPHY, alpha } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
-    scrollContent: {
-        paddingBottom: 184,
+    // Sits on TOKENS.inkSurface (see SessionScreen).
+    scroll: {
+        flexGrow: 1,
+        width: '100%',
+        maxWidth: 520,
+        alignSelf: 'center',
+        paddingHorizontal: SPACING.xl,
+        paddingTop: SPACING.lg,
+    },
+    screenTitle: {
+        fontSize: 18,
+        lineHeight: 24,
+        fontWeight: '600',
+        color: TOKENS.surface,
+        marginBottom: SPACING.lg,
+    },
+    notice: {
+        marginBottom: SPACING.lg,
+        fontSize: 14,
+        lineHeight: 20,
+        color: TOKENS.inkMuted,
     },
 
-    header: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: TOKENS.hairline,
+    card: {
+        padding: SPACING.xl,
+        borderRadius: RADIUS['2xl'],
         backgroundColor: TOKENS.surface,
     },
-    statusBar: {
+    cardTop: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 12,
     },
-    locationText: {
-        flex: 1,
-        fontSize: 13,
-        color: TOKENS.textMuted,
-        fontWeight: '400',
-        textAlign: 'right',
-    },
-
-    timerCard: {
-        backgroundColor: TOKENS.surface,
-        marginHorizontal: 20,
-        marginTop: 20,
-        borderRadius: 18,
-        padding: 28,
-        alignItems: 'center',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 1,
-    },
-    timerCardWarning: {
-        backgroundColor: alpha(TOKENS.warning, 0.10),
-        borderColor: alpha(TOKENS.warning, 0.32),
-    },
-    timerCardDanger: {
-        backgroundColor: alpha(TOKENS.danger, 0.10),
-        borderColor: alpha(TOKENS.danger, 0.32),
-    },
-    timerLabel: {
-        fontSize: 11,
+    demo: {
+        fontSize: 12,
         fontWeight: '600',
         color: TOKENS.textMuted,
-        letterSpacing: 0.8,
+        letterSpacing: 0.3,
         textTransform: 'uppercase',
-        marginBottom: 8,
     },
-    timerValue: {
-        fontSize: 48,
+    timeLabel: {
+        marginTop: SPACING.md,
+        fontSize: 14,
+        color: TOKENS.textMuted,
+    },
+    time: {
+        ...TYPOGRAPHY.numLarge,
+        fontSize: 44,
+        lineHeight: 50,
         fontWeight: '600',
-        color: TOKENS.text,
         letterSpacing: -1,
-        marginBottom: 20,
-        fontVariant: ['tabular-nums'],
+        marginTop: 2,
     },
-    timerValueWarning: {
-        color: TOKENS.warning,
+    timeWarning: {
+        color: TOKENS.warningInk,
     },
-    timerValueDanger: {
+    timeDanger: {
         color: TOKENS.danger,
     },
-    progressContainer: {
-        width: '100%',
-        height: 5,
+
+    track: {
+        height: 6,
+        marginTop: SPACING.md,
         borderRadius: 3,
-        backgroundColor: alpha(TOKENS.primary, 0.14),
         overflow: 'hidden',
-        marginBottom: 20,
+        backgroundColor: TOKENS.surfaceMuted,
     },
-    progressBackground: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    progressBar: {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
+    fill: {
+        height: '100%',
+        width: '100%',
+        borderRadius: 3,
         backgroundColor: TOKENS.primary,
-        borderRadius: 2,
+        transformOrigin: 'left',
     },
-    progressBarWarning: {
+    fillWarning: {
         backgroundColor: TOKENS.warning,
     },
-    progressBarDanger: {
+    fillDanger: {
         backgroundColor: TOKENS.danger,
     },
-    timerMeta: {
-        flexDirection: 'row',
-        gap: 16,
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-    },
-    timerMetaItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    timerMetaText: {
-        fontSize: 13,
-        color: TOKENS.textMuted,
+    endsAt: {
+        marginTop: SPACING.sm,
+        fontSize: 14,
         fontWeight: '500',
+        color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
 
-    // Quick extend
-    quickActions: {
-        marginHorizontal: 20,
-        marginTop: 24,
+    warning: {
+        flexDirection: 'row',
+        gap: SPACING.sm,
+        marginTop: SPACING.lg,
+        padding: SPACING.md,
+        borderRadius: RADIUS.md,
+        backgroundColor: TOKENS.warningSoft,
     },
-    quickActionsTitle: {
-        fontSize: 13,
+    warningDanger: {
+        backgroundColor: TOKENS.dangerSoft,
+    },
+    warningText: {
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
+        color: TOKENS.warningInk,
+    },
+    warningTextDanger: {
+        color: TOKENS.danger,
+    },
+
+    place: {
+        marginTop: SPACING.xl,
+        paddingTop: SPACING.lg,
+        marginBottom: SPACING.sm,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: TOKENS.hairline,
+    },
+    placeName: {
+        fontSize: 17,
+        lineHeight: 22,
         fontWeight: '600',
         color: TOKENS.text,
-        marginBottom: 12,
     },
-    extendGrid: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    extendButton: {
-        flex: 1,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderRadius: 12,
-        padding: 14,
-        alignItems: 'center',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-    },
-    extendButtonHighlight: {
-        backgroundColor: TOKENS.primaryWash,
-        borderColor: TOKENS.primary,
-    },
-    extendButtonDisabled: {
-        opacity: 0.4,
-    },
-    extendTopRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    extendButtonText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.primary,
-        marginTop: 0,
-    },
-    extendButtonTextDisabled: {
-        color: TOKENS.textMuted,
-    },
-    extendButtonCost: {
-        fontSize: 11,
-        color: TOKENS.textMuted,
+    placeDetail: {
         marginTop: 2,
-        fontWeight: '500',
-        fontVariant: ['tabular-nums'],
-    },
-    extendButtonCostDisabled: {
-        color: alpha(TOKENS.textMuted, 0.5),
-    },
-
-    detailsCard: {
-        marginHorizontal: 20,
-        marginTop: 24,
-        gap: 0,
-    },
-    detailsTitle: {
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: 14,
+        lineHeight: 20,
         color: TOKENS.textMuted,
-        marginBottom: 10,
-        letterSpacing: 0.3,
-        textTransform: 'uppercase',
     },
-    detailRow: {
+    kv: {
         flexDirection: 'row',
-        paddingVertical: 14,
-        paddingHorizontal: 0,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: TOKENS.divider,
-    },
-    detailIcon: {
-        width: 34,
-        height: 34,
-        borderRadius: 10,
-        backgroundColor: TOKENS.surfaceMuted,
+        justifyContent: 'space-between',
         alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
+        paddingVertical: SPACING.sm,
     },
-    detailContent: {
-        flex: 1,
-    },
-    detailLabel: {
-        fontSize: 11,
+    kvLabel: {
+        fontSize: 14,
         color: TOKENS.textMuted,
-        marginBottom: 4,
-        letterSpacing: 0.3,
-        fontWeight: '500',
-        textTransform: 'uppercase',
     },
-    detailValue: {
+    kvValue: {
         fontSize: 15,
         fontWeight: '600',
         color: TOKENS.text,
-    },
-    detailSubvalue: {
-        fontSize: 13,
-        color: TOKENS.textMuted,
-        marginTop: 2,
         fontVariant: ['tabular-nums'],
-        fontWeight: '500',
     },
 
-    // Bottom actions
-    bottomActions: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: TOKENS.surface,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: TOKENS.hairline,
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 8,
+    // Extend on top, End well below it so they are never confused.
+    actions: {
+        marginTop: SPACING['2xl'],
     },
-    endButton: {
+    extend: {
         minHeight: 54,
-        borderRadius: 14,
-        backgroundColor: TOKENS.danger,
-        flexDirection: 'row',
+        paddingVertical: SPACING.md,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
-        elevation: 2,
     },
-    endButtonText: {
+    extendText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
-    },
-    bottomHint: {
-        fontSize: 12,
-        color: TOKENS.textMuted,
+        color: TOKENS.surface,
         textAlign: 'center',
-        marginTop: 8,
-        fontWeight: '400',
-        lineHeight: 18,
+    },
+    capped: {
+        padding: SPACING.lg,
+        borderRadius: RADIUS.lg,
+        backgroundColor: alpha(TOKENS.surface, 0.08),
+    },
+    cappedTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: TOKENS.surface,
+    },
+    cappedBody: {
+        marginTop: 2,
+        fontSize: 14,
+        color: TOKENS.inkMuted,
+    },
+    end: {
+        minHeight: 48,
+        marginTop: SPACING['3xl'],
+        paddingVertical: SPACING.md,
+        borderRadius: RADIUS.lg,
+        borderWidth: 1,
+        borderColor: alpha(TOKENS.surface, 0.35),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // When time is up, ending is the main thing left to do.
+    endPrimary: {
+        marginTop: SPACING.lg,
+        backgroundColor: TOKENS.surface,
+        borderColor: TOKENS.surface,
+    },
+    endText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.surface,
+    },
+    endTextPrimary: {
+        color: TOKENS.text,
     },
 });

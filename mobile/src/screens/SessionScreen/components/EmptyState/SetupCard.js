@@ -3,12 +3,24 @@ import { useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS, RATE_OPTIONS } from '../../../../constants/session';
-import { formatMoney, formatTime } from '../../../../utils/formatters';
-import { calculateCost } from '../../../../utils/sessionHelpers';
+import { formatMoney } from '../../../../utils/formatters';
+import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
 
+// Quick picks that fit the spot's maximum stay. If even the shortest is too
+// long, offer the maximum itself.
+export function durationsFor(maxMinutes) {
+    const quick = DURATION_OPTIONS.filter((opt) => opt.quickSelect);
+    if (!maxMinutes) return quick;
+    const fit = quick.filter((opt) => opt.value <= maxMinutes);
+    return fit.length ? fit : [{ value: maxMinutes, label: formatDuration(maxMinutes) }];
+}
+
 /**
- * SetupCard - Handles the 3-step parking session setup
+ * SetupCard - plate, duration and (in the demo flow) rate, with a summary of
+ * what Start will commit to: when it ends and what it costs.
+ * With a spot from Details, the rate is the spot's and durations respect its
+ * posted maximum.
  */
 const SetupCard = ({
     vehiclePlate,
@@ -18,16 +30,17 @@ const SetupCard = ({
     selectedDuration,
     setSelectedDuration,
     onStartSession,
+    fixedRate = null,
+    maxMinutes = null,
+    zoneLabel = null,
+    now = Date.now(),
 }) => {
-    const totalCost = useMemo(
-        () => calculateCost(selectedDuration, selectedRate),
-        [selectedDuration, selectedRate]
-    );
-
-    const isValid = useMemo(
-        () => vehiclePlate.trim().length > 0,
-        [vehiclePlate]
-    );
+    const rate = fixedRate ?? selectedRate;
+    const durations = useMemo(() => durationsFor(maxMinutes), [maxMinutes]);
+    const duration = maxMinutes ? Math.min(selectedDuration, maxMinutes) : selectedDuration;
+    const totalCost = calculateCost(duration, rate);
+    const endsAt = formatClock(now + duration * 60000);
+    const isValid = vehiclePlate.trim().length > 0;
 
     return (
         <View style={styles.setupCard}>
@@ -47,7 +60,7 @@ const SetupCard = ({
                         maxLength={10}
                         style={styles.plateInput}
                         selectionColor={TOKENS.primary}
-                        accessibilityLabel="Vehicle license plate input"
+                        accessibilityLabel="Vehicle license plate"
                         accessibilityHint="Enter your vehicle's license plate number"
                     />
                 </View>
@@ -58,117 +71,117 @@ const SetupCard = ({
                     <Text style={styles.stepNumber}>2</Text>
                 </View>
                 <View style={styles.setupContent}>
-                    <Text style={styles.setupLabel}>Parking duration</Text>
-                    <View style={styles.durationGrid}>
-                        {DURATION_OPTIONS.filter(opt => opt.quickSelect).map((option) => (
-                            <TouchableOpacity
-                                key={option.value}
-                                onPress={() => setSelectedDuration(option.value)}
-                                activeOpacity={0.8}
-                                style={[
-                                    styles.durationOption,
-                                    selectedDuration === option.value && styles.durationOptionActive
-                                ]}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Select ${option.label} duration`}
-                                accessibilityState={{ selected: selectedDuration === option.value }}
-                            >
-                                <Text
-                                    style={[
-                                        styles.durationTime,
-                                        selectedDuration === option.value && styles.durationTimeActive
-                                    ]}
-                                    numberOfLines={1}
-                                    adjustsFontSizeToFit
-                                    minimumFontScale={0.85}
-                                    maxFontSizeMultiplier={1.0}
+                    <Text style={styles.setupLabel}>How long</Text>
+                    <View style={styles.durationGrid} accessibilityRole="radiogroup">
+                        {durations.map((option) => {
+                            const selected = duration === option.value;
+                            return (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    onPress={() => setSelectedDuration(option.value)}
+                                    activeOpacity={0.8}
+                                    style={[styles.durationOption, selected && styles.durationOptionActive]}
+                                    accessibilityRole="radio"
+                                    aria-checked={selected}
+                                    accessibilityLabel={`${formatDuration(option.value)}, ${formatMoney(calculateCost(option.value, rate))}`}
                                 >
-                                    {option.label}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.durationCost,
-                                        selectedDuration === option.value && styles.durationCostActive
-                                    ]}
-                                    numberOfLines={1}
-                                    adjustsFontSizeToFit
-                                    minimumFontScale={0.85}
-                                    maxFontSizeMultiplier={1.0}
-                                >
-                                    {formatMoney(calculateCost(option.value, selectedRate))}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                                    <Text
+                                        style={[styles.durationTime, selected && styles.durationTimeActive]}
+                                        numberOfLines={1}
+                                        adjustsFontSizeToFit
+                                        minimumFontScale={0.85}
+                                    >
+                                        {formatDuration(option.value)}
+                                    </Text>
+                                    <Text
+                                        style={[styles.durationCost, selected && styles.durationCostActive]}
+                                        numberOfLines={1}
+                                    >
+                                        {formatMoney(calculateCost(option.value, rate))}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
+                    {maxMinutes ? (
+                        <Text style={styles.setupHint}>
+                            {formatDuration(maxMinutes)} maximum here. Check posted signs.
+                        </Text>
+                    ) : null}
                 </View>
             </View>
 
-            <View style={styles.setupSection}>
-                <View style={styles.stepIndicator}>
-                    <Text style={styles.stepNumber}>3</Text>
-                </View>
-                <View style={styles.setupContent}>
-                    <Text style={styles.setupLabel}>Hourly rate</Text>
-                    <View style={styles.rateOptions}>
-                        {RATE_OPTIONS.map((option) => (
-                            <TouchableOpacity
-                                key={option.value}
-                                onPress={() => setSelectedRate(option.value)}
-                                activeOpacity={0.8}
-                                style={[
-                                    styles.rateOption,
-                                    selectedRate === option.value && styles.rateOptionActive
-                                ]}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Select ${option.label} rate`}
-                                accessibilityState={{ selected: selectedRate === option.value }}
-                            >
-                                <Text style={[
-                                    styles.rateText,
-                                    selectedRate === option.value && styles.rateTextActive
-                                ]}>
-                                    {option.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+            {fixedRate === null ? (
+                <View style={styles.setupSection}>
+                    <View style={styles.stepIndicator}>
+                        <Text style={styles.stepNumber}>3</Text>
+                    </View>
+                    <View style={styles.setupContent}>
+                        <Text style={styles.setupLabel}>Hourly rate</Text>
+                        <View style={styles.rateOptions} accessibilityRole="radiogroup">
+                            {RATE_OPTIONS.map((option) => {
+                                const selected = selectedRate === option.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        onPress={() => setSelectedRate(option.value)}
+                                        activeOpacity={0.8}
+                                        style={[styles.rateOption, selected && styles.rateOptionActive]}
+                                        accessibilityRole="radio"
+                                        aria-checked={selected}
+                                        accessibilityLabel={`${formatMoney(option.value)} per hour`}
+                                    >
+                                        <Text style={[styles.rateText, selected && styles.rateTextActive]}>
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
                     </View>
                 </View>
-            </View>
+            ) : null}
 
+            {/* What Start commits to, read before the tap that costs money */}
             <View style={styles.summaryBox}>
                 <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Total time</Text>
-                    <Text style={styles.summaryValue}>{formatTime(selectedDuration)}</Text>
+                    <Text style={styles.summaryLabel}>Ends at</Text>
+                    <Text style={styles.summaryValue}>{endsAt}</Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Estimated total</Text>
-                    <Text style={styles.summaryValueLarge}>
-                        {formatMoney(totalCost)}
+                    <Text style={styles.summaryLabel}>Rate</Text>
+                    <Text style={styles.summaryValue}>
+                        {formatMoney(rate)} / hour{zoneLabel ? ` · ${zoneLabel}` : ''}
                     </Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Total for {formatDuration(duration)}</Text>
+                    <Text style={styles.summaryValueLarge}>{formatMoney(totalCost)}</Text>
                 </View>
             </View>
 
             <TouchableOpacity
                 onPress={onStartSession}
                 activeOpacity={0.9}
-                style={[
-                    styles.primaryButton,
-                    !isValid && styles.primaryButtonDisabled
-                ]}
+                style={[styles.primaryButton, !isValid && styles.primaryButtonDisabled]}
                 disabled={!isValid}
                 accessibilityRole="button"
-                accessibilityLabel="Start parking session"
-                accessibilityHint="Begins your parking session with the selected options"
+                accessibilityLabel={`Start session: ${formatDuration(duration)}, ${formatMoney(totalCost)}, ends at ${endsAt}`}
+                accessibilityHint={isValid ? undefined : 'Enter your license plate first'}
                 accessibilityState={{ disabled: !isValid }}
             >
                 <MaterialCommunityIcons
                     name="timer-play"
                     size={20}
-                    color="#fff"
+                    color={isValid ? TOKENS.surface : TOKENS.textMuted}
                 />
-                <Text style={styles.primaryButtonText}>Start session</Text>
+                <Text style={[styles.primaryButtonText, !isValid && styles.primaryButtonTextDisabled]}>
+                    Start {'·'} {formatDuration(duration)} {'·'} {formatMoney(totalCost)}
+                </Text>
             </TouchableOpacity>
+            {!isValid ? <Text style={styles.disabledHint}>Add your plate to start.</Text> : null}
         </View>
     );
 };

@@ -4,19 +4,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../components/BrandLoader';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { logger } from '../../utils/loggers';
+import { getSpotName } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
 import EmptyState from './components/EmptyState';
 import { styles } from './SessionScreen.styles';
 
 /**
- * SessionScreen - parking session management
+ * SessionScreen - parking session management. Details hands a spot over as
+ * the `spot` route param; it prefills the setup for that spot.
  */
-export default function SessionScreen() {
+export default function SessionScreen({ route, navigation }) {
   const {
     session,
     isLoaded,
     sessionState,
+    maxExtendMinutes,
     timeRemaining,
+    timeRemainingMs,
     elapsedTime,
     progress,
     startSession,
@@ -33,6 +37,29 @@ export default function SessionScreen() {
   } = useSessionManager();
 
   const hasSession = Boolean(session);
+
+  // Spot handed over from Details. Consumed once storage is read, so we know
+  // whether a session is already running.
+  const routeSpot = route?.params?.spot ?? null;
+  const [pendingSpot, setPendingSpot] = React.useState(null);
+  const [notice, setNotice] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!routeSpot || !isLoaded) return;
+    navigation?.setParams({ spot: undefined });
+    if (session) {
+      setNotice(
+        `You\u2019re already parked at ${session.locationName}. End this session to park at ${getSpotName(routeSpot).title}.`
+      );
+    } else {
+      setPendingSpot(routeSpot);
+    }
+  }, [routeSpot, isLoaded, session, navigation]);
+
+  // The notice only applies to the session it was about.
+  React.useEffect(() => {
+    if (!hasSession) setNotice(null);
+  }, [hasSession]);
 
   React.useEffect(() => {
     logger.log('session_screen_mount');
@@ -64,16 +91,20 @@ export default function SessionScreen() {
       plate: vehiclePlate || null,
       rate: selectedRate,
       durationMin: selectedDuration,
+      spotId: pendingSpot?.id ?? null,
     });
-    startSession();
-  }, [vehiclePlate, selectedRate, selectedDuration, startSession]);
+    startSession(pendingSpot).then((started) => {
+      if (started) setPendingSpot(null);
+    });
+  }, [vehiclePlate, selectedRate, selectedDuration, startSession, pendingSpot]);
 
-  const handleExtend = React.useCallback(() => {
+  const handleExtend = React.useCallback((minutes) => {
     logger.log('session_extend_request', {
+      minutes,
       currentEndTime: endTime,
       elapsedSec: elapsedTime,
     });
-    extendSession();
+    extendSession(minutes);
   }, [extendSession, endTime, elapsedTime]);
 
   const handleEnd = React.useCallback(() => {
@@ -121,6 +152,8 @@ export default function SessionScreen() {
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
         <StatusBar style="dark" />
         <EmptyState
+          spot={pendingSpot}
+          now={Date.now()}
           vehiclePlate={vehiclePlate}
           setVehiclePlate={setVehiclePlate}
           selectedRate={selectedRate}
@@ -133,17 +166,18 @@ export default function SessionScreen() {
     );
   }
 
+  // A running session is a focus moment: ink canvas, like Details.
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, styles.ink]}>
+      <StatusBar style="light" />
       <ActiveSession
         session={session}
         sessionState={sessionState}
-        timeRemaining={timeRemaining}
-        elapsedTime={elapsedTime}
-        progress={progress}
+        timeRemainingMs={timeRemainingMs}
         totalCost={totalCost}
         endTime={endTime}
+        maxExtendMinutes={maxExtendMinutes}
+        notice={notice}
         onExtend={handleExtend}
         onEnd={handleEnd}
       />

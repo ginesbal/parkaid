@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: TOKENS.bg,
     },
+    ink: {
+        backgroundColor: TOKENS.inkSurface,
+    },
     loading: {
         alignItems: 'center',
         justifyContent: 'center',

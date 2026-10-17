@@ -103,6 +103,7 @@ export const TOKENS = {
     success: '#2C7A6B',
     successSoft: 'rgba(44, 122, 107, 0.08)',
     warning: '#B8832D',
+    warningInk: '#8F6216',                             // warning as text: 5.3:1 on white
     warningSoft: 'rgba(184, 131, 45, 0.08)',
 
     // ink canvas — focus screens (Details, Session) sit on prussian instead of bg

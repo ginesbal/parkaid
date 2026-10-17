@@ -1,6 +1,6 @@
 // App.js
 
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
@@ -38,10 +38,12 @@ const TAB_CONFIG = {
         activeIcon: 'map',
         inactiveIcon: 'map-outline',
     },
+    // The P of the brand pin, rather than a generic car.
     Park: {
         label: 'Park',
-        activeIcon: 'car',
-        inactiveIcon: 'car-outline',
+        iconSet: MaterialCommunityIcons,
+        activeIcon: 'alpha-p-box',
+        inactiveIcon: 'alpha-p-box-outline',
     },
 };
 
@@ -77,9 +79,10 @@ function MainTabs() {
                 tabBarShowLabel: true,
                 tabBarIcon: ({ focused, color, size }) => {
                     const tabMeta = TAB_CONFIG[route.name];
+                    const Icon = tabMeta.iconSet || Ionicons;
                     return (
                         <View style={navStyles.iconWrap}>
-                            <Ionicons
+                            <Icon
                                 name={focused ? tabMeta.activeIcon : tabMeta.inactiveIcon}
                                 size={size}
                                 color={color}

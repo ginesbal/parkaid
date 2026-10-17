@@ -227,4 +227,19 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#fff',
     },
+    primaryButtonTextDisabled: {
+        color: TOKENS.textMuted,
+    },
+    disabledHint: {
+        marginTop: 8,
+        fontSize: 13,
+        color: TOKENS.textMuted,
+        textAlign: 'center',
+    },
+    setupHint: {
+        marginTop: 8,
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+    },
 });
