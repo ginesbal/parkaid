@@ -5,12 +5,17 @@
 //
 // `delay` keeps fast loads from flashing a loader: nothing shows until the
 // wait has lasted that long.
+//
+// `live` plays the Spline loader over the hopping still, for the full-screen
+// waits where it has room; small and brief loaders keep the still.
 
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SPLINE_SCENES } from '../../constants/spline';
 import { MOTION, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { PIN } from '../BrandPin';
+import BrandPin3D from '../BrandPin3D';
 
 const LOOP_MS = 1400;
 
@@ -54,8 +59,9 @@ function buildTransforms(progress, size) {
     };
 }
 
-export default function BrandLoader({ size = 72, label, sublabel, delay = 0, style }) {
+export default function BrandLoader({ size = 72, label, sublabel, delay = 0, live = false, style }) {
     const reduceMotion = useReduceMotion();
+    const { width: windowWidth } = useWindowDimensions();
     const [visible, setVisible] = useState(delay <= 0);
     const fade = useRef(new Animated.Value(0)).current;
     const progress = useRef(new Animated.Value(0)).current;
@@ -108,6 +114,32 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
     // Same style shape in both modes. Swapping animated props in and out leaves
     // natively driven views stuck on their last frame, so the idle value rests.
     const { pin, shadowScale, shadowOpacity } = transforms.current;
+    const still = (
+        <>
+            <Animated.Image
+                source={PIN}
+                resizeMode="contain"
+                style={{
+                    width: size,
+                    height: size,
+                    opacity: breathe,
+                    transform: pin,
+                }}
+            />
+            <Animated.View
+                style={[
+                    styles.shadow,
+                    {
+                        width: size * 0.42,
+                        height: Math.max(4, size * 0.07),
+                        marginTop: -size * 0.12,
+                        opacity: shadowOpacity,
+                        transform: [{ scaleX: shadowScale }],
+                    },
+                ]}
+            />
+        </>
+    );
 
     return (
         <Animated.View
@@ -120,28 +152,15 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, sty
         >
             {/* Headroom for the hop so it never collides with the label */}
             <View style={{ paddingTop: size * 0.28 }}>
-                <Animated.Image
-                    source={PIN}
-                    resizeMode="contain"
-                    style={{
-                        width: size,
-                        height: size,
-                        opacity: breathe,
-                        transform: pin,
-                    }}
-                />
-                <Animated.View
-                    style={[
-                        styles.shadow,
-                        {
-                            width: size * 0.42,
-                            height: Math.max(4, size * 0.07),
-                            marginTop: -size * 0.12,
-                            opacity: shadowOpacity,
-                            transform: [{ scaleX: shadowScale }],
-                        },
-                    ]}
-                />
+                {live ? (
+                    <BrandPin3D
+                        scene={SPLINE_SCENES.loader}
+                        size={size}
+                        stageWidth={Math.min(windowWidth, size * 3)}
+                    >
+                        {still}
+                    </BrandPin3D>
+                ) : still}
             </View>
             {label ? <Text style={styles.label}>{label}</Text> : null}
             {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}

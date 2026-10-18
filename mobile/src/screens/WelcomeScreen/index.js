@@ -1,8 +1,8 @@
 // WelcomeScreen — first-run screen. Shown once, then the app opens on Home.
-// The pin carries the moment; the copy fades up once and nothing else loops.
+// The live Spline pin carries the moment; the copy fades up once.
 
 import ScreenStatusBar from '../../components/ScreenStatusBar';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
     Animated,
     Pressable,
@@ -13,7 +13,8 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BrandPin from '../../components/BrandPin';
+import BrandPin3D from '../../components/BrandPin3D';
+import { SPLINE_SCENES } from '../../constants/spline';
 import { MOTION, RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../constants/theme';
 import { useEntrance } from '../../hooks/useEntrance';
 import { markWelcomeSeen } from '../../utils/onboarding';
@@ -25,6 +26,8 @@ export default function WelcomeScreen({ navigation }) {
     const insets = useSafeAreaInsets();
     const { width, height } = useWindowDimensions();
     const pinSize = Math.round(Math.min(width * 0.56, height * 0.3, 240));
+    // The live scene spans the stage, so the pin has room to move.
+    const [stageWidth, setStageWidth] = useState(0);
 
     const rise = useEntrance(ENTRANCE_ITEMS);
     const pressScale = useRef(new Animated.Value(1)).current;
@@ -59,8 +62,11 @@ export default function WelcomeScreen({ navigation }) {
             >
                 <Text style={styles.brand}>ParkAid</Text>
 
-                <View style={styles.pinStage}>
-                    <BrandPin size={pinSize} />
+                <View
+                    style={styles.pinStage}
+                    onLayout={(e) => setStageWidth(e.nativeEvent.layout.width)}
+                >
+                    <BrandPin3D scene={SPLINE_SCENES.hero} size={pinSize} stageWidth={stageWidth} />
                 </View>
 
                 <Animated.Text style={[styles.headline, rise[0]]} accessibilityRole="header">

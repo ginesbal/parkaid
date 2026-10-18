@@ -49,6 +49,7 @@ Mobile app
 - React Native Maps for the map and markers
 - Expo Location for GPS
 - AsyncStorage for caching data on the phone
+- Spline for the 3D pin, played live in a WebView (an iframe on web)
 
 Backend
 - Node.js and Express for the API
@@ -276,6 +277,11 @@ The main things I did:
   when the connection is bad.
 - The server fails loudly at startup if a required setting is missing, but
   handles a temporary database outage per request instead of crashing.
+- The 3D pin on the welcome screen and the first loading screen is the real
+  Spline scene, so its Code-tab motion plays as it does in Spline. A still
+  image shows first and stays when the scene can't play (offline, reduce
+  motion, or a phone without WebGPU). Scene URLs and the runtime version live
+  in `constants/spline.js`.
 
 ## Credits
 

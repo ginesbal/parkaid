@@ -6,18 +6,19 @@ import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
 /**
- * LoadingState - first load of Home: the pin hops while we find the driver,
- * then the spots around them.
+ * LoadingState - first load of Home: the live Spline pin jumps while we find
+ * the driver, then the spots around them.
  */
 const LoadingState = ({ searchRadius, phase = 'spots' }) => (
     <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right', 'bottom']}>
         <ScreenStatusBar style="dark" />
         <View style={styles.loadingContainer}>
             {phase === 'location' ? (
-                <BrandLoader size={96} label="Finding where you are" />
+                <BrandLoader size={96} label="Finding where you are" live />
             ) : (
                 <BrandLoader
                     size={96}
+                    live
                     label="Looking for spots nearby"
                     sublabel={`Checking within ${getDistanceLabel(searchRadius)} of you`}
                 />
