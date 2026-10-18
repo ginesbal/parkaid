@@ -1,23 +1,51 @@
-import { getLiveBox } from '../splineLayout';
+import { getCanvasLayout } from '../splineLayout';
 
-const FRAME = { height: 0.5, centerY: 0.6 };
-const STILL = { height: 0.75, centerX: 0.5, centerY: 0.5 };
+const BADGE = { width: 274, height: 72, inset: 12 };
+const STAGE = { width: 390, height: 760 };
 
-describe('getLiveBox', () => {
-    it('sizes the canvas so the scene pin matches the still', () => {
-        const box = getLiveBox({ size: 100, width: 300, frame: FRAME, still: STILL });
-        // A 75 pt pin at half the canvas height needs a 150 pt canvas.
-        expect(box.height).toBeCloseTo(150);
-        expect(box.width).toBe(300);
-        expect(box.position).toBe('absolute');
+// The pin, in stage points, from the target the page is given.
+const pinFrom = ({ box, target }) => ({
+    cx: box.left + target.u * box.width,
+    cy: box.top + target.v * box.height,
+    height: target.h * box.height,
+});
+
+describe('getCanvasLayout', () => {
+    it('ends every canvas at the stage corner, where the badge goes', () => {
+        for (const pin of [{ cx: 340, cy: 60, height: 40 }, { cx: 195, cy: 380, height: 73 }]) {
+            const { box } = getCanvasLayout({ pin, stage: STAGE, badge: BADGE });
+            expect(box.left + box.width).toBe(STAGE.width);
+            expect(box.top + box.height).toBe(STAGE.height);
+        }
     });
 
-    it('centres the scene pin on the still pin', () => {
-        const size = 96;
-        const box = getLiveBox({ size, width: 288, frame: FRAME, still: { ...STILL, centerX: 0.54 } });
-        const pinX = box.left + box.width / 2;
-        const pinY = box.top + FRAME.centerY * box.height;
-        expect(pinX).toBeCloseTo(size * 0.54);
-        expect(pinY).toBeCloseTo(size * STILL.centerY);
+    it('puts the scene pin exactly on the still', () => {
+        const pin = { cx: 340, cy: 60, height: 40 };
+        const layout = getCanvasLayout({ pin, stage: STAGE, badge: BADGE, room: 0.45 });
+        const placed = pinFrom(layout);
+        expect(placed.cx).toBeCloseTo(pin.cx);
+        expect(placed.cy).toBeCloseTo(pin.cy);
+        expect(placed.height).toBeCloseTo(pin.height);
+    });
+
+    it('is always wide and tall enough for the whole badge', () => {
+        // A pin in the bottom-right corner itself.
+        const { box } = getCanvasLayout({ pin: { cx: 370, cy: 740, height: 30 }, stage: STAGE, badge: BADGE });
+        expect(box.width).toBeGreaterThanOrEqual(BADGE.width + 2 * BADGE.inset);
+        expect(box.height).toBeGreaterThanOrEqual(BADGE.height + 2 * BADGE.inset);
+    });
+
+    it('leaves room above the pin for its motion, within the stage', () => {
+        const pin = { cx: 195, cy: 380, height: 100 };
+        const { box } = getCanvasLayout({ pin, stage: STAGE, badge: BADGE, room: 0.45 });
+        expect(box.top).toBeCloseTo(pin.cy - pin.height * 0.95);
+        const high = getCanvasLayout({ pin: { ...pin, cy: 40 }, stage: STAGE, badge: BADGE, room: 0.45 });
+        expect(high.box.top).toBe(0);
+    });
+
+    it('spans the stage when it is narrower than the badge', () => {
+        const { box } = getCanvasLayout({ pin: { cx: 120, cy: 200, height: 60 }, stage: { width: 240, height: 400 }, badge: BADGE });
+        expect(box.left).toBe(0);
+        expect(box.width).toBe(240);
     });
 });

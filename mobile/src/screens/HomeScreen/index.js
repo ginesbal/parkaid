@@ -4,6 +4,7 @@ import { Animated, FlatList, LayoutAnimation, Platform, RefreshControl, UIManage
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BrandLoader from '../../components/BrandLoader';
+import LiveStage from '../../components/LiveStage';
 import Header from './components/Header';
 import ParkingList from './components/ParkingList';
 import EmptyState from './components/ParkingList/EmptyState';
@@ -208,6 +209,9 @@ export default function HomeScreen({ navigation }) {
     }
   }, [searchRadius]);
 
+  // The live pins hold their spots only while the list is at the top.
+  const [scrolled, setScrolled] = useState(false);
+
   // The loader hands over to the list with one soft rise, not a hard cut.
   const showLoader = isLoadingLocation || (!hasFetched && !error);
   const [contentIn] = useEntrance(1, !showLoader);
@@ -223,7 +227,7 @@ export default function HomeScreen({ navigation }) {
 
   const emptyComponent = loading ? (
     <View style={styles.updating}>
-      <BrandLoader size={56} label="Updating the list" delay={150} />
+      <BrandLoader size={56} label="Updating the list" delay={150} live />
     </View>
   ) : (
     <EmptyState
@@ -240,46 +244,51 @@ export default function HomeScreen({ navigation }) {
     <>
       <ScreenStatusBar style="dark" />
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-        <Animated.View style={[styles.content, contentIn]}>
-        <FlatList
-          data={restSpots}
-          renderItem={renderSpot}
-          keyExtractor={(item) => String(item.id)}
-          ListHeaderComponent={
-            <Header
-              greeting={greeting}
-              statusMessage={error || locationError}
-              statusTone={error ? 'warning' : 'info'}
-              onSearchPress={handleSearchPress}
-              view={view}
-              onViewChange={handleViewChange}
-              filtersOpen={filtersOpen}
-              onToggleFilters={toggleFilters}
-              filterCount={filterCount}
-              activeFilter={activeFilter}
-              setActiveFilter={handleTypeChange}
-              searchRadius={searchRadius}
-              setSearchRadius={setSearchRadius}
-              topPick={topPick}
-              onViewSpot={handleSpotPress}
-              moreCount={restSpots.length}
-              isUpdating={loading}
-            />
-          }
-          ListEmptyComponent={topPick ? null : emptyComponent}
-          ListFooterComponent={<View style={styles.footer} />}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={TOKENS.primary}
-              colors={[TOKENS.primary]}
-            />
-          }
-          contentContainerStyle={visibleSpots.length === 0 ? styles.emptyList : null}
-          keyboardShouldPersistTaps="handled"
-        />
-        </Animated.View>
+        <LiveStage>
+          <Animated.View style={[styles.content, contentIn]}>
+          <FlatList
+            data={restSpots}
+            renderItem={renderSpot}
+            keyExtractor={(item) => String(item.id)}
+            ListHeaderComponent={
+              <Header
+                greeting={greeting}
+                statusMessage={error || locationError}
+                statusTone={error ? 'warning' : 'info'}
+                onSearchPress={handleSearchPress}
+                view={view}
+                onViewChange={handleViewChange}
+                filtersOpen={filtersOpen}
+                onToggleFilters={toggleFilters}
+                filterCount={filterCount}
+                activeFilter={activeFilter}
+                setActiveFilter={handleTypeChange}
+                searchRadius={searchRadius}
+                setSearchRadius={setSearchRadius}
+                topPick={topPick}
+                onViewSpot={handleSpotPress}
+                moreCount={restSpots.length}
+                isUpdating={loading}
+                pinSuspended={scrolled}
+              />
+            }
+            ListEmptyComponent={topPick ? null : emptyComponent}
+            ListFooterComponent={<View style={styles.footer} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={TOKENS.primary}
+                colors={[TOKENS.primary]}
+              />
+            }
+            contentContainerStyle={visibleSpots.length === 0 ? styles.emptyList : null}
+            keyboardShouldPersistTaps="handled"
+            onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 1)}
+            scrollEventThrottle={16}
+          />
+          </Animated.View>
+        </LiveStage>
       </SafeAreaView>
     </>
   );

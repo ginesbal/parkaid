@@ -1,5 +1,5 @@
 // WelcomeScreen — first-run screen. Shown once, then the app opens on Home.
-// The live Spline pin carries the moment; the copy fades up once.
+// The live Spline logo carries the moment; the copy fades up once.
 
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { useRef, useState } from 'react';
@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BrandPin3D from '../../components/BrandPin3D';
-import { SPLINE_SCENES } from '../../constants/spline';
+import LiveStage from '../../components/LiveStage';
+import { SPLINE_BADGE, SPLINE_LIVE, SPLINE_SCENES } from '../../constants/spline';
 import { MOTION, RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../constants/theme';
 import { useEntrance } from '../../hooks/useEntrance';
 import { markWelcomeSeen } from '../../utils/onboarding';
@@ -22,12 +23,15 @@ import { markWelcomeSeen } from '../../utils/onboarding';
 // headline, body, footer
 const ENTRANCE_ITEMS = 3;
 
+// Room under the footnote for the Spline badge in the bottom-right corner.
+const BOTTOM_ROOM = SPLINE_LIVE ? SPLINE_BADGE.height + 2 * SPLINE_BADGE.inset : SPACING['2xl'];
+
 export default function WelcomeScreen({ navigation }) {
     const insets = useSafeAreaInsets();
     const { width, height } = useWindowDimensions();
     const pinSize = Math.round(Math.min(width * 0.56, height * 0.3, 240));
-    // The live scene spans the stage, so the pin has room to move.
-    const [stageWidth, setStageWidth] = useState(0);
+    // The live logo holds its spot only while the page is unscrolled.
+    const [scrolled, setScrolled] = useState(false);
 
     const rise = useEntrance(ENTRANCE_ITEMS);
     const pressScale = useRef(new Animated.Value(1)).current;
@@ -49,48 +53,49 @@ export default function WelcomeScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <ScreenStatusBar style="dark" />
-            <ScrollView
-                contentContainerStyle={[
-                    styles.content,
-                    {
-                        paddingTop: insets.top + SPACING.lg,
-                        paddingBottom: insets.bottom + SPACING['2xl'],
-                    },
-                ]}
-                alwaysBounceVertical={false}
-                showsVerticalScrollIndicator={false}
-            >
-                <Text style={styles.brand}>ParkAid</Text>
-
-                <View
-                    style={styles.pinStage}
-                    onLayout={(e) => setStageWidth(e.nativeEvent.layout.width)}
+            <LiveStage insetBottom={insets.bottom}>
+                <ScrollView
+                    contentContainerStyle={[
+                        styles.content,
+                        {
+                            paddingTop: insets.top + SPACING.lg,
+                            paddingBottom: insets.bottom + BOTTOM_ROOM,
+                        },
+                    ]}
+                    onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 1)}
+                    scrollEventThrottle={16}
+                    alwaysBounceVertical={false}
+                    showsVerticalScrollIndicator={false}
                 >
-                    <BrandPin3D scene={SPLINE_SCENES.hero} size={pinSize} stageWidth={stageWidth} />
-                </View>
+                    <Text style={styles.brand}>ParkAid</Text>
 
-                <Animated.Text style={[styles.headline, rise[0]]} accessibilityRole="header">
-                    A little less circling.{'\n'}A little more city.
-                </Animated.Text>
-                <Animated.Text style={[styles.body, rise[1]]}>
-                    Find a place to park,{'\n'}then get on with your day.
-                </Animated.Text>
+                    <View style={styles.pinStage}>
+                        <BrandPin3D scene={SPLINE_SCENES.hero} size={pinSize} suspended={scrolled} />
+                    </View>
 
-                <Animated.View style={[styles.footer, rise[2]]}>
-                    <Pressable
-                        onPress={handleExplore}
-                        onPressIn={() => pressTo(MOTION.pressScale)}
-                        onPressOut={() => pressTo(1)}
-                        accessibilityRole="button"
-                        accessibilityHint="Opens nearby parking"
-                    >
-                        <Animated.View style={[styles.cta, { transform: [{ scale: pressScale }] }]}>
-                            <Text style={styles.ctaLabel}>Explore parking</Text>
-                        </Animated.View>
-                    </Pressable>
-                    <Text style={styles.footnote}>Browse first. No account needed.</Text>
-                </Animated.View>
-            </ScrollView>
+                    <Animated.Text style={[styles.headline, rise[0]]} accessibilityRole="header">
+                        A little less circling.{'\n'}A little more city.
+                    </Animated.Text>
+                    <Animated.Text style={[styles.body, rise[1]]}>
+                        Find a place to park,{'\n'}then get on with your day.
+                    </Animated.Text>
+
+                    <Animated.View style={[styles.footer, rise[2]]}>
+                        <Pressable
+                            onPress={handleExplore}
+                            onPressIn={() => pressTo(MOTION.pressScale)}
+                            onPressOut={() => pressTo(1)}
+                            accessibilityRole="button"
+                            accessibilityHint="Opens nearby parking"
+                        >
+                            <Animated.View style={[styles.cta, { transform: [{ scale: pressScale }] }]}>
+                                <Text style={styles.ctaLabel}>Explore parking</Text>
+                            </Animated.View>
+                        </Pressable>
+                        <Text style={styles.footnote}>Browse first. No account needed.</Text>
+                    </Animated.View>
+                </ScrollView>
+            </LiveStage>
         </View>
     );
 }

@@ -2,6 +2,7 @@ import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../components/BrandLoader';
+import LiveStage from '../../components/LiveStage';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { logger } from '../../utils/loggers';
 import { getSpotName } from '../../utils/spotPresentation';
@@ -141,9 +142,11 @@ export default function SessionScreen({ route, navigation }) {
 
   if (!isLoaded) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.container, styles.loading]}>
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
         <ScreenStatusBar style="dark" />
-        <BrandLoader size={88} label="Checking your session" delay={250} />
+        <LiveStage style={styles.loading}>
+          <BrandLoader size={88} label="Checking your session" delay={250} live />
+        </LiveStage>
       </SafeAreaView>
     );
   }

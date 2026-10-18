@@ -1,58 +1,94 @@
 // BrandPin3D — the live Spline pin, over its still.
-// The still shows at once. When the scene has drawn, the still fades out and
-// the 3D pin carries on at the same size and place. The still stays under
-// reduce motion, and when the scene cannot play (offline, or no WebGPU for a
+// The still shows at once. The enclosing LiveStage plays the scene with the
+// 3D pin on the same spot and at the same size, and once it has drawn the
+// still fades out. The still stays under reduce motion, outside a
+// LiveStage, and when the scene cannot play (offline, or no WebGPU for a
 // WebGPU-only export), so there is always a pin.
 //
-// children:   the still, starting with a size x size pin at the top-left
-//             (BrandPin by default; BrandLoader passes its hopping pin).
-// stageWidth: room for the scene beside the pin; nothing live mounts until
-//             it is known.
+// children:  the still, starting with a size x size pin at the top-left
+//            (BrandPin by default; BrandLoader passes its hopping pin).
+// suspended: show the still for now, for example while its screen is
+//            scrolled and the pin has moved off its spot.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { SPLINE_LIVE } from '../../constants/spline';
 import { MOTION } from '../../constants/theme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
-import { getLiveBox } from '../../utils/splineLayout';
 import BrandPin, { PIN_FRAME } from '../BrandPin';
-import SplineScene from '../SplineScene';
+import { useLiveStage } from '../LiveStage';
 
 const NATIVE = Platform.OS !== 'web';
 
-export default function BrandPin3D({ scene, size, stageWidth, children, style }) {
+export default function BrandPin3D({ scene, size, suspended = false, children, style }) {
+    const stage = useLiveStage();
     const reduceMotion = useReduceMotion();
+    const id = useId();
+    const self = useRef(null);
+    // False once unregistered, so a late measurement cannot register again.
+    const registered = useRef(false);
     const [failed, setFailed] = useState(false);
     const stillOpacity = useRef(new Animated.Value(1)).current;
 
-    const live = SPLINE_LIVE && Boolean(scene?.url) && reduceMotion === false && !failed && stageWidth > 0;
+    const live = SPLINE_LIVE && Boolean(stage) && Boolean(scene?.url) && reduceMotion === false && !failed;
+    const host = stage?.host;
+    const register = stage?.register;
+    const unregister = stage?.unregister;
+    const status = stage?.status[id];
 
-    const handleReady = useCallback(() => {
+    // Where the still's pin sits on the stage.
+    const measure = useCallback(() => {
+        if (!live || !self.current || !host?.current) return;
+        self.current.measureLayout(
+            host.current,
+            (x, y) => registered.current && register(id, {
+                scene,
+                suspended,
+                cx: x + size * PIN_FRAME.centerX,
+                cy: y + size * PIN_FRAME.centerY,
+                height: size * PIN_FRAME.height,
+            }),
+            () => {}
+        );
+    }, [live, host, register, id, scene, suspended, size]);
+
+    // Before the first measurement, which registers.
+    useEffect(() => {
+        if (!live) return undefined;
+        registered.current = true;
+        return () => {
+            registered.current = false;
+            unregister(id);
+        };
+    }, [live, unregister, id]);
+
+    // Again whenever the stage resizes.
+    useEffect(() => {
+        measure();
+    }, [measure, stage?.size]);
+
+    useEffect(() => {
+        if (status === 'failed') setFailed(true);
+    }, [status]);
+
+    // Fade to the 3D pin once it is up; snap back to the still, so there is
+    // never a moment with neither.
+    const showing = live && status === 'ready' && !suspended && stage.active;
+    useEffect(() => {
+        if (!showing) {
+            stillOpacity.setValue(1);
+            return;
+        }
         Animated.timing(stillOpacity, {
             toValue: 0,
             duration: MOTION.duration.slow,
             easing: MOTION.easing,
             useNativeDriver: NATIVE,
         }).start();
-    }, [stillOpacity]);
-
-    const handleError = useCallback(() => setFailed(true), []);
-
-    // Whenever the scene is not playing, the still is fully back.
-    useEffect(() => {
-        if (!live) stillOpacity.setValue(1);
-    }, [live, stillOpacity]);
+    }, [showing, stillOpacity]);
 
     return (
-        <View style={style}>
-            {live ? (
-                <SplineScene
-                    scene={scene}
-                    onReady={handleReady}
-                    onError={handleError}
-                    style={getLiveBox({ size, width: stageWidth, frame: scene.frame, still: PIN_FRAME })}
-                />
-            ) : null}
+        <View ref={self} style={style} onLayout={measure} collapsable={false}>
             <Animated.View style={[styles.still, { opacity: stillOpacity }]}>
                 {children ?? <BrandPin size={size} />}
             </Animated.View>

@@ -21,6 +21,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen/index';
 
 // services
 import BrandLoader from './src/components/BrandLoader';
+import LiveStage from './src/components/LiveStage';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
 import { useReduceMotion } from './src/hooks/useReduceMotion';
@@ -165,9 +166,9 @@ function AppNavigation() {
     // Usually resolves in a few ms; the loader only appears if storage is slow.
     if (!initialRoute) {
         return (
-            <View style={navStyles.boot}>
-                <BrandLoader size={88} delay={400} />
-            </View>
+            <LiveStage style={navStyles.boot}>
+                <BrandLoader size={88} delay={400} live />
+            </LiveStage>
         );
     }
 

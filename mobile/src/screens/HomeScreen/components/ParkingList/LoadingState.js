@@ -1,7 +1,7 @@
 import ScreenStatusBar from '../../../../components/ScreenStatusBar';
-import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../../../components/BrandLoader';
+import LiveStage from '../../../../components/LiveStage';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
@@ -12,7 +12,7 @@ import { styles } from './styles';
 const LoadingState = ({ searchRadius, phase = 'spots' }) => (
     <SafeAreaView style={styles.fullScreenBg} edges={['top', 'left', 'right', 'bottom']}>
         <ScreenStatusBar style="dark" />
-        <View style={styles.loadingContainer}>
+        <LiveStage style={styles.loadingContainer}>
             {phase === 'location' ? (
                 <BrandLoader size={96} label="Finding where you are" live />
             ) : (
@@ -23,7 +23,7 @@ const LoadingState = ({ searchRadius, phase = 'spots' }) => (
                     sublabel={`Checking within ${getDistanceLabel(searchRadius)} of you`}
                 />
             )}
-        </View>
+        </LiveStage>
     </SafeAreaView>
 );
 

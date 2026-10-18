@@ -1,24 +1,32 @@
-// Where to put a live Spline scene so its pin lands on the still: the same
-// height and the same centre, so the crossfade between them does not jump.
-// A Spline camera draws the pin at a fixed share of the canvas height, so
-// the canvas height sets the pin's size; the width is free.
+// Where a live pin's canvas goes on its stage, and where the pin goes in it.
 //
-// size:  the still's box (square, in points)
-// width: the canvas width; the scene needs room around the pin to move
-// frame: where the scene draws its pin, as fractions of the canvas height
-//        ({ height, centerY })
-// still: where the still draws its pin, as fractions of its box
-//        ({ height, centerX, centerY })
+// The canvas runs from just above and left of the pin to the stage's
+// bottom-right corner, where the runtime draws its badge. Every canvas on a
+// stage ends at that corner, so the badges land on the same spot. The canvas
+// is never smaller than the badge needs, so the badge is drawn whole.
 //
-// Returns the canvas box, relative to the still's top-left corner. The scene
-// centres its pin horizontally.
-export function getLiveBox({ size, width, frame, still }) {
-    const height = (size * still.height) / frame.height;
+// pin:   the still's pin on the stage ({ cx, cy, height }, in points)
+// stage: the stage size ({ width, height })
+// badge: the badge size and inset ({ width, height, inset })
+// room:  space above the pin for its motion, as a share of its height
+//
+// Returns the canvas box on the stage, and the target for the page: the
+// pin's centre as fractions of the canvas width and height (u, v), and its
+// height as a fraction of the canvas height (h).
+export function getCanvasLayout({ pin, stage, badge, room = 0 }) {
+    const minWidth = badge.width + 2 * badge.inset;
+    const minHeight = badge.height + 2 * badge.inset;
+    const left = Math.max(0, Math.min(pin.cx - pin.height, stage.width - minWidth));
+    const top = Math.max(0, Math.min(pin.cy - pin.height * (0.5 + room), stage.height - minHeight));
+    const width = stage.width - left;
+    const height = stage.height - top;
+
     return {
-        position: 'absolute',
-        left: size * still.centerX - width / 2,
-        top: size * still.centerY - frame.centerY * height,
-        width,
-        height,
+        box: { position: 'absolute', left, top, width, height },
+        target: {
+            u: (pin.cx - left) / width,
+            v: (pin.cy - top) / height,
+            h: pin.height / height,
+        },
     };
 }

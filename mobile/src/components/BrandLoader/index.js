@@ -6,11 +6,10 @@
 // `delay` keeps fast loads from flashing a loader: nothing shows until the
 // wait has lasted that long.
 //
-// `live` plays the Spline loader over the hopping still, for the full-screen
-// waits where it has room; small and brief loaders keep the still.
+// `live` plays the Spline loader over the hopping still, inside a LiveStage.
 
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 import { SPLINE_SCENES } from '../../constants/spline';
 import { MOTION, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
@@ -61,7 +60,6 @@ function buildTransforms(progress, size) {
 
 export default function BrandLoader({ size = 72, label, sublabel, delay = 0, live = false, style }) {
     const reduceMotion = useReduceMotion();
-    const { width: windowWidth } = useWindowDimensions();
     const [visible, setVisible] = useState(delay <= 0);
     const fade = useRef(new Animated.Value(0)).current;
     const progress = useRef(new Animated.Value(0)).current;
@@ -153,11 +151,7 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, liv
             {/* Headroom for the hop so it never collides with the label */}
             <View style={{ paddingTop: size * 0.28 }}>
                 {live ? (
-                    <BrandPin3D
-                        scene={SPLINE_SCENES.loader}
-                        size={size}
-                        stageWidth={Math.min(windowWidth, size * 3)}
-                    >
+                    <BrandPin3D scene={SPLINE_SCENES.loader} size={size}>
                         {still}
                     </BrandPin3D>
                 ) : still}

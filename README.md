@@ -277,11 +277,12 @@ The main things I did:
   when the connection is bad.
 - The server fails loudly at startup if a required setting is missing, but
   handles a temporary database outage per request instead of crashing.
-- The 3D pin on the welcome screen and the first loading screen is the real
-  Spline scene, so its Code-tab motion plays as it does in Spline. A still
-  image shows first and stays when the scene can't play (offline, reduce
-  motion, or a phone without WebGPU). Scene URLs and the runtime version live
-  in `constants/spline.js`.
+- The ParkAid pin is the real Spline scene wherever it appears outside the
+  map, so its Code-tab motion plays as it does in Spline. A still image shows
+  first and stays when the scene can't play (offline, reduce motion, or a
+  phone without WebGPU). Each screen lines its 3D pins up with their stills
+  by moving the scene's camera, and keeps the Spline badge in its bottom-right
+  corner. Scene URLs and the runtime version live in `constants/spline.js`.
 
 ## Credits
 

@@ -2,7 +2,7 @@
 // the same page as the WebView on iOS and Android. Decorative: hidden from
 // screen readers and out of the tab order, and clicks pass through.
 
-import { createElement, useEffect, useMemo, useRef } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { buildSplineHtml, parseSplineMessage } from './buildHtml';
 
@@ -15,9 +15,11 @@ const FRAME_STYLE = {
     pointerEvents: 'none',
 };
 
-export default function SplineScene({ scene, onReady, onError, style }) {
+export default function SplineScene({ scene, target, onReady, onError, style }) {
     const frame = useRef(null);
-    const html = useMemo(() => buildSplineHtml(scene), [scene]);
+    // The page starts on the first target; later ones are sent to it.
+    const [initialTarget] = useState(target);
+    const html = useMemo(() => buildSplineHtml(scene, initialTarget), [scene, initialTarget]);
 
     useEffect(() => {
         const handleMessage = (event) => {
@@ -29,6 +31,12 @@ export default function SplineScene({ scene, onReady, onError, style }) {
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
     }, [onReady, onError]);
+
+    // Compared by value: the host builds a fresh target object each render.
+    const targetKey = JSON.stringify(target);
+    useEffect(() => {
+        frame.current?.contentWindow?.postMessage(`{"type":"place","target":${targetKey}}`, '*');
+    }, [targetKey]);
 
     return (
         <View style={style} pointerEvents="none" aria-hidden>
