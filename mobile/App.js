@@ -158,6 +158,7 @@ function AppNavigation() {
     // null until the first-run flag is read; then 'Welcome' or 'Tabs'
     const [initialRoute, setInitialRoute] = useState(null);
     const reduceMotion = useReduceMotion();
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         hasSeenWelcome().then((seen) => setInitialRoute(seen ? 'Tabs' : 'Welcome'));
@@ -166,7 +167,7 @@ function AppNavigation() {
     // Usually resolves in a few ms; the loader only appears if storage is slow.
     if (!initialRoute) {
         return (
-            <LiveStage style={navStyles.boot}>
+            <LiveStage style={navStyles.boot} insetBottom={insets.bottom}>
                 <BrandLoader size={88} delay={400} live />
             </LiveStage>
         );

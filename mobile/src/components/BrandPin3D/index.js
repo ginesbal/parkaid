@@ -62,10 +62,12 @@ export default function BrandPin3D({ scene, size, suspended = false, children, s
         };
     }, [live, unregister, id]);
 
-    // Again whenever the stage resizes.
+    // After every render too: a parent can move the still (a label appearing
+    // below it, a header above it changing) without the still's own layout
+    // changing. The stage ignores repeats of the same spot.
     useEffect(() => {
         measure();
-    }, [measure, stage?.size]);
+    });
 
     useEffect(() => {
         if (status === 'failed') setFailed(true);

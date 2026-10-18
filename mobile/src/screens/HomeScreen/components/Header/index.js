@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
-import BrandPin3D from '../../../../components/BrandPin3D';
-import { SPLINE_SCENES } from '../../../../constants/spline';
+import BrandPin from '../../../../components/BrandPin';
 import { TOKENS } from '../../../../constants/theme';
 import TopPick from '../TopPick';
 import FilterBar from './FilterBar';
@@ -30,7 +29,6 @@ const Header = ({
     onViewSpot,
     moreCount,
     isUpdating,
-    pinSuspended,
 }) => {
     const filterLabel = filterCount > 0 ? `Filters, ${filterCount} active` : 'Filters';
 
@@ -40,12 +38,7 @@ const Header = ({
                 <Text style={styles.greeting} accessibilityRole="header">
                     {greeting.hello}{'\n'}{greeting.ask}
                 </Text>
-                <BrandPin3D
-                    scene={SPLINE_SCENES.pin}
-                    size={52}
-                    suspended={pinSuspended}
-                    style={styles.greetingPin}
-                />
+                <BrandPin size={52} style={styles.greetingPin} />
             </View>
 
             {statusMessage ? (

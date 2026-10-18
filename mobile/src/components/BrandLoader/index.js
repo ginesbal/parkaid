@@ -6,7 +6,8 @@
 // `delay` keeps fast loads from flashing a loader: nothing shows until the
 // wait has lasted that long.
 //
-// `live` plays the Spline loader over the hopping still, inside a LiveStage.
+// `live` plays the Spline loader over the hopping still, inside a LiveStage;
+// `suspended` hands back to the still for now (its screen is scrolled).
 
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
@@ -41,8 +42,8 @@ const KEYFRAMES = [
     { t: 1.00, hop: 0, sx: 1, sy: 1 },          // rest before the next hop
 ];
 
-// The tip sits at ~90% of the image height. Squash about the tip, not the centre.
-const ANCHOR = 0.4;
+// The tip sits at ~88% of the image height. Squash about the tip, not the centre.
+const ANCHOR = 0.38;
 
 function buildTransforms(progress, size) {
     const inputRange = KEYFRAMES.map((k) => k.t);
@@ -58,7 +59,7 @@ function buildTransforms(progress, size) {
     };
 }
 
-export default function BrandLoader({ size = 72, label, sublabel, delay = 0, live = false, style }) {
+export default function BrandLoader({ size = 72, label, sublabel, delay = 0, live = false, suspended, style }) {
     const reduceMotion = useReduceMotion();
     const [visible, setVisible] = useState(delay <= 0);
     const fade = useRef(new Animated.Value(0)).current;
@@ -151,7 +152,7 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, liv
             {/* Headroom for the hop so it never collides with the label */}
             <View style={{ paddingTop: size * 0.28 }}>
                 {live ? (
-                    <BrandPin3D scene={SPLINE_SCENES.loader} size={size}>
+                    <BrandPin3D scene={SPLINE_SCENES.loader} size={size} suspended={suspended}>
                         {still}
                     </BrandPin3D>
                 ) : still}

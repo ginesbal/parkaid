@@ -1,5 +1,5 @@
 // WelcomeScreen — first-run screen. Shown once, then the app opens on Home.
-// The live Spline logo carries the moment; the copy fades up once.
+// The live Spline pin jumps and twirls; the copy fades up once.
 
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { useRef, useState } from 'react';
@@ -30,7 +30,7 @@ export default function WelcomeScreen({ navigation }) {
     const insets = useSafeAreaInsets();
     const { width, height } = useWindowDimensions();
     const pinSize = Math.round(Math.min(width * 0.56, height * 0.3, 240));
-    // The live logo holds its spot only while the page is unscrolled.
+    // The live pin holds its spot only while the page is unscrolled.
     const [scrolled, setScrolled] = useState(false);
 
     const rise = useEntrance(ENTRANCE_ITEMS);
@@ -62,7 +62,7 @@ export default function WelcomeScreen({ navigation }) {
                             paddingBottom: insets.bottom + BOTTOM_ROOM,
                         },
                     ]}
-                    onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 1)}
+                    onScroll={(e) => setScrolled(Math.abs(e.nativeEvent.contentOffset.y) > 1)}
                     scrollEventThrottle={16}
                     alwaysBounceVertical={false}
                     showsVerticalScrollIndicator={false}
@@ -70,7 +70,7 @@ export default function WelcomeScreen({ navigation }) {
                     <Text style={styles.brand}>ParkAid</Text>
 
                     <View style={styles.pinStage}>
-                        <BrandPin3D scene={SPLINE_SCENES.hero} size={pinSize} suspended={scrolled} />
+                        <BrandPin3D scene={SPLINE_SCENES.loader} size={pinSize} suspended={scrolled} />
                     </View>
 
                     <Animated.Text style={[styles.headline, rise[0]]} accessibilityRole="header">

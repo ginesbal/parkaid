@@ -21,22 +21,28 @@ export default function SplineScene({ scene, target, onReady, onError, style }) 
     const [initialTarget] = useState(target);
     const html = useMemo(() => buildSplineHtml(scene, initialTarget), [scene, initialTarget]);
 
+    // Compared by value: the host builds a fresh target object each render.
+    const targetKey = JSON.stringify(target);
+    const latestTarget = useRef(targetKey);
+    const send = (key) => frame.current?.contentWindow?.postMessage(`{"type":"place","target":${key}}`, '*');
+    useEffect(() => {
+        latestTarget.current = targetKey;
+        send(targetKey);
+    }, [targetKey]);
+
     useEffect(() => {
         const handleMessage = (event) => {
             if (event.source !== frame.current?.contentWindow) return;
             const message = parseSplineMessage(event.data);
-            if (message?.type === 'ready') onReady?.();
-            else if (message?.type === 'error') onError?.(message.detail);
+            if (message?.type === 'ready') {
+                // A target sent before the page was listening was dropped.
+                send(latestTarget.current);
+                onReady?.();
+            } else if (message?.type === 'error') onError?.(message.detail);
         };
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
     }, [onReady, onError]);
-
-    // Compared by value: the host builds a fresh target object each render.
-    const targetKey = JSON.stringify(target);
-    useEffect(() => {
-        frame.current?.contentWindow?.postMessage(`{"type":"place","target":${targetKey}}`, '*');
-    }, [targetKey]);
 
     return (
         <View style={style} pointerEvents="none" aria-hidden>

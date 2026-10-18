@@ -17,8 +17,13 @@ import { StyleSheet, View } from 'react-native';
 import { SPLINE_BADGE } from '../../constants/spline';
 import { getCanvasLayout } from '../../utils/splineLayout';
 import SplineScene from '../SplineScene';
+import { NO_WEBGPU } from '../SplineScene/buildHtml';
 
 const LiveStageContext = createContext(null);
+
+// Once the device has shown it cannot draw the scene at all, later pins keep
+// their stills for the rest of the session instead of loading it again.
+let unsupported = false;
 
 export const useLiveStage = () => useContext(LiveStageContext);
 
@@ -60,9 +65,16 @@ export default function LiveStage({ children, insetBottom = 0, style }) {
     // id -> 'ready' | 'failed'
     const [status, setStatus] = useState({});
 
-    const register = useCallback((id, pin) => {
-        setPins((all) => (samePin(all[id], pin) ? all : { ...all, [id]: pin }));
+    const fail = useCallback((id) => {
+        setStatus((all) => (all[id] === 'failed' ? all : { ...all, [id]: 'failed' }));
     }, []);
+    const register = useCallback((id, pin) => {
+        if (unsupported) {
+            fail(id);
+            return;
+        }
+        setPins((all) => (samePin(all[id], pin) ? all : { ...all, [id]: pin }));
+    }, [fail]);
     const unregister = useCallback((id) => {
         setPins((all) => without(all, id));
         setStatus((all) => without(all, id));
@@ -104,7 +116,10 @@ export default function LiveStage({ children, insetBottom = 0, style }) {
                                     scene={pin.scene}
                                     target={target}
                                     onReady={() => setStatus((all) => ({ ...all, [id]: 'ready' }))}
-                                    onError={() => setStatus((all) => ({ ...all, [id]: 'failed' }))}
+                                    onError={(detail) => {
+                                        if (detail === NO_WEBGPU) unsupported = true;
+                                        fail(id);
+                                    }}
                                     style={[box, pin.suspended && styles.hidden]}
                                 />
                             );

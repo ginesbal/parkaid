@@ -21,7 +21,6 @@ describe('buildSplineHtml', () => {
         expect(config).toMatchObject({
             url: SCENE.url,
             camera: 'Camera',
-            angle: null,
             focus: 'Pin',
             height: 250,
             center: [0, 0, 0],

@@ -209,7 +209,8 @@ export default function HomeScreen({ navigation }) {
     }
   }, [searchRadius]);
 
-  // The live pins hold their spots only while the list is at the top.
+  // The live loader holds its spot only while the list is at rest at the
+  // top (a pull to refresh moves it too).
   const [scrolled, setScrolled] = useState(false);
 
   // The loader hands over to the list with one soft rise, not a hard cut.
@@ -227,7 +228,7 @@ export default function HomeScreen({ navigation }) {
 
   const emptyComponent = loading ? (
     <View style={styles.updating}>
-      <BrandLoader size={56} label="Updating the list" delay={150} live />
+      <BrandLoader size={56} label="Updating the list" delay={150} live suspended={scrolled} />
     </View>
   ) : (
     <EmptyState
@@ -269,7 +270,6 @@ export default function HomeScreen({ navigation }) {
                 onViewSpot={handleSpotPress}
                 moreCount={restSpots.length}
                 isUpdating={loading}
-                pinSuspended={scrolled}
               />
             }
             ListEmptyComponent={topPick ? null : emptyComponent}
@@ -284,7 +284,7 @@ export default function HomeScreen({ navigation }) {
             }
             contentContainerStyle={visibleSpots.length === 0 ? styles.emptyList : null}
             keyboardShouldPersistTaps="handled"
-            onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 1)}
+            onScroll={(e) => setScrolled(Math.abs(e.nativeEvent.contentOffset.y) > 1)}
             scrollEventThrottle={16}
           />
           </Animated.View>

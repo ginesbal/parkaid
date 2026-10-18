@@ -3,7 +3,8 @@
 // The canvas runs from just above and left of the pin to the stage's
 // bottom-right corner, where the runtime draws its badge. Every canvas on a
 // stage ends at that corner, so the badges land on the same spot. The canvas
-// is never smaller than the badge needs, so the badge is drawn whole.
+// is never smaller than the badge needs (unless the stage itself is, which
+// no phone screen is), so the badge is drawn whole.
 //
 // pin:   the still's pin on the stage ({ cx, cy, height }, in points)
 // stage: the stage size ({ width, height })

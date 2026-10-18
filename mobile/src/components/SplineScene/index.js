@@ -18,14 +18,18 @@ export default function SplineScene({ scene, target, onReady, onError, style }) 
 
     // Compared by value: the host builds a fresh target object each render.
     const targetKey = JSON.stringify(target);
+    const send = (key) => webView.current?.injectJavaScript(`window.parkaid && window.parkaid.place(${key}); true;`);
     useEffect(() => {
-        webView.current?.injectJavaScript(`window.parkaid && window.parkaid.place(${targetKey}); true;`);
+        send(targetKey);
     }, [targetKey]);
 
     const handleMessage = (event) => {
         const message = parseSplineMessage(event.nativeEvent.data);
-        if (message?.type === 'ready') onReady?.();
-        else if (message?.type === 'error') onError?.(message.detail);
+        if (message?.type === 'ready') {
+            // A target sent before the page was listening was dropped.
+            send(targetKey);
+            onReady?.();
+        } else if (message?.type === 'error') onError?.(message.detail);
     };
     const handleFailure = () => onError?.('webview');
 

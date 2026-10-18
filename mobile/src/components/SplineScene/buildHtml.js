@@ -14,10 +14,14 @@ const RUNTIME_URL = `https://cdn.jsdelivr.net/npm/@splinetool/runtime@${SPLINE_R
 
 export const MESSAGE_SOURCE = 'parkaid-spline';
 
+// The error detail when the device cannot draw the scene at all (no usable
+// WebGPU for a WebGPU-only export), as opposed to a passing failure.
+export const NO_WEBGPU = 'webgpu';
+
 export function buildSplineHtml(scene, target) {
-    const { url, camera, angle = null, focus, center = [0, 0, 0], height, show = [], hide = [] } = scene;
+    const { url, camera, focus, center = [0, 0, 0], height, show = [], hide = [] } = scene;
     // Escape '<' so no value can close the script tag.
-    const config = JSON.stringify({ url, camera, angle, focus, center, height, show, hide, target, runtime: RUNTIME_URL })
+    const config = JSON.stringify({ url, camera, focus, center, height, show, hide, target, runtime: RUNTIME_URL })
         .replace(/</g, '\\u003c');
 
     return `<!doctype html>
@@ -53,6 +57,14 @@ const fail = (reason) => settle('error', String((reason && reason.message) || re
 
 window.addEventListener('error', (event) => fail(event.message));
 window.addEventListener('unhandledrejection', (event) => fail(event.reason));
+// Spline reports a WebGPU it cannot use on the console, then carries on
+// drawing nothing.
+const consoleError = console.error.bind(console);
+console.error = (...args) => {
+  consoleError(...args);
+  const text = args.map(String).join(' ');
+  if (text.includes('[spline]') && text.includes('WebGPU')) fail('${NO_WEBGPU}');
+};
 
 // New target from the host: injected on iOS and Android, posted on web.
 window.parkaid = {
@@ -117,7 +129,7 @@ try {
   // A WebGPU-only export loads, then cannot draw without a WebGPU adapter.
   const gpuOnly = app.data && app.data.scene && app.data.scene.publish && app.data.scene.publish.renderer === 'webgpu';
   const adapter = gpuOnly && navigator.gpu ? await navigator.gpu.requestAdapter().catch(() => null) : null;
-  if (gpuOnly && !adapter) throw new Error('This scene needs WebGPU');
+  if (gpuOnly && !adapter) throw new Error('${NO_WEBGPU}');
 
   for (const name of config.show) {
     const object = app.findObjectByName(name);
@@ -132,12 +144,6 @@ try {
   const camera = app.findObjectByName(config.camera);
   const focus = app.findObjectByName(config.focus);
   if (!camera || !focus) throw new Error('The scene has no "' + (camera ? config.focus : config.camera) + '"');
-  const angle = config.angle && app.findObjectByName(config.angle);
-  if (angle) {
-    camera.rotation.x = angle.rotation.x;
-    camera.rotation.y = angle.rotation.y;
-    camera.rotation.z = angle.rotation.z;
-  }
   const view = rotationMatrix(camera.rotation);
   const tan = Math.tan((fieldOfView(app, config.camera) * Math.PI) / 360);
   const pin = toWorld(app, focus, config.center);
