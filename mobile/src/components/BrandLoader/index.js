@@ -42,8 +42,8 @@ const KEYFRAMES = [
     { t: 1.00, hop: 0, sx: 1, sy: 1 },          // rest before the next hop
 ];
 
-// The tip sits at ~88% of the image height. Squash about the tip, not the centre.
-const ANCHOR = 0.38;
+// The tip sits at ~89% of the image height. Squash about the tip, not the centre.
+const ANCHOR = 0.39;
 
 function buildTransforms(progress, size) {
     const inputRange = KEYFRAMES.map((k) => k.t);

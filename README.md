@@ -283,7 +283,7 @@ The main things I did:
   reduce motion, or a phone without WebGPU). Each screen lines its 3D pin up
   with the still by moving the scene's camera, and keeps the Spline badge in
   its bottom-right corner. Everywhere else (the Home and Park headers, the
-  map, the map thumbnails) the pin is one still rendered from the same scene.
+  map, the map thumbnails) the pin is one still: the flat ParkAid logo.
   Scene URLs and the runtime version live in `constants/spline.js`.
 
 ## Credits
