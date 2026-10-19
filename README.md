@@ -279,11 +279,12 @@ The main things I did:
   handles a temporary database outage per request instead of crashing.
 - The welcome screen and the loaders play the real Spline scene, so the
   pin's jump and twirl from the file's Code tab play as they do in Spline.
-  A still image shows first and stays when the scene can't play (offline,
-  reduce motion, or a phone without WebGPU). Each screen lines its 3D pin up
-  with the still by moving the scene's camera, and keeps the Spline badge in
-  its bottom-right corner. Everywhere else (the Home and Park headers, the
-  map, the map thumbnails) the pin is one still: the flat ParkAid logo.
+  A still of the same 3D pin shows first and stays when the scene can't play
+  (offline, reduce motion, or a phone without WebGPU). Each screen lines its
+  3D pin up with the still by moving the scene's camera, and keeps the
+  Spline badge in its bottom-right corner. Everywhere else (the Home and
+  Park headers, the map, the map thumbnails) the pin is the flat ParkAid
+  logo.
   Scene URLs and the runtime version live in `constants/spline.js`.
 
 ## Credits

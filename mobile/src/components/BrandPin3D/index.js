@@ -6,7 +6,8 @@
 // WebGPU-only export), so there is always a pin.
 //
 // children:  the still, starting with a size x size pin at the top-left
-//            (BrandPin by default; BrandLoader passes its hopping pin).
+//            (the 3D BrandPin by default; BrandLoader passes its hopping
+//            pin). Either way the 3D still, which the scene lines up with.
 // suspended: show the still for now, for example while its screen is
 //            scrolled and the pin has moved off its spot.
 
@@ -15,7 +16,7 @@ import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { SPLINE_LIVE } from '../../constants/spline';
 import { MOTION } from '../../constants/theme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
-import BrandPin, { PIN_FRAME } from '../BrandPin';
+import BrandPin, { PIN_3D_FRAME } from '../BrandPin';
 import { useLiveStage } from '../LiveStage';
 
 const NATIVE = Platform.OS !== 'web';
@@ -44,9 +45,9 @@ export default function BrandPin3D({ scene, size, suspended = false, children, s
             (x, y) => registered.current && register(id, {
                 scene,
                 suspended,
-                cx: x + size * PIN_FRAME.centerX,
-                cy: y + size * PIN_FRAME.centerY,
-                height: size * PIN_FRAME.height,
+                cx: x + size * PIN_3D_FRAME.centerX,
+                cy: y + size * PIN_3D_FRAME.centerY,
+                height: size * PIN_3D_FRAME.height,
             }),
             () => {}
         );
@@ -92,7 +93,7 @@ export default function BrandPin3D({ scene, size, suspended = false, children, s
     return (
         <View ref={self} style={style} onLayout={measure} collapsable={false}>
             <Animated.View style={[styles.still, { opacity: stillOpacity }]}>
-                {children ?? <BrandPin size={size} />}
+                {children ?? <BrandPin size={size} variant="3d" />}
             </Animated.View>
         </View>
     );

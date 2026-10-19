@@ -6,7 +6,8 @@
 // `delay` keeps fast loads from flashing a loader: nothing shows until the
 // wait has lasted that long.
 //
-// `live` plays the Spline loader over the hopping still, inside a LiveStage;
+// `live` plays the Spline loader over the hopping still, inside a LiveStage,
+// and the still is the 3D pin; otherwise it is the flat logo, as on the map.
 // `suspended` hands back to the still for now (its screen is scrolled).
 
 import { useEffect, useRef, useState } from 'react';
@@ -14,7 +15,7 @@ import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native
 import { SPLINE_SCENES } from '../../constants/spline';
 import { MOTION, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
-import { PIN } from '../BrandPin';
+import { PIN, PIN_3D, PIN_3D_FRAME, PIN_FRAME } from '../BrandPin';
 import BrandPin3D from '../BrandPin3D';
 
 const LOOP_MS = 1400;
@@ -42,15 +43,14 @@ const KEYFRAMES = [
     { t: 1.00, hop: 0, sx: 1, sy: 1 },          // rest before the next hop
 ];
 
-// The tip sits at ~89% of the image height. Squash about the tip, not the centre.
-const ANCHOR = 0.39;
-
-function buildTransforms(progress, size) {
+// Squash about the tip, not the centre: anchor is the tip's distance below
+// the image centre, as a fraction of its height.
+function buildTransforms(progress, size, anchor) {
     const inputRange = KEYFRAMES.map((k) => k.t);
     const at = (fn) => progress.interpolate({ inputRange, outputRange: KEYFRAMES.map(fn) });
     return {
         pin: [
-            { translateY: at((k) => k.hop * size + ANCHOR * size * (1 - k.sy)) },
+            { translateY: at((k) => k.hop * size + anchor * size * (1 - k.sy)) },
             { scaleX: at((k) => k.sx) },
             { scaleY: at((k) => k.sy) },
         ],
@@ -65,9 +65,11 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, liv
     const fade = useRef(new Animated.Value(0)).current;
     const progress = useRef(new Animated.Value(0)).current;
     const breathe = useRef(new Animated.Value(1)).current;
+    const source = live ? PIN_3D : PIN;
+    const anchor = (live ? PIN_3D_FRAME : PIN_FRAME).tipY - 0.5;
     const transforms = useRef(null);
-    if (!transforms.current || transforms.current.size !== size) {
-        transforms.current = { size, ...buildTransforms(progress, size) };
+    if (!transforms.current || transforms.current.size !== size || transforms.current.anchor !== anchor) {
+        transforms.current = { size, anchor, ...buildTransforms(progress, size, anchor) };
     }
 
     useEffect(() => {
@@ -116,7 +118,7 @@ export default function BrandLoader({ size = 72, label, sublabel, delay = 0, liv
     const still = (
         <>
             <Animated.Image
-                source={PIN}
+                source={source}
                 resizeMode="contain"
                 style={{
                     width: size,
