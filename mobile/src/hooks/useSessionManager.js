@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, Alert } from 'react-native';
 import { DEFAULT_VALUES, DEFAULT_WALK_MINUTES, HEAD_BACK_BUFFER, STORAGE_KEYS } from '../constants/session.js';
+import { cancelSessionReminders, scheduleSessionReminders } from '../services/reminders';
 import { confirm } from '../utils/confirm';
 import {
     calculateProgress,
@@ -18,6 +19,14 @@ import {
     getSpotName,
     getZoneLabel,
 } from '../utils/spotPresentation';
+
+// "Head back" starts when the walk back plus a buffer is all that is left,
+// scaled down for short sessions.
+const warnMinutesFor = (session) => getWarnAtMinutes(
+    session?.walkMinutes ?? DEFAULT_WALK_MINUTES,
+    session?.duration,
+    HEAD_BACK_BUFFER
+);
 
 export const useSessionManager = () => {
     // core state
@@ -41,6 +50,9 @@ export const useSessionManager = () => {
             ]);
             const parsed = raw ? JSON.parse(raw) : null;
             setSession(parsed);
+            // Keep the phone's reminders in step with the stored session,
+            // without asking for permission here.
+            if (parsed) scheduleSessionReminders(parsed, warnMinutesFor(parsed));
             // Prefill the plate from last time; the driver can still change it.
             if (lastPlate) setVehiclePlate((current) => current || lastPlate);
         } catch (error) {
@@ -124,13 +136,7 @@ export const useSessionManager = () => {
         [elapsedTime, session]
     );
 
-    // "Head back" starts when the walk back plus a buffer is all that is left,
-    // scaled down for short sessions.
-    const warnAtMinutes = getWarnAtMinutes(
-        session?.walkMinutes ?? DEFAULT_WALK_MINUTES,
-        session?.duration,
-        HEAD_BACK_BUFFER
-    );
+    const warnAtMinutes = warnMinutesFor(session);
 
     // Rounded up, so the last seconds still count as time left, not expired.
     const sessionState = useMemo(
@@ -185,6 +191,9 @@ export const useSessionManager = () => {
         };
 
         await saveSession(newSession);
+        // The first Start is when we ask to send reminders; the setup card
+        // says why just above the button.
+        scheduleSessionReminders(newSession, warnMinutesFor(newSession), { ask: true });
         try {
             await AsyncStorage.setItem(STORAGE_KEYS.LAST_PLATE, plate);
         } catch (error) {
@@ -209,6 +218,7 @@ export const useSessionManager = () => {
         };
 
         await saveSession(updatedSession);
+        scheduleSessionReminders(updatedSession, warnMinutesFor(updatedSession));
 
         // The card updates in place; tell screen readers what changed.
         AccessibilityInfo.announceForAccessibility?.(
@@ -226,7 +236,10 @@ export const useSessionManager = () => {
                 : undefined,
             confirmText: 'End session',
             destructive: true,
-            onConfirm: () => saveSession(null),
+            onConfirm: () => {
+                cancelSessionReminders();
+                saveSession(null);
+            },
         });
     }, [session, timeRemaining, saveSession]);
 

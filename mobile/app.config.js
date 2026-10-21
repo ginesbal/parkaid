@@ -47,6 +47,11 @@ export default {
       }
     },
 
+    plugins: [
+      // Parking reminders: Android's small icon tint and the POST_NOTIFICATIONS permission
+      ["expo-notifications", { color: "#1d6d8b" }]
+    ],
+
     extra: {
       // Use local backend for development, production URL for builds
       apiUrl: process.env.EXPO_PUBLIC_API_URL || process.env.API_URL || "http://localhost:3000",

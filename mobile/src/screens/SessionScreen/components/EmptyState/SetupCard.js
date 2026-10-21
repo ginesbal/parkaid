@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS, RATE_OPTIONS } from '../../../../constants/session';
+import { REMINDERS_SUPPORTED } from '../../../../services/reminders';
 import { formatMoney } from '../../../../utils/formatters';
 import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
@@ -212,6 +213,9 @@ const SetupCard = ({
                 </Text>
             </TouchableOpacity>
             {!isValid ? <Text style={styles.disabledHint}>Add your plate to start.</Text> : null}
+            {isValid && REMINDERS_SUPPORTED ? (
+                <Text style={styles.disabledHint}>We’ll remind you when it’s time to head back.</Text>
+            ) : null}
         </View>
     );
 };

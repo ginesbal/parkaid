@@ -1,9 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../components/BrandLoader';
 import LiveStage from '../../components/LiveStage';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { PENDING_SPOT_MAX_AGE, STORAGE_KEYS } from '../../constants/session';
+import { useSession } from '../../context/SessionContext';
 import { logger } from '../../utils/loggers';
 import { getSpotName } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
@@ -12,8 +14,26 @@ import { styles } from './SessionScreen.styles';
 
 /**
  * SessionScreen - parking session management. Details hands a spot over as
- * the `spot` route param; it prefills the setup for that spot.
+ * the `spot` route param; it prefills the setup for that spot, and is kept
+ * on the phone until its session starts, in case the app is closed first.
+ * The session itself lives in SessionContext, shared with Home and Map.
  */
+
+const rememberPendingSpot = (spot) => {
+  const write = spot
+    ? AsyncStorage.setItem(STORAGE_KEYS.PENDING_SPOT, JSON.stringify({ spot, savedAt: Date.now() }))
+    : AsyncStorage.removeItem(STORAGE_KEYS.PENDING_SPOT);
+  write.catch((error) => console.warn('Failed to remember the spot:', error));
+};
+
+const recallPendingSpot = async () => {
+  try {
+    const saved = JSON.parse(await AsyncStorage.getItem(STORAGE_KEYS.PENDING_SPOT));
+    return saved && Date.now() - saved.savedAt < PENDING_SPOT_MAX_AGE ? saved.spot : null;
+  } catch (error) {
+    return null;
+  }
+};
 export default function SessionScreen({ route, navigation }) {
   const {
     session,
@@ -35,7 +55,7 @@ export default function SessionScreen({ route, navigation }) {
     setSelectedDuration,
     totalCost,
     endTime,
-  } = useSessionManager();
+  } = useSession();
 
   const hasSession = Boolean(session);
 
@@ -51,12 +71,24 @@ export default function SessionScreen({ route, navigation }) {
     // Keep the new spot either way: if a session is running, it is set up
     // as soon as that session ends, as the notice promises.
     setPendingSpot(routeSpot);
+    rememberPendingSpot(routeSpot);
     if (session) {
       setNotice(
         `You\u2019re already parked at ${session.locationName}. End this session to park at ${getSpotName(routeSpot).title}.`
       );
     }
   }, [routeSpot, isLoaded, session, navigation]);
+
+  // Without a spot from Details, pick up one handed over before the app
+  // was closed. Once only, so a started session's spot does not come back.
+  const recalled = React.useRef(false);
+  React.useEffect(() => {
+    if (!isLoaded || routeSpot || recalled.current) return;
+    recalled.current = true;
+    recallPendingSpot().then((spot) => {
+      if (spot) setPendingSpot((current) => current ?? spot);
+    });
+  }, [isLoaded, routeSpot]);
 
   // The notice only applies to the session it was about.
   React.useEffect(() => {
@@ -96,7 +128,9 @@ export default function SessionScreen({ route, navigation }) {
       spotId: pendingSpot?.id ?? null,
     });
     startSession(pendingSpot).then((started) => {
-      if (started) setPendingSpot(null);
+      if (!started) return;
+      setPendingSpot(null);
+      rememberPendingSpot(null);
     });
   }, [vehiclePlate, selectedRate, selectedDuration, startSession, pendingSpot]);
 

@@ -2,7 +2,7 @@
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
@@ -22,6 +22,8 @@ import WelcomeScreen from './src/screens/WelcomeScreen/index';
 // services
 import BrandLoader from './src/components/BrandLoader';
 import LiveStage from './src/components/LiveStage';
+import SessionStrip from './src/components/SessionStrip';
+import { SessionProvider, useSessionStatus } from './src/context/SessionContext';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
 import { useReduceMotion } from './src/hooks/useReduceMotion';
@@ -49,13 +51,28 @@ const TAB_CONFIG = {
     },
 };
 
+// The Park tab's dot while a session runs, coloured by its state.
+const SESSION_DOT = {
+    active: TOKENS.primary,
+    expiring: TOKENS.warning,
+    expired: TOKENS.danger,
+};
+
+// The tab bar, with the running session's strip above it everywhere but Park.
+function TabBarWithSession(props) {
+    const current = props.state.routes[props.state.index]?.name;
+    return (
+        <View>
+            <SessionStrip navigation={props.navigation} hidden={current === 'Park'} />
+            <BottomTabBar {...props} />
+        </View>
+    );
+}
+
 // Mounted only after Welcome, so the location prompt never covers it.
 function MainTabs() {
-    const insets = useSafeAreaInsets();
     const [, setDeviceId] = useState(null);
     const [, setLocation] = useState(null);
-    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
-    const tabBarHeight = 66 + tabBarBottomPadding;
 
     useEffect(() => {
         (async () => {
@@ -72,7 +89,26 @@ function MainTabs() {
     }, []);
 
     return (
+        <SessionProvider>
+            <Tabs />
+        </SessionProvider>
+    );
+}
+
+function Tabs() {
+    const insets = useSafeAreaInsets();
+    const sessionStatus = useSessionStatus();
+    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
+    const tabBarHeight = 66 + tabBarBottomPadding;
+
+    // A moment, while the stored session is read: a driver who is parked
+    // opens straight on Park.
+    if (!sessionStatus.isLoaded) return <View style={navStyles.waiting} />;
+
+    return (
         <Tab.Navigator
+            initialRouteName={sessionStatus.active ? 'Park' : 'Home'}
+            tabBar={(props) => <TabBarWithSession {...props} />}
             sceneContainerStyle={{
                 backgroundColor: TOKENS.bg,
             }}
@@ -82,6 +118,9 @@ function MainTabs() {
                 tabBarIcon: ({ focused, color, size }) => {
                     const tabMeta = TAB_CONFIG[route.name];
                     const Icon = tabMeta.iconSet || Ionicons;
+                    const dot = route.name === 'Park' && sessionStatus.active
+                        ? SESSION_DOT[sessionStatus.state] || SESSION_DOT.active
+                        : null;
                     return (
                         <View style={navStyles.iconWrap}>
                             <Icon
@@ -89,6 +128,7 @@ function MainTabs() {
                                 size={size}
                                 color={color}
                             />
+                            {dot ? <View style={[navStyles.sessionDot, { backgroundColor: dot }]} /> : null}
                         </View>
                     );
                 },
@@ -148,7 +188,10 @@ function MainTabs() {
             <Tab.Screen
                 name="Park"
                 component={SessionScreen}
-                options={{ tabBarLabel: 'Park' }}
+                options={{
+                    tabBarLabel: 'Park',
+                    tabBarAccessibilityLabel: sessionStatus.active ? 'Park, you are parked' : 'Park',
+                }}
             />
         </Tab.Navigator>
     );
@@ -222,6 +265,21 @@ const navStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 2,
+    },
+    // Top-right of the Park icon, ringed in the tab bar's white.
+    sessionDot: {
+        position: 'absolute',
+        top: 1,
+        right: 7,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        borderWidth: 2,
+        borderColor: TOKENS.surface,
+    },
+    waiting: {
+        flex: 1,
+        backgroundColor: TOKENS.bg,
     },
     label: {
         fontSize: 12,

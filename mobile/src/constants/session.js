@@ -5,7 +5,12 @@ export const STORAGE_KEYS = {
     USER_PREFERENCES: 'user_preferences',
     HISTORY: 'session_history',
     LAST_PLATE: 'parkaid.lastPlate',
+    // The spot handed over from Details, until its session starts.
+    PENDING_SPOT: 'parkaid.pendingSpot',
 };
+
+// How long a handed-over spot is kept if its session never starts.
+export const PENDING_SPOT_MAX_AGE = 12 * 60 * 60 * 1000;
 
 export const DEFAULT_VALUES = {
     RATE: 2.5,
