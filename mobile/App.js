@@ -1,11 +1,9 @@
 // App.js
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
@@ -70,23 +68,13 @@ function TabBarWithSession(props) {
     );
 }
 
-// Mounted only after Welcome, so the location prompt never covers it.
+// Mounted only after Welcome, so the location prompt (asked by Home, see
+// useLocationManager) never covers it.
 function MainTabs() {
     const [, setDeviceId] = useState(null);
-    const [, setLocation] = useState(null);
 
     useEffect(() => {
-        (async () => {
-            const id = await getDeviceId();
-            setDeviceId(id);
-
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status === 'granted') {
-                const loc = await Location.getCurrentPositionAsync({});
-                setLocation(loc.coords);
-                await AsyncStorage.setItem('userLocation', JSON.stringify(loc.coords));
-            }
-        })();
+        getDeviceId().then(setDeviceId);
     }, []);
 
     return (

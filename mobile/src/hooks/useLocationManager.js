@@ -1,97 +1,152 @@
-import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { DEFAULT_LOCATION, LOCATION_STORAGE_KEY } from '../constants/parking';
+import { distanceMeters, isInCalgary } from '../utils/geo';
 
+// Give up on a fix after this long; some phones never answer indoors.
+const FIX_TIMEOUT = 10000;
+// Opening Home asks again at most this often; pull to refresh always asks.
+const REFRESH_EVERY = 60 * 1000;
+// A fix older than this is not fresh.
+const FIX_MAX_AGE = 10000;
+// A fix this close to the one in use keeps it, so GPS jitter does not
+// fetch the list again.
+const MOVED_ENOUGH = 50; // metres
+
+function withTimeout(promise, ms) {
+    let timer;
+    const late = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('No location fix in time')), ms);
+    });
+    return Promise.race([promise, late]).finally(() => clearTimeout(timer));
+}
+
+async function readSaved() {
+    try {
+        const saved = JSON.parse(await AsyncStorage.getItem(LOCATION_STORAGE_KEY));
+        return Number.isFinite(saved?.latitude) && Number.isFinite(saved?.longitude) ? saved : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * useLocationManager - where Home searches from. On launch it starts from the
+ * last saved fix, so the list appears at once, then asks the phone for a
+ * fresh one; again whenever Home opens (refreshLocation()) and on pull to
+ * refresh (refreshLocation({ force: true })). It says what it is using:
+ *
+ * source:     'gps' (a fix from now), 'saved' (an earlier fix, when a fresh
+ *             one cannot be had), 'default' (downtown: no permission or no
+ *             fix) or 'outside' (downtown: the phone is outside Calgary)
+ * savedAt:    when the fix in use was taken (ms), if known
+ * permission: 'granted', 'denied' (can still ask) or 'blocked'
+ * locating:   a fix is being asked for
+ */
 export const useLocationManager = () => {
-    const [location, setLocation] = useState(null);
-    const [isLoadingLocation, setIsLoadingLocation] = useState(true);
-    const [locationError, setLocationError] = useState(null);
-    const [locationName, setLocationName] = useState('Loading...');
-    
-    // load location from storage or get current
-    const loadLocation = useCallback(async () => {
-        try {
-            setIsLoadingLocation(true);
-            
-            // first, try to load from storage
-            const stored = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
-            if (stored) {
-                const parsedLocation = JSON.parse(stored);
-                setLocation(parsedLocation);
-                setLocationName(parsedLocation.name || 'Downtown Calgary');
-                setIsLoadingLocation(false);
-                return;
-            }
-            
-            // request permission if not stored
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            
-            if (status !== 'granted') {
-                // use default location if permission denied
-                setLocation(DEFAULT_LOCATION);
-                setLocationName(DEFAULT_LOCATION.name);
-                setLocationError('Location permission denied. Using default location.');
-            } else {
-                // get current location
-                const currentLocation = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced
-                });
-                
-                const newLocation = {
-                    latitude: currentLocation.coords.latitude,
-                    longitude: currentLocation.coords.longitude,
-                    name: 'Current Location'
-                };
-                
-                // try to get address
-                try {
-                    const [address] = await Location.reverseGeocodeAsync({
-                        latitude: newLocation.latitude,
-                        longitude: newLocation.longitude
-                    });
-                    
-                    if (address) {
-                        newLocation.name = address.district || address.city || 'Current Location';
-                    }
-                } catch (error) {
-                    console.log('Reverse geocoding failed:', error);
+    const [state, setState] = useState({ location: null, source: null, savedAt: null });
+    const [permission, setPermission] = useState('granted');
+    const [locating, setLocating] = useState(false);
+
+    const current = useRef(state);
+    const lastTry = useRef(0);
+    const pending = useRef(null);
+
+    const use = useCallback((location, source, savedAt = null) => {
+        const next = { location, source, savedAt };
+        current.current = next;
+        setState(next);
+    }, []);
+
+    const refreshLocation = useCallback(({ force = false, ask = false } = {}) => {
+        if (pending.current) return pending.current;
+        if (!force && Date.now() - lastTry.current < REFRESH_EVERY) return Promise.resolve();
+        lastTry.current = Date.now();
+
+        const run = (async () => {
+            setLocating(true);
+            try {
+                let answer = await Location.getForegroundPermissionsAsync();
+                if (!answer.granted && ask && answer.canAskAgain) {
+                    answer = await Location.requestForegroundPermissionsAsync();
                 }
-                
-                setLocation(newLocation);
-                setLocationName(newLocation.name);
+                if (!answer.granted) {
+                    setPermission(answer.canAskAgain ? 'denied' : 'blocked');
+                    // Without permission an old fix is no better than a guess.
+                    use(DEFAULT_LOCATION, 'default');
+                    return;
+                }
+                setPermission('granted');
 
-                // save to storage
-                await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(newLocation));
+                const position = await withTimeout(
+                    // On web, expo-location reuses any earlier fix unless told
+                    // otherwise; phones ignore maximumAge.
+                    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced, maximumAge: FIX_MAX_AGE }),
+                    FIX_TIMEOUT
+                );
+                const fix = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                if (!isInCalgary(fix)) {
+                    use(DEFAULT_LOCATION, 'outside');
+                    return;
+                }
+                const now = Date.now();
+                const { location, source } = current.current;
+                const near = location && (source === 'gps' || source === 'saved')
+                    && distanceMeters(location, fix) < MOVED_ENOUGH;
+                use(near ? location : fix, 'gps', now);
+                AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ ...fix, savedAt: now }))
+                    .catch((error) => console.warn('Failed to save the location:', error));
+            } catch (error) {
+                console.warn('No location fix:', error?.message);
+                // Keep what is shown; Home says it is a saved place or downtown.
+                const { location, source, savedAt } = current.current;
+                if (!location) use(DEFAULT_LOCATION, 'default');
+                else if (source === 'gps') use(location, 'saved', savedAt);
+            } finally {
+                setLocating(false);
+                pending.current = null;
             }
-        } catch (error) {
-            console.error('Error loading location:', error);
-            setLocationError('Failed to load location. Using default.');
-            setLocation(DEFAULT_LOCATION);
-            setLocationName(DEFAULT_LOCATION.name);
-        } finally {
-            setIsLoadingLocation(false);
-        }
-    }, []);
+        })();
+        pending.current = run;
+        return run;
+    }, [use]);
 
-    // update location
-    const updateLocation = useCallback(async (newLocation) => {
-        setLocation(newLocation);
-        setLocationName(newLocation.name || 'Selected Location');
-        await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(newLocation));
-    }, []);
-
-    // initial load
+    // Launch: the saved fix at once, then a fresh one, asking for permission
+    // the first time.
     useEffect(() => {
-        loadLocation();
-    }, [loadLocation]);
-    
+        let cancelled = false;
+        (async () => {
+            const saved = await readSaved();
+            if (cancelled) return;
+            if (saved && !current.current.location) {
+                use({ latitude: saved.latitude, longitude: saved.longitude }, 'saved', saved.savedAt ?? null);
+            }
+            refreshLocation({ force: true, ask: true });
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [use, refreshLocation]);
+
+    // Back in the app (from Settings, or after a drive): look again.
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (next) => {
+            if (next === 'active') refreshLocation();
+        });
+        return () => subscription.remove();
+    }, [refreshLocation]);
+
     return {
-        location,
-        locationName,
-        isLoadingLocation,
-        locationError,
-        updateLocation,
-        refreshLocation: loadLocation
+        location: state.location,
+        source: state.source,
+        savedAt: state.savedAt,
+        permission,
+        locating,
+        // Nothing to search from yet: only on a first launch, until the
+        // first fix or downtown.
+        isLoadingLocation: state.location === null,
+        refreshLocation,
     };
 };

@@ -1,6 +1,6 @@
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, FlatList, LayoutAnimation, Platform, RefreshControl, UIManager, View } from 'react-native';
+import { Animated, FlatList, LayoutAnimation, Linking, Platform, RefreshControl, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BrandLoader from '../../components/BrandLoader';
@@ -16,6 +16,7 @@ import { useEntrance } from '../../hooks/useEntrance';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 
+import { describeLocation } from '../../utils/geo';
 import { getGreeting } from '../../utils/greeting';
 import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
@@ -31,7 +32,30 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function HomeScreen({ navigation }) {
   // location & filter state
-  const { location, isLoadingLocation, locationError } = useLocationManager();
+  const {
+    location,
+    isLoadingLocation,
+    source: locationSource,
+    savedAt: locationSavedAt,
+    permission,
+    locating,
+    refreshLocation,
+  } = useLocationManager();
+
+  // A fresh fix each time Home opens (the hook asks at most once a minute).
+  useEffect(() => navigation.addListener('focus', () => refreshLocation()), [navigation, refreshLocation]);
+
+  // Where the list is measured from, when it is not the phone's location now.
+  // A saved place is only named once the fresh fix has failed.
+  const place = locating && locationSource === 'saved'
+    ? null
+    : describeLocation({ source: locationSource, savedAt: locationSavedAt, permission });
+  const placeAction = {
+    ask: { label: 'Turn on', onPress: () => refreshLocation({ force: true, ask: true }) },
+    settings: { label: 'Open Settings', onPress: () => Linking.openSettings() },
+    retry: { label: 'Try again', onPress: () => refreshLocation({ force: true }) },
+  }[place?.action] ?? null;
+  const fromDowntown = locationSource === 'default' || locationSource === 'outside';
 
   const {
     activeFilter,
@@ -185,8 +209,9 @@ export default function HomeScreen({ navigation }) {
     refreshStartedRef.current = false;
     setRefreshing(true);
     setLastRefresh(new Date());
-    refetch();
-  }, [location, requestType, searchRadius, refetch]);
+    // Where you are now first, then the list for there.
+    refreshLocation({ force: true }).finally(refetch);
+  }, [location, requestType, searchRadius, refetch, refreshLocation]);
 
   useEffect(() => {
     if (!refreshing) return;
@@ -255,7 +280,9 @@ export default function HomeScreen({ navigation }) {
             ListHeaderComponent={
               <Header
                 greeting={greeting}
-                statusMessage={locationError}
+                statusMessage={place?.text}
+                statusAction={placeAction}
+                fromDowntown={fromDowntown}
                 onSearchPress={handleSearchPress}
                 view={view}
                 onViewChange={handleViewChange}

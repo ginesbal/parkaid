@@ -16,7 +16,9 @@ const REASONS = {
     covered: 'Covered',
 };
 
-const TopPick = ({ spot, view, onView }) => {
+// fromDowntown: the list is measured from downtown, not from the phone.
+const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
+    const reason = view === 'near' && fromDowntown ? 'Closest to downtown' : REASONS[view];
     const { title, detail } = getSpotName(spot);
     const rate = getRateDisplay(spot);
     const meta = [getZoneLabel(spot) || getSpotKind(spot), getWalkLabel(spot)]
@@ -30,10 +32,10 @@ const TopPick = ({ spot, view, onView }) => {
                 <View
                     style={styles.info}
                     accessible
-                    accessibilityLabel={`${REASONS[view]}. ${title}. ${meta}. ${rateSpoken}.`}
+                    accessibilityLabel={`${reason}. ${title}. ${meta}. ${rateSpoken}.`}
                 >
                     <View style={styles.reason}>
-                        <Text style={styles.reasonText}>{REASONS[view]}</Text>
+                        <Text style={styles.reasonText}>{reason}</Text>
                     </View>
                     <Text style={styles.title} numberOfLines={2}>{title}</Text>
                     {detail ? <Text style={styles.detail} numberOfLines={1}>{detail}</Text> : null}

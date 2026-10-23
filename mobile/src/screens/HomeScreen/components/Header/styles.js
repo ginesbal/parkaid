@@ -43,6 +43,11 @@ export const styles = StyleSheet.create({
     statusBannerInfo: {
         backgroundColor: 'transparent',
     },
+    statusAction: {
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+        textDecorationLine: 'underline',
+    },
     statusBannerText: {
         flex: 1,
         fontSize: 13,

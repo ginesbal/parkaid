@@ -9,12 +9,16 @@ import { styles } from './styles';
 
 /**
  * Home header: greeting, search, view chips, optional filters, and the top pick.
- * Everything above the list rows. `statusMessage` is about the location;
+ * Everything above the list rows. `statusMessage` says where the list is
+ * measured from when it is not the phone's location now, with an optional
+ * `statusAction` ({ label, onPress }); `fromDowntown` when that is downtown.
  * `savedNote` says how old the list is (utils/loadStatus).
  */
 const Header = ({
     greeting,
     statusMessage,
+    statusAction = null,
+    fromDowntown = false,
     onSearchPress,
     view,
     onViewChange,
@@ -44,7 +48,17 @@ const Header = ({
             {statusMessage ? (
                 <View style={[styles.statusBanner, styles.statusBannerInfo]} accessibilityRole="alert">
                     <MaterialCommunityIcons name="crosshairs-question" size={16} color={TOKENS.primary} />
-                    <Text style={styles.statusBannerText}>{statusMessage}</Text>
+                    <Text style={styles.statusBannerText}>
+                        {statusMessage}
+                        {statusAction ? (
+                            <>
+                                {' '}
+                                <Text style={styles.statusAction} onPress={statusAction.onPress} accessibilityRole="button">
+                                    {statusAction.label}
+                                </Text>
+                            </>
+                        ) : null}
+                    </Text>
                 </View>
             ) : null}
 
@@ -104,7 +118,7 @@ const Header = ({
                         </Text>
                         {savedNote ? <Text style={styles.sectionNote}>{savedNote}</Text> : null}
                     </View>
-                    <TopPick spot={topPick} view={view} onView={onViewSpot} />
+                    <TopPick spot={topPick} view={view} onView={onViewSpot} fromDowntown={fromDowntown} />
                     {moreCount > 0 ? (
                         <Text style={styles.moreLabel}>
                             {moreCount === 1 ? '1 more nearby' : `${moreCount} more nearby`}
