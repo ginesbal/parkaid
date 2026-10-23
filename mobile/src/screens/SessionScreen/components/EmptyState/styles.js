@@ -236,6 +236,11 @@ export const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         textAlign: 'center',
     },
+    hintLink: {
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+        textDecorationLine: 'underline',
+    },
     setupHint: {
         marginTop: 8,
         fontSize: 13,

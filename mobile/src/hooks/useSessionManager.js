@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, Alert } from 'react-native';
+import { AccessibilityInfo, Alert, AppState } from 'react-native';
 import { DEFAULT_VALUES, DEFAULT_WALK_MINUTES, HEAD_BACK_BUFFER, STORAGE_KEYS } from '../constants/session.js';
 import { cancelSessionReminders, scheduleSessionReminders } from '../services/reminders';
 import { confirm } from '../utils/confirm';
@@ -82,6 +82,16 @@ export const useSessionManager = () => {
     useEffect(() => {
         loadSession();
     }, [loadSession]);
+
+    // Back in the app: reschedule, so reminders the driver has just allowed
+    // in Settings start working, and any already shown are cleared.
+    useEffect(() => {
+        if (!session) return undefined;
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') scheduleSessionReminders(session, warnMinutesFor(session));
+        });
+        return () => subscription.remove();
+    }, [session]);
 
     // update timer every 1 second
     useEffect(() => {

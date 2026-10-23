@@ -46,11 +46,26 @@ async function allowed(ask) {
     }
 }
 
+// Clears both the reminders still to come and any already shown, so the
+// tray never holds an old end time.
 export async function cancelSessionReminders() {
     if (!REMINDERS_SUPPORTED) return;
-    await Promise.all(Object.values(REMINDER_IDS).map((id) =>
-        Notifications.cancelScheduledNotificationAsync(id).catch(() => null)
-    ));
+    await Promise.all(Object.values(REMINDER_IDS).flatMap((id) => [
+        Notifications.cancelScheduledNotificationAsync(id).catch(() => null),
+        Notifications.dismissNotificationAsync(id).catch(() => null),
+    ]));
+}
+
+// True when the driver has turned notifications off and the app can no
+// longer ask, so there will be no reminder unless they turn them back on.
+export async function remindersBlocked() {
+    if (!REMINDERS_SUPPORTED) return false;
+    try {
+        const permission = await Notifications.getPermissionsAsync();
+        return !permission.granted && !permission.canAskAgain;
+    } catch (error) {
+        return false;
+    }
 }
 
 // Replaces whatever was scheduled for the session.

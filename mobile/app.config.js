@@ -24,6 +24,9 @@ export default {
       bundleIdentifier: "com.parkaid.app"
     },
     android: {
+      // Parking reminders on time (android/ is committed, so its manifest
+      // carries this too)
+      permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
       adaptiveIcon: {
         foregroundImage: "src/utils/assets/adaptive-icon.png",
         backgroundColor: "#001d4a"
@@ -48,7 +51,8 @@ export default {
     },
 
     plugins: [
-      // Parking reminders: Android's small icon tint and the POST_NOTIFICATIONS permission
+      // Parking reminders. Applies on prebuild only: the committed android/
+      // project sets the colour itself, and the library brings POST_NOTIFICATIONS.
       ["expo-notifications", { color: "#1d6d8b" }]
     ],
 

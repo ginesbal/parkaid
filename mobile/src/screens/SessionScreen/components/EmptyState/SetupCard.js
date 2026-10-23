@@ -1,9 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useMemo } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, Linking, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS, RATE_OPTIONS } from '../../../../constants/session';
-import { REMINDERS_SUPPORTED } from '../../../../services/reminders';
+import { REMINDERS_SUPPORTED, remindersBlocked } from '../../../../services/reminders';
 import { formatMoney } from '../../../../utils/formatters';
 import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
@@ -61,6 +61,19 @@ const SetupCard = ({
     }, [duration, selectedDuration, setSelectedDuration]);
     const endsAt = formatClock(now + duration * 60000);
     const isValid = vehiclePlate.trim().length > 0;
+
+    // Only promise a reminder the phone will deliver. Checked again on the
+    // way back from Settings.
+    const [blocked, setBlocked] = useState(false);
+    useEffect(() => {
+        if (!REMINDERS_SUPPORTED) return undefined;
+        const check = () => remindersBlocked().then(setBlocked);
+        check();
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') check();
+        });
+        return () => subscription.remove();
+    }, []);
 
     return (
         <View style={styles.setupCard}>
@@ -213,8 +226,16 @@ const SetupCard = ({
                 </Text>
             </TouchableOpacity>
             {!isValid ? <Text style={styles.disabledHint}>Add your plate to start.</Text> : null}
-            {isValid && REMINDERS_SUPPORTED ? (
+            {isValid && REMINDERS_SUPPORTED && !blocked ? (
                 <Text style={styles.disabledHint}>We’ll remind you when it’s time to head back.</Text>
+            ) : null}
+            {isValid && blocked ? (
+                <Text style={styles.disabledHint}>
+                    Notifications are off, so there won’t be a reminder.{' '}
+                    <Text style={styles.hintLink} onPress={() => Linking.openSettings()} accessibilityRole="link">
+                        Turn them on
+                    </Text>
+                </Text>
             ) : null}
         </View>
     );
