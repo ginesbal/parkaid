@@ -7,6 +7,7 @@ import { chargedCost, parseChargeHours } from '../../../../utils/chargeHours';
 import { formatMoney } from '../../../../utils/formatters';
 import { getSessionZone } from '../../../../utils/parkPlus';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
+import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 import TimerCard from './TimerCard';
 
@@ -115,7 +116,7 @@ const ActiveSession = ({
                             accessibilityRole="button"
                             accessibilityHint="Ends the session and opens Home"
                         >
-                            <Text style={styles.endText}>Find parking nearby</Text>
+                            <Text style={styles.endText}>Find a spot nearby</Text>
                         </TouchableOpacity>
                     </>
                 ) : (
@@ -136,7 +137,7 @@ const ActiveSession = ({
                         ) : (
                             <View style={styles.capped} accessibilityRole="text">
                                 <Text style={styles.cappedTitle}>
-                                    {formatDuration(session.maxDuration)} maximum reached
+                                    {formatMaxStay(session.maxDuration)} reached
                                 </Text>
                                 <Text style={styles.cappedBody}>Move your car by {formatClock(endTime)}.</Text>
                             </View>

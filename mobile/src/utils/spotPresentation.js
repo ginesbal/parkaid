@@ -157,15 +157,18 @@ export function pickTopSpot(spots, activeFilter = 'all') {
     return spots.find((s) => s.spot_type !== 'residential') || spots[0];
 }
 
-// "2 hour maximum", "90 minute maximum", or null.
+// "2 hour maximum", "90 minute maximum": how a posted limit is said
+// everywhere (Details, setup, the capped session).
+export function formatMaxStay(minutes) {
+    if (minutes % 60 === 0) return `${minutes / 60} hour maximum`;
+    return `${Math.round(minutes)} minute maximum`;
+}
+
+// The spot's posted maximum, said as above, or null.
 export function getMaxStayLabel(spot) {
     const minutes = Number(spot?.max_duration_minutes ?? spot?.metadata?.max_time);
     if (!Number.isFinite(minutes) || minutes <= 0) return null;
-    if (minutes % 60 === 0) {
-        const hours = minutes / 60;
-        return `${hours} hour maximum`;
-    }
-    return `${Math.round(minutes)} minute maximum`;
+    return formatMaxStay(minutes);
 }
 
 export function getMaxStayMinutes(spot) {

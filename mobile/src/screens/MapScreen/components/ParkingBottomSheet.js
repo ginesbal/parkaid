@@ -267,9 +267,9 @@ const ParkingBottomSheet = forwardRef(({
     if (loading && spots.length === 0) countLine = 'Finding spots\u2026';
     else if (loading) countLine = 'Updating for this area\u2026';
     else if (failure) countLine = failure.title;
-    else if (spots.length === 0) countLine = `No places within ${within}`;
-    else if (saved) countLine = `${spots.length} ${spots.length === 1 ? 'place' : 'places'} \u00B7 ${saved}`;
-    else countLine = `${spots.length} ${spots.length === 1 ? 'place' : 'places'} within ${within}`;
+    else if (spots.length === 0) countLine = `No spots within ${within}`;
+    else if (saved) countLine = `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} \u00B7 ${saved}`;
+    else countLine = `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} within ${within}`;
 
     const featured = featuredSpot ? {
         reason: selectedSpot?.id === featuredSpot.id
@@ -300,12 +300,12 @@ const ParkingBottomSheet = forwardRef(({
                     style={styles.grabber}
                     hitSlop={{ top: 12, bottom: 8 }}
                     accessibilityRole="button"
-                    accessibilityLabel="List of places"
+                    accessibilityLabel="List of spots"
                     accessibilityHint={expanded ? 'Hides the list' : 'Shows the list'}
                     aria-expanded={expanded}
                     accessibilityActions={[
                         { name: 'activate' },
-                        { name: 'expand', label: 'Show all places' },
+                        { name: 'expand', label: 'Show all spots' },
                         { name: 'collapse', label: 'Hide the list' },
                     ]}
                     onAccessibilityAction={handleAccessibilityAction}
@@ -316,7 +316,7 @@ const ParkingBottomSheet = forwardRef(({
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
                         <Text style={styles.headerTitle} accessibilityRole="header">
-                            {pinned ? 'Parking around your pin' : 'Parking around you'}
+                            {pinned ? 'Spots around your pin' : 'Spots around you'}
                         </Text>
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {countLine}
@@ -379,9 +379,9 @@ const ParkingBottomSheet = forwardRef(({
                             onPress={() => onViewSpot(featuredSpot)}
                             style={({ pressed }) => [styles.viewButton, pressed && styles.viewButtonPressed]}
                             accessibilityRole="button"
-                            accessibilityLabel={`View parking at ${featured.name}`}
+                            accessibilityLabel={`View spot: ${featured.name}`}
                         >
-                            <Text style={styles.viewButtonText}>View parking</Text>
+                            <Text style={styles.viewButtonText}>View spot</Text>
                         </Pressable>
                     </View>
                 ) : (
@@ -423,7 +423,7 @@ const ParkingBottomSheet = forwardRef(({
                         aria-expanded={expanded}
                     >
                         <Text style={styles.showAllText}>
-                            {expanded ? 'Hide the list' : `Show all ${spots.length} places`}
+                            {expanded ? 'Hide the list' : `Show all ${spots.length} spots`}
                         </Text>
                         <MaterialCommunityIcons
                             name={expanded ? 'chevron-down' : 'chevron-up'}

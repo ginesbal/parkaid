@@ -178,7 +178,7 @@ function MapScreen({ route, navigation }) {
     };
 
     // Select a spot: highlight its marker, centre it, and show it as the
-    // featured card in the sheet's peek. "View parking" there opens Details.
+    // featured card in the sheet's peek. "View spot" there opens Details.
     const selectSpot = useCallback((spot, fromList = false) => {
         // important: deep snapshot of the chosen spot for diagnostics
         logger.logSpotData(spot, `Selected from ${fromList ? 'LIST' : 'MAP'}`);

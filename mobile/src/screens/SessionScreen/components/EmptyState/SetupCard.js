@@ -7,6 +7,7 @@ import { REMINDERS_SUPPORTED, remindersBlocked } from '../../../../services/remi
 import { chargedCost, chargedMinutes, describeFreeNow } from '../../../../utils/chargeHours';
 import { formatCost, formatMoney } from '../../../../utils/formatters';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
+import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
 // Quick picks that fit the spot's maximum stay, plus the maximum itself when
@@ -157,7 +158,7 @@ const SetupCard = ({
                     </View>
                     {maxMinutes ? (
                         <Text style={styles.setupHint}>
-                            {formatDuration(maxMinutes)} maximum here. Check posted signs.
+                            {formatMaxStay(maxMinutes)} here. Check posted signs.
                         </Text>
                     ) : null}
                 </View>

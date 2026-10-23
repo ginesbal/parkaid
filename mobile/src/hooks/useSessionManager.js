@@ -177,8 +177,8 @@ export const useSessionManager = () => {
     const startSession = useCallback(async (spot = null, { zone = null, duration: minutes = selectedDuration } = {}) => {
         if (!vehiclePlate.trim()) {
             Alert.alert(
-                'License Plate Required',
-                'Please enter your vehicle license plate to continue.'
+                'Add your license plate',
+                'Enter your plate to start the session.'
             );
             return false;
         }

@@ -25,13 +25,13 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
         .join(' · ');
     const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
-    // The whole card is one target; "View parking" shows what a tap does.
+    // The whole card is one target; "View spot" shows what a tap does.
     return (
         <Pressable
             onPress={() => onView(spot)}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
             accessibilityRole="button"
-            accessibilityLabel={`View parking at ${title}. ${reason}. ${meta}. ${rateSpoken}.`}
+            accessibilityLabel={`View spot: ${title}. ${reason}. ${meta}. ${rateSpoken}.`}
         >
             {({ pressed }) => (
                 <>
@@ -56,7 +56,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
                     </View>
 
                     <View style={[styles.button, pressed && styles.buttonPressed]}>
-                        <Text style={styles.buttonText}>View parking</Text>
+                        <Text style={styles.buttonText}>View spot</Text>
                     </View>
                 </>
             )}

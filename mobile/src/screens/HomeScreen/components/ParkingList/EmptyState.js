@@ -79,7 +79,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
                         ]}
                         onPress={onViewMap}
                         accessibilityRole="button"
-                        accessibilityLabel="View parking map"
+                        accessibilityLabel="View map"
                     >
                         <MaterialCommunityIcons
                             name="map-search-outline"
@@ -87,7 +87,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
                             color={TOKENS.text}
                         />
                         <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
-                            View Map
+                            View map
                         </Text>
                     </Pressable>
                 )}

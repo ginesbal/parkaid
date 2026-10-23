@@ -147,7 +147,7 @@ export default function DetailsScreen({ route, navigation }) {
                         >
                             <MaterialCommunityIcons name="chevron-left" size={28} color={TOKENS.surface} />
                         </Pressable>
-                        <Text style={styles.navTitle}>Parking details</Text>
+                        <Text style={styles.navTitle}>Spot details</Text>
                     </View>
 
                     <Text style={styles.title} accessibilityRole="header">{title}</Text>
