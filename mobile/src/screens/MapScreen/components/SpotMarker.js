@@ -6,7 +6,7 @@
 // re-snapshots with its new look.
 
 import { memo, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { getCoordinates, getSpotName } from '../../../utils/spotPresentation';
 import SpotPill, { SpotBadge, getPillLabel } from './SpotPill';
@@ -40,9 +40,23 @@ function SpotMarker({ spot, selected, onPress }) {
             zIndex={selected ? 10 : 1}
             accessibilityLabel={`${title}${label ? `, ${label} per hour` : ''}`}
         >
-            <MarkerBody spot={spot} selected={selected} onImageLoad={() => setReady(true)} />
+            {/* iOS: a clear 44 pt box around the pill is the tap target. Android
+                cannot draw past 100 px, so there the map's own tap handler
+                picks a pin within reach (MapScreen handleMapPress). */}
+            <View style={Platform.OS === 'ios' ? styles.target : null}>
+                <MarkerBody spot={spot} selected={selected} onImageLoad={() => setReady(true)} />
+            </View>
         </Marker>
     );
 }
+
+const styles = StyleSheet.create({
+    target: {
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});
 
 export default memo(SpotMarker);

@@ -103,7 +103,8 @@ export const styles = StyleSheet.create({
     filtersInline: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        columnGap: 6,
+        rowGap: 8,
         flexWrap: 'wrap',
         paddingTop: 8,
         marginTop: 2,
@@ -111,7 +112,10 @@ export const styles = StyleSheet.create({
         borderTopColor: TOKENS.hairline,
     },
 
+    // 36 pt to the eye; CHIP_SLOP (MapHeader) makes it 44 pt to the finger.
     miniChip: {
+        minHeight: 36,
+        justifyContent: 'center',
         paddingHorizontal: 12,
         paddingVertical: 7,
         borderRadius: 10,

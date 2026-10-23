@@ -1,13 +1,16 @@
 // MapScreen (web) — react-native-maps has no web renderer here, so the web
 // build shows a drawn street grid with the real markers, sheet and data. It is
-// labelled as a preview; the live map runs on iOS and Android.
+// labelled as a preview; the live map runs on iOS and Android. Search works as
+// on the phones (through the backend), and centres the grid on the place.
 
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEFAULT_LOCATION } from '../../constants/config';
+import PlacesSearchBar from '../../components/PlacesAutocomplete/PlacesSearchBar';
 import { RADIUS, SPACING, TOKENS, alpha } from '../../constants/theme';
+import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { getCoordinates, pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
@@ -20,32 +23,57 @@ const METERS_PER_DEG_LAT = 110540;
 const AVENUE_GAP = 74;
 const STREET_GAP = 96;
 
-export default function MapScreen({ navigation }) {
+export default function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     const tabBarHeight = useBottomTabBarHeight();
     const [size, setSize] = useState({ width: 0, height: 0 });
     const [peek, setPeek] = useState(200);
     const [selectedSpot, setSelectedSpot] = useState(null);
 
-    const { spots, loading, error, savedAt, stale, refetch } = useParkingSpots(DEFAULT_LOCATION, SEARCH_RADIUS, 'all');
+    // Around the driver, as on Home (downtown without a fix in Calgary), or
+    // around a searched place.
+    const { location, source } = useLocationManager();
+    const [place, setPlace] = useState(null);
+    const here = source === 'gps' || source === 'saved' ? location : null;
+    // null until the first fix (or downtown); the grid is drawn around downtown meanwhile.
+    const center = place ?? location;
+    const origin = center ?? DEFAULT_LOCATION;
+
+    // Home's search row opens Map with { focusSearch: true }.
+    const [focusSignal, setFocusSignal] = useState(0);
+    const focusSearch = route?.params?.focusSearch;
+    useEffect(() => {
+        if (!focusSearch) return;
+        setFocusSignal((n) => n + 1);
+        navigation?.setParams({ focusSearch: undefined });
+    }, [focusSearch, navigation]);
+
+    const handlePlaceSelected = useCallback(({ lat, lng, name }) => {
+        setSelectedSpot(null);
+        setPlace({ latitude: lat, longitude: lng, name });
+    }, []);
+
+    const { spots, loading, error, savedAt, stale, refetch } = useParkingSpots(center, SEARCH_RADIUS, 'all');
 
     const featuredSpot = useMemo(
         () => selectedSpot || pickTopSpot(sortByDistance(spots || [])),
         [selectedSpot, spots]
     );
 
-    // Centre the search area in the space above the sheet's peek.
-    const topInset = insets.top + 48;
+    // Centre the search area in the space above the sheet's peek, below the
+    // search bar and the preview note.
+    const topInset = insets.top + 104;
     const cx = size.width / 2;
     const cy = topInset + Math.max(0, (size.height - peek - topInset) / 2);
     const pxPerMeter = Math.max(0.1, (Math.min(size.width, size.height - peek - topInset) * 0.42) / SEARCH_RADIUS);
 
     const project = useCallback((coords) => {
-        const dy = (coords.latitude - DEFAULT_LOCATION.latitude) * METERS_PER_DEG_LAT;
-        const dx = (coords.longitude - DEFAULT_LOCATION.longitude)
-            * METERS_PER_DEG_LAT * Math.cos((DEFAULT_LOCATION.latitude * Math.PI) / 180);
+        const dy = (coords.latitude - origin.latitude) * METERS_PER_DEG_LAT;
+        const dx = (coords.longitude - origin.longitude)
+            * METERS_PER_DEG_LAT * Math.cos((origin.latitude * Math.PI) / 180);
         return { x: cx + dx * pxPerMeter, y: cy - dy * pxPerMeter };
-    }, [cx, cy, pxPerMeter]);
+    }, [cx, cy, pxPerMeter, origin]);
+    const me = here && size.width > 0 ? project(here) : null;
 
     const handleViewSpot = useCallback((spot) => {
         if (spot) navigation?.navigate('Details', { spot });
@@ -80,8 +108,12 @@ export default function MapScreen({ navigation }) {
 
             {/* Marker layer: one stacking context, so the sheet always covers it */}
             <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-                {/* You are here */}
-                {size.width > 0 ? <View style={[styles.me, { left: cx - 9, top: cy - 9 }]} accessibilityLabel="Your location" /> : null}
+                {/* You are here, when the phone said where */}
+                {me ? <View style={[styles.me, { left: me.x - 9, top: me.y - 9 }]} accessibilityLabel="Your location" /> : null}
+                {/* The searched place */}
+                {place && size.width > 0 ? (
+                    <View style={[styles.place, { left: cx - 10, top: cy - 10 }]} accessibilityLabel={place.name || 'Searched place'} />
+                ) : null}
 
                 {size.width > 0 && spots.map((spot) => {
                     const coords = getCoordinates(spot);
@@ -102,20 +134,29 @@ export default function MapScreen({ navigation }) {
                 })}
             </View>
 
-            <View style={[styles.notice, { top: insets.top + SPACING.md }]}>
+            <View style={[styles.notice, { top: insets.top + 68 }]}>
                 <Text style={styles.noticeText}>Preview map. The live map runs on iOS and Android.</Text>
             </View>
 
+            {/* After the note, so its suggestions draw over it */}
+            <PlacesSearchBar
+                onPlaceSelected={handlePlaceSelected}
+                focusSignal={focusSignal}
+                containerStyle={[styles.search, { top: insets.top + SPACING.md }]}
+            />
+
             <ParkingBottomSheet
                 spots={spots}
-                loading={loading}
+                // Waiting for a location counts as loading, not as "no spots".
+                loading={loading || !center}
                 error={error}
                 savedAt={savedAt}
                 stale={stale}
                 onRetry={refetch}
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
-                searchMode="current"
+                searchMode={place ? 'pinned' : 'current'}
+                onClearPin={() => setPlace(null)}
                 searchRadius={SEARCH_RADIUS}
                 onPeekHeightChange={setPeek}
                 tabBarHeight={tabBarHeight}
@@ -179,10 +220,29 @@ const styles = StyleSheet.create({
         borderWidth: 3,
         borderColor: TOKENS.surface,
     },
-    // Centre the pill on its coordinate.
+    place: {
+        position: 'absolute',
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: TOKENS.inkSurface,
+        borderWidth: 4,
+        borderColor: TOKENS.surface,
+    },
+    // Centre the pill on its coordinate, in a 44 pt touch target.
     marker: {
         position: 'absolute',
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
         transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
+    },
+    search: {
+        position: 'absolute',
+        left: SPACING.lg,
+        right: SPACING.lg,
+        zIndex: 5,
     },
     notice: {
         position: 'absolute',

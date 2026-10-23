@@ -26,41 +26,42 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
         .join(' · ');
     const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
+    // The whole card is one target; "View parking" shows what a tap does.
     return (
-        <View style={styles.card}>
-            <View style={styles.top}>
-                <View
-                    style={styles.info}
-                    accessible
-                    accessibilityLabel={`${reason}. ${title}. ${meta}. ${rateSpoken}.`}
-                >
-                    <View style={styles.reason}>
-                        <Text style={styles.reasonText}>{reason}</Text>
+        <Pressable
+            onPress={() => onView(spot)}
+            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`View parking at ${title}. ${reason}. ${meta}. ${rateSpoken}.`}
+        >
+            {({ pressed }) => (
+                <>
+                    <View style={styles.top}>
+                        <View style={styles.info}>
+                            <View style={styles.reason}>
+                                <Text style={styles.reasonText}>{reason}</Text>
+                            </View>
+                            <Text style={styles.title} numberOfLines={2}>{title}</Text>
+                            {detail ? <Text style={styles.detail} numberOfLines={1}>{detail}</Text> : null}
+                            <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
+                            {rate.amount ? (
+                                <Text style={styles.price}>
+                                    {rate.amount}
+                                    <Text style={styles.priceUnit}> {rate.unit}</Text>
+                                </Text>
+                            ) : (
+                                <Text style={styles.rateNote}>{rate.note}</Text>
+                            )}
+                        </View>
+                        <MapThumb />
                     </View>
-                    <Text style={styles.title} numberOfLines={2}>{title}</Text>
-                    {detail ? <Text style={styles.detail} numberOfLines={1}>{detail}</Text> : null}
-                    <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
-                    {rate.amount ? (
-                        <Text style={styles.price}>
-                            {rate.amount}
-                            <Text style={styles.priceUnit}> {rate.unit}</Text>
-                        </Text>
-                    ) : (
-                        <Text style={styles.rateNote}>{rate.note}</Text>
-                    )}
-                </View>
-                <MapThumb />
-            </View>
 
-            <Pressable
-                onPress={() => onView(spot)}
-                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                accessibilityRole="button"
-                accessibilityLabel={`View parking at ${title}`}
-            >
-                <Text style={styles.buttonText}>View parking</Text>
-            </Pressable>
-        </View>
+                    <View style={[styles.button, pressed && styles.buttonPressed]}>
+                        <Text style={styles.buttonText}>View parking</Text>
+                    </View>
+                </>
+            )}
+        </Pressable>
     );
 };
 

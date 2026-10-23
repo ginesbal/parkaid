@@ -33,3 +33,18 @@ describe('geo', () => {
         expect(describeLocation({ source: 'default', permission: 'granted' }).action).toBe('retry');
     });
 });
+
+describe('nearestSpot', () => {
+    const { nearestSpot } = require('../geo');
+    const at = (id, latitude, longitude) => ({ id, coordinates: { type: 'Point', coordinates: [longitude, latitude] } });
+    const spots = [at('a', 51.0447, -114.0719), at('b', 51.0449, -114.0719), at('c', 51.05, -114.08)];
+
+    it('picks the closest pin within reach of a tap', () => {
+        expect(nearestSpot(spots, { latitude: 51.04485, longitude: -114.0719 }, 30).id).toBe('b');
+    });
+
+    it('picks nothing when no pin is within reach', () => {
+        expect(nearestSpot(spots, { latitude: 51.047, longitude: -114.0719 }, 30)).toBeNull();
+        expect(nearestSpot([], { latitude: 51.0447, longitude: -114.0719 }, 30)).toBeNull();
+    });
+});

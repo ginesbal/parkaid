@@ -18,7 +18,7 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
   to street, lot or permit parking within 150 m to 1 km.
 - Shows spots on a map as pins with their hourly rate, so you can compare
   without tapping each one. Drop a pin or search an address to look
-  somewhere else.
+  somewhere else. Search also works in the web preview.
 - Opens a details page for each spot: the rate and when it is charged, the
   ParkPlus zone to pay at, the maximum stay, the walk, and directions.
 - Times your parking. Pick where you parked from your last search, or give

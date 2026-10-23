@@ -11,6 +11,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+// Each chip is 36 pt tall; this makes its touch target 44 pt.
+const CHIP_SLOP = { top: 4, bottom: 4 };
+
 const TYPE_FILTERS = [
     { type: 'all', label: 'All' },
     { type: 'on_street', label: 'Street' },
@@ -142,6 +145,7 @@ function MapHeader({
                                 pressed && styles.filterChipPressed,
                             ]}
                             onPress={() => handleFilterPress(f.type)}
+                            hitSlop={CHIP_SLOP}
                             accessibilityRole="button"
                             accessibilityState={{ selected: filterType === f.type }}
                         >
@@ -167,6 +171,7 @@ function MapHeader({
                                 pressed && styles.filterChipPressed,
                             ]}
                             onPress={() => handleDistancePress(preset.value)}
+                            hitSlop={CHIP_SLOP}
                             accessibilityRole="button"
                             accessibilityState={{ selected: searchRadius === preset.value }}
                         >

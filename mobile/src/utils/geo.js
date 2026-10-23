@@ -3,6 +3,7 @@
 import { Platform } from 'react-native';
 import { DEFAULT_LOCATION } from '../constants/parking';
 import { formatClock } from './sessionHelpers';
+import { getCoordinates } from './spotPresentation';
 
 const EARTH_RADIUS = 6371000; // metres
 
@@ -14,6 +15,23 @@ export function distanceMeters(a, b) {
     const h = Math.sin(dLat / 2) ** 2
         + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
     return 2 * EARTH_RADIUS * Math.asin(Math.sqrt(h));
+}
+
+// The spot nearest `point` within `maxMeters`, or null. A tap just beside a
+// small map pin still picks it.
+export function nearestSpot(spots, point, maxMeters) {
+    let best = null;
+    let bestDistance = maxMeters;
+    for (const spot of spots || []) {
+        const coords = getCoordinates(spot);
+        if (!coords) continue;
+        const d = distanceMeters(point, coords);
+        if (d <= bestDistance) {
+            best = spot;
+            bestDistance = d;
+        }
+    }
+    return best;
 }
 
 // The City's parking data covers Calgary; further than this from downtown

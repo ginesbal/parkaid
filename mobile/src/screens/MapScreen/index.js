@@ -9,6 +9,7 @@ import {
     Pressable,
     Text,
     View,
+    useWindowDimensions,
 } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +20,7 @@ import { DEFAULT_LOCATION } from '../../constants/config';
 import { MOTION } from '../../constants/theme';
 
 // logs
+import { nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
 import { pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
 
@@ -31,8 +33,12 @@ import ParkingBottomSheet from './components/ParkingBottomSheet';
 import { styles } from './styles';
 import { centerCamera } from './utils/camera';
 
+// Half a 44 pt touch target: how far from a pin a tap may land and still pick it.
+const TAP_SLOP = 22;
+
 function MapScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
+    const { width: windowWidth } = useWindowDimensions();
     // Compact header: ~70px content + safe area inset (collapsed filters)
     const [navigationHeight, setNavigationHeight] = useState(70 + insets.top);
     const [sheetPeekHeight, setSheetPeekHeight] = useState(108);
@@ -253,7 +259,7 @@ function MapScreen({ route, navigation }) {
         setIsSearchFocused(focused);
     }, []);
 
-    const handleMapPress = useCallback(() => {
+    const handleMapPress = useCallback((event) => {
         // Google Maps iOS SDK fires its native tap recognizer in parallel with
         // RN's touch delivery, so tapping the search bar also triggers this
         // onPress. If the search was focused within the last 400ms, assume the
@@ -261,9 +267,22 @@ function MapScreen({ route, navigation }) {
         // dismiss the instant it appears.
         const dtSinceFocus = Date.now() - searchFocusAtRef.current;
         if (dtSinceFocus < 400) return;
-        if (isSearchFocused) Keyboard.dismiss();
-        setSelectedSpot(null);
-    }, [isSearchFocused]);
+        if (isSearchFocused) {
+            Keyboard.dismiss();
+            setSelectedSpot(null);
+            return;
+        }
+        // Pins are smaller than a fingertip (and Android cannot draw them any
+        // bigger), so a tap within half a 44 pt target of one still picks it.
+        const point = event?.nativeEvent?.coordinate;
+        const metersPerPoint = (region.longitudeDelta * 111320
+            * Math.cos((region.latitude * Math.PI) / 180)) / windowWidth;
+        const near = point && Number.isFinite(metersPerPoint)
+            ? nearestSpot(spots, point, TAP_SLOP * metersPerPoint)
+            : null;
+        if (near) selectSpot(near);
+        else setSelectedSpot(null);
+    }, [isSearchFocused, region, windowWidth, spots, selectSpot]);
 
     const handleMapPanDrag = useCallback(() => {
         handleMapInteraction();

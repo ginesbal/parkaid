@@ -10,6 +10,9 @@ export const styles = StyleSheet.create({
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairlineStrong,
     },
+    cardPressed: {
+        borderColor: TOKENS.primaryBorder,
+    },
     top: {
         flexDirection: 'row',
         gap: SPACING.lg,
