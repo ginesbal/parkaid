@@ -1,5 +1,4 @@
 import { ScrollView, Text, View } from 'react-native';
-import BrandPin from '../../../../components/BrandPin';
 import { getPayLine } from '../../../../utils/parkPlus';
 import { formatClock } from '../../../../utils/sessionHelpers';
 import {
@@ -62,9 +61,6 @@ const EmptyState = ({
             keyboardShouldPersistTaps="handled"
         >
             <View style={styles.header}>
-                <View style={styles.iconContainer}>
-                    <BrandPin size={64} />
-                </View>
                 <Text style={styles.title} accessibilityRole="header">
                     {handedOver ? `Park at ${name.title}` : 'Where are you parked?'}
                 </Text>

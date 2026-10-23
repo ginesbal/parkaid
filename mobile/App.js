@@ -22,6 +22,7 @@ import BrandLoader from './src/components/BrandLoader';
 import ConfirmHost from './src/components/ConfirmHost';
 import LiveStage from './src/components/LiveStage';
 import SessionStrip from './src/components/SessionStrip';
+import { FilterProvider } from './src/context/FilterContext';
 import { SessionProvider, useSessionStatus } from './src/context/SessionContext';
 import { getDeviceId } from './src/utils/device';
 import { TOKENS } from './src/constants/theme';
@@ -79,7 +80,10 @@ function MainTabs() {
 
     return (
         <SessionProvider>
-            <Tabs />
+            {/* Type and distance, the same on Home and Map */}
+            <FilterProvider>
+                <Tabs />
+            </FilterProvider>
         </SessionProvider>
     );
 }

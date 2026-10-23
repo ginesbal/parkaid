@@ -2,8 +2,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useCallback, useState } from 'react';
 import { LayoutAnimation, Platform, Pressable, Text, UIManager, View } from 'react-native';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
+import { DEFAULT_SEARCH_RADIUS } from '../../../constants/parking';
 import { TOKENS } from '../../../constants/theme';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
+import { DISTANCE_OPTIONS, TYPE_OPTIONS } from '../../../utils/filters';
+import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import { styles } from '../styles';
 
 // Enable LayoutAnimation on Android
@@ -13,19 +16,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 // Each chip is 36 pt tall; this makes its touch target 44 pt.
 const CHIP_SLOP = { top: 4, bottom: 4 };
-
-const TYPE_FILTERS = [
-    { type: 'all', label: 'All' },
-    { type: 'on_street', label: 'Street' },
-    { type: 'off_street', label: 'Lot' },
-    { type: 'residential', label: 'Permit' },
-];
-
-const DISTANCE_PRESETS = [
-    { value: 150, label: '150m' },
-    { value: 500, label: '500m' },
-    { value: 1000, label: '1km' },
-];
 
 function MapHeader({
     pinnedLocation,
@@ -58,7 +48,7 @@ function MapHeader({
 
     // Active filter count for the badge
     const activeFilterCount =
-        (filterType !== 'all' ? 1 : 0) + (searchRadius !== 150 ? 1 : 0);
+        (filterType !== 'all' ? 1 : 0) + (searchRadius !== DEFAULT_SEARCH_RADIUS ? 1 : 0);
 
     return (
         <View style={styles.headerBar}>
@@ -136,22 +126,22 @@ function MapHeader({
             {filtersExpanded && (
                 <View style={styles.filtersInline}>
                     {/* Type chips */}
-                    {TYPE_FILTERS.map(f => (
+                    {TYPE_OPTIONS.map(f => (
                         <Pressable
-                            key={f.type}
+                            key={f.key}
                             style={({ pressed }) => [
                                 styles.miniChip,
-                                filterType === f.type && styles.miniChipActive,
+                                filterType === f.key && styles.miniChipActive,
                                 pressed && styles.filterChipPressed,
                             ]}
-                            onPress={() => handleFilterPress(f.type)}
+                            onPress={() => handleFilterPress(f.key)}
                             hitSlop={CHIP_SLOP}
                             accessibilityRole="button"
-                            accessibilityState={{ selected: filterType === f.type }}
+                            aria-selected={filterType === f.key}
                         >
                             <Text style={[
                                 styles.miniChipText,
-                                filterType === f.type && styles.miniChipTextActive,
+                                filterType === f.key && styles.miniChipTextActive,
                             ]}>
                                 {f.label}
                             </Text>
@@ -162,24 +152,24 @@ function MapHeader({
                     <View style={styles.chipDivider} />
 
                     {/* Distance chips */}
-                    {DISTANCE_PRESETS.map(preset => (
+                    {DISTANCE_OPTIONS.map(meters => (
                         <Pressable
-                            key={preset.value}
+                            key={meters}
                             style={({ pressed }) => [
                                 styles.miniChip,
-                                searchRadius === preset.value && styles.miniChipActive,
+                                searchRadius === meters && styles.miniChipActive,
                                 pressed && styles.filterChipPressed,
                             ]}
-                            onPress={() => handleDistancePress(preset.value)}
+                            onPress={() => handleDistancePress(meters)}
                             hitSlop={CHIP_SLOP}
                             accessibilityRole="button"
-                            accessibilityState={{ selected: searchRadius === preset.value }}
+                            aria-selected={searchRadius === meters}
                         >
                             <Text style={[
                                 styles.miniChipText,
-                                searchRadius === preset.value && styles.miniChipTextActive,
+                                searchRadius === meters && styles.miniChipTextActive,
                             ]}>
-                                {preset.label}
+                                {getDistanceLabel(meters)}
                             </Text>
                         </Pressable>
                     ))}

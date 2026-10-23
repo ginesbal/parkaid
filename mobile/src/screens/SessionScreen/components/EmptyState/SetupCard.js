@@ -37,7 +37,7 @@ export function snapDuration(options, selected) {
  * chargeHours: when the City charges (utils/chargeHours); only those minutes
  *           are priced. null: every minute is
  * maxMinutes: the spot's posted maximum; durations stay within it
- * where:    the place picker, shown as the first step
+ * where:    the place picker, shown first
  */
 const SetupCard = ({
     where = null,
@@ -84,16 +84,10 @@ const SetupCard = ({
         return () => subscription.remove();
     }, []);
 
-    // Steps are numbered in the order they show.
-    let step = 0;
-
     return (
         <View style={styles.setupCard}>
             {where ? (
                 <View style={styles.setupSection}>
-                    <View style={styles.stepIndicator}>
-                        <Text style={styles.stepNumber}>{++step}</Text>
-                    </View>
                     <View style={styles.setupContent}>
                         <Text style={styles.setupLabel}>Spot</Text>
                         {where}
@@ -102,9 +96,6 @@ const SetupCard = ({
             ) : null}
 
             <View style={styles.setupSection}>
-                <View style={styles.stepIndicator}>
-                    <Text style={styles.stepNumber}>{++step}</Text>
-                </View>
                 <View style={styles.setupContent}>
                     <Text style={styles.setupLabel}>Vehicle license plate</Text>
                     <TextInput
@@ -124,9 +115,6 @@ const SetupCard = ({
             </View>
 
             <View style={styles.setupSection}>
-                <View style={styles.stepIndicator}>
-                    <Text style={styles.stepNumber}>{++step}</Text>
-                </View>
                 <View style={styles.setupContent}>
                     <Text style={styles.setupLabel}>How long</Text>
                     <View style={styles.durationGrid} accessibilityRole="radiogroup">

@@ -1,17 +1,8 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { DISTANCE_OPTIONS, TYPE_OPTIONS, getTypeLabel } from '../../../../utils/filters';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
-
-const TYPE_FILTERS = [
-    { key: 'all', label: 'All' },
-    { key: 'on_street', label: 'Street' },
-    { key: 'off_street', label: 'Lot' },
-    { key: 'residential', label: 'Permit' },
-];
-
-// Four stops so the row fits a phone without hiding the widest option.
-const DISTANCE_OPTIONS = [150, 250, 500, 1000];
 
 function OptionRow({ label, options, selected, onSelect, renderLabel }) {
     return (
@@ -49,17 +40,16 @@ function OptionRow({ label, options, selected, onSelect, renderLabel }) {
     );
 }
 
-// Type and search radius. Lives behind the Filters button on Home.
-const FilterBar = ({ activeFilter, setActiveFilter, searchRadius, setSearchRadius, typeNote }) => (
+// Type and search radius, shared with Map. Lives behind the Filters button on Home.
+const FilterBar = ({ activeFilter, setActiveFilter, searchRadius, setSearchRadius }) => (
     <View style={styles.filterPanel}>
         <OptionRow
             label="Parking type"
-            options={TYPE_FILTERS.map((f) => f.key)}
+            options={TYPE_OPTIONS.map((f) => f.key)}
             selected={activeFilter}
             onSelect={setActiveFilter}
-            renderLabel={(key) => TYPE_FILTERS.find((f) => f.key === key).label}
+            renderLabel={getTypeLabel}
         />
-        {typeNote ? <Text style={styles.filterNote}>{typeNote}</Text> : null}
         <OptionRow
             label="Distance"
             options={DISTANCE_OPTIONS}

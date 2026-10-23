@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapThumb from '../../components/MapThumb';
+import SpotMap from '../../components/SpotMap';
 import ParkPlusActions from '../../components/ParkPlusActions';
 import { TOKENS } from '../../constants/theme';
 import { describeFreeNow } from '../../utils/chargeHours';
@@ -27,7 +27,7 @@ function InfoLine({ icon, title, body, zone }) {
     return (
         <View style={styles.line}>
             <View style={styles.lineIcon}>
-                <MaterialCommunityIcons name={icon} size={20} color={TOKENS.primaryInk} />
+                <MaterialCommunityIcons name={icon} size={20} color={TOKENS.textMuted} />
             </View>
             <View style={styles.lineText}>
                 <Text style={styles.lineTitle}>{title}</Text>
@@ -153,7 +153,7 @@ export default function DetailsScreen({ route, navigation }) {
                     <Text style={styles.title} accessibilityRole="header">{title}</Text>
                     <Text style={styles.subtitle}>{[detail, 'Calgary'].filter(Boolean).join(', ')}</Text>
 
-                    <MapThumb width={thumbWidth} height={132} style={styles.thumb} />
+                    <SpotMap spot={spot} width={thumbWidth} height={132} style={styles.thumb} />
                 </View>
 
                 <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>

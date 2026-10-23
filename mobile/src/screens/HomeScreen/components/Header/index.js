@@ -42,7 +42,7 @@ const Header = ({
                 <Text style={styles.greeting} accessibilityRole="header">
                     {greeting.hello}{'\n'}{greeting.ask}
                 </Text>
-                <BrandPin size={52} style={styles.greetingPin} />
+                <BrandPin size={36} style={styles.greetingPin} />
             </View>
 
             {statusMessage ? (
@@ -100,11 +100,10 @@ const Header = ({
 
             {filtersOpen ? (
                 <FilterBar
-                    activeFilter={view === 'covered' ? null : activeFilter}
+                    activeFilter={activeFilter}
                     setActiveFilter={setActiveFilter}
                     searchRadius={searchRadius}
                     setSearchRadius={setSearchRadius}
-                    typeNote={view === 'covered' ? 'Covered shows parkades only. Pick a type to see the rest.' : null}
                 />
             ) : null}
 

@@ -12,9 +12,9 @@ import { styles } from './styles';
  */
 const MAX_RADIUS = 1000;
 
-const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, view, searchRadius }) => {
+const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', searchRadius }) => {
     const isError = Boolean(error);
-    const covered = view === 'covered';
+    const parkades = type === 'parkade';
     // At the widest radius there is nothing left to expand; the map is the next step.
     const canExpand = !isError && searchRadius < MAX_RADIUS;
     const within = getDistanceLabel(searchRadius);
@@ -24,11 +24,11 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, view, searchRad
     let body = 'Try widening the search radius, or switch to the map to look around the next block.';
     if (isError) {
         ({ title, body } = failure);
-    } else if (covered) {
+    } else if (parkades) {
         title = `No parkades within ${within}`;
         body = canExpand
             ? 'Parkades are few and far between. Widen the search, or look on the map.'
-            : 'Try the map, or switch to Near me for street and surface parking.';
+            : 'Try the map, or pick another parking type in Filters.';
     } else if (!canExpand) {
         title = `Nothing within ${within}`;
         body = 'Switch to the map to look around a different area.';
@@ -39,8 +39,8 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, view, searchRad
             <View style={styles.emptyIcon}>
                 <MaterialCommunityIcons
                     name={isError ? failure.icon : 'parking'}
-                    size={64}
-                    color={alpha(TOKENS.text, 0.15)}
+                    size={40}
+                    color={alpha(TOKENS.text, 0.25)}
                 />
             </View>
 

@@ -12,12 +12,13 @@ import PlacesSearchBar from '../../components/PlacesAutocomplete/PlacesSearchBar
 import { RADIUS, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
+import { useFilters } from '../../context/FilterContext';
+import { apiTypeFor, applyType } from '../../utils/filters';
 import { distanceMeters } from '../../utils/geo';
 import { getCoordinates, getSpotName, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
 import SpotPill, { getMarkerDescription } from './components/SpotPill';
 
-const SEARCH_RADIUS = 250;
 const METERS_PER_DEG_LAT = 110540;
 
 // Downtown's grid, roughly: avenues run east-west, streets north-south.
@@ -54,10 +55,13 @@ export default function MapScreen({ route, navigation }) {
         setPlace({ latitude: lat, longitude: lng, name });
     }, []);
 
-    const { spots, loading, error, savedAt, stale, refetch } = useParkingSpots(center, SEARCH_RADIUS, 'all');
+    // Type and distance, as set on Home (the preview has no filter row).
+    const { type, radius } = useFilters();
+    const { spots: found, loading, error, savedAt, stale, refetch } = useParkingSpots(center, radius, apiTypeFor(type));
+    const spots = useMemo(() => applyType(found, type), [found, type]);
 
     // The sheet's order, as on Home: by walk, permit-only last.
-    const rankedSpots = useMemo(() => rankSpots(spots), [spots]);
+    const rankedSpots = useMemo(() => rankSpots(spots, type), [spots, type]);
     const featuredSpot = useMemo(
         () => selectedSpot || pickTopSpot(rankedSpots),
         [selectedSpot, rankedSpots]
@@ -70,10 +74,10 @@ export default function MapScreen({ route, navigation }) {
     const cy = topInset + Math.max(0, (size.height - peek - topInset) / 2);
     // Fit the search circle, or the farthest spot if one lies beyond it, so
     // every place in the sheet's count has its pin on screen.
-    const reach = useMemo(() => Math.max(SEARCH_RADIUS, ...(spots || []).map((spot) => {
+    const reach = useMemo(() => Math.max(radius, ...(spots || []).map((spot) => {
         const coords = getCoordinates(spot);
         return coords ? distanceMeters(origin, coords) : 0;
-    })), [spots, origin]);
+    })), [spots, origin, radius]);
     const pxPerMeter = Math.max(0.1, (Math.min(size.width, size.height - peek - topInset) * 0.42) / reach);
 
     const project = useCallback((coords) => {
@@ -88,7 +92,7 @@ export default function MapScreen({ route, navigation }) {
         if (spot) navigation?.navigate('Details', { spot });
     }, [navigation]);
 
-    const radiusPx = SEARCH_RADIUS * pxPerMeter;
+    const radiusPx = radius * pxPerMeter;
 
     return (
         <View
@@ -166,7 +170,7 @@ export default function MapScreen({ route, navigation }) {
                 featuredSpot={featuredSpot}
                 searchMode={place ? 'pinned' : 'current'}
                 onClearPin={() => setPlace(null)}
-                searchRadius={SEARCH_RADIUS}
+                searchRadius={radius}
                 onPeekHeightChange={setPeek}
                 tabBarHeight={tabBarHeight}
                 topInset={topInset}

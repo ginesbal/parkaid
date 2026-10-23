@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import MapThumb from '../../../../components/MapThumb';
+import SpotMap from '../../../../components/SpotMap';
 import {
     getRateDisplay,
     getSpotKind,
@@ -13,7 +13,6 @@ import { styles } from './styles';
 const REASONS = {
     near: 'Closest to you',
     value: 'Best value nearby',
-    covered: 'Covered',
 };
 
 // fromDowntown: the list is measured from downtown, not from the phone.
@@ -53,7 +52,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
                                 <Text style={styles.rateNote}>{rate.note}</Text>
                             )}
                         </View>
-                        <MapThumb />
+                        <SpotMap spot={spot} width={88} height={88} />
                     </View>
 
                     <View style={[styles.button, pressed && styles.buttonPressed]}>

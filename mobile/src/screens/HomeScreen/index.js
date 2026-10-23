@@ -10,17 +10,18 @@ import ParkingList from './components/ParkingList';
 import EmptyState from './components/ParkingList/EmptyState';
 import LoadingState from './components/ParkingList/LoadingState';
 
-import { useFilterState } from '../../hooks/useFilterState';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useEntrance } from '../../hooks/useEntrance';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 
+import { useFilters } from '../../context/FilterContext';
+import { apiTypeFor, applyType } from '../../utils/filters';
 import { describeLocation } from '../../utils/geo';
 import { getGreeting } from '../../utils/greeting';
 import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
-import { isCovered, permitLast, pickTopSpot, rankSpots, sortByValue } from '../../utils/spotPresentation';
+import { permitLast, pickTopSpot, rankSpots, sortByValue } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
@@ -60,23 +61,23 @@ export default function HomeScreen({ navigation }) {
   }[place?.action] ?? null;
   const fromDowntown = locationSource === 'default' || locationSource === 'outside';
 
+  // Type and distance, shared with Map (context/FilterContext).
   const {
-    activeFilter,
-    setActiveFilter,
-    searchRadius,
-    setSearchRadius,
-  } = useFilterState();
+    type: activeFilter,
+    setType: setActiveFilter,
+    radius: searchRadius,
+    setRadius: setSearchRadius,
+  } = useFilters();
 
-  // 'near' | 'value' | 'covered' — see ViewChips
+  // How the list is sorted: 'near' | 'value' — see ViewChips
   const [view, setView] = useState('near');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Covered asks the API for off-street only, then keeps the parkades.
-  const requestType = view === 'covered' ? 'off_street' : activeFilter;
+  const requestType = apiTypeFor(activeFilter);
 
-  // Badge count for the Filters button; the type does not count while Covered overrides it.
+  // Badge count for the Filters button.
   const filterCount =
-    (view !== 'covered' && activeFilter !== 'all' ? 1 : 0) +
+    (activeFilter !== 'all' ? 1 : 0) +
     (searchRadius !== DEFAULT_SEARCH_RADIUS ? 1 : 0);
 
   // data fetching hook
@@ -98,8 +99,7 @@ export default function HomeScreen({ navigation }) {
   // Nearest by walk (the cheaper first for the same walk), or cheapest first;
   // permit-only blocks after everywhere a visitor can park.
   const visibleSpots = useMemo(() => {
-    const list = Array.isArray(spots) ? spots : [];
-    if (view === 'covered') return rankSpots(list.filter(isCovered));
+    const list = applyType(spots, activeFilter);
     if (view === 'value') return permitLast(sortByValue(list), activeFilter);
     return rankSpots(list, activeFilter);
   }, [spots, view, activeFilter]);
@@ -184,11 +184,6 @@ export default function HomeScreen({ navigation }) {
     setView(next);
   }, [view]);
 
-  // Picking a type in Filters leaves Covered, which overrides the type.
-  const handleTypeChange = useCallback((type) => {
-    setActiveFilter(type);
-    if (view === 'covered') setView('near');
-  }, [view, setActiveFilter]);
 
   const reduceMotion = useReduceMotion();
   const toggleFilters = useCallback(() => {
@@ -204,8 +199,8 @@ export default function HomeScreen({ navigation }) {
     });
 
     setSearchRadius(1000);
-    // Covered keeps its meaning; a wider radius is what finds a parkade.
-    if (view !== 'covered') setActiveFilter('all');
+    // Parkade keeps its meaning; a wider radius is what finds one.
+    if (activeFilter !== 'parkade') setActiveFilter('all');
   };
 
   // Pull to refresh and Retry: refetch past the cache; the spinner stops when
@@ -276,7 +271,7 @@ export default function HomeScreen({ navigation }) {
       onViewMap={handleMapPress}
       onRetry={handleRefresh}
       error={error}
-      view={view}
+      type={activeFilter}
       searchRadius={searchRadius}
     />
   );
@@ -304,7 +299,7 @@ export default function HomeScreen({ navigation }) {
                 onToggleFilters={toggleFilters}
                 filterCount={filterCount}
                 activeFilter={activeFilter}
-                setActiveFilter={handleTypeChange}
+                setActiveFilter={setActiveFilter}
                 searchRadius={searchRadius}
                 setSearchRadius={setSearchRadius}
                 topPick={topPick}

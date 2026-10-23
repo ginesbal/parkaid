@@ -9,15 +9,7 @@ export const styles = StyleSheet.create({
     },
 
     header: {
-        alignItems: 'center',
-        marginBottom: 28,
-    },
-    iconContainer: {
-        width: 64,
-        height: 64,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 24,
     },
     title: {
         fontSize: 22,
@@ -27,13 +19,14 @@ export const styles = StyleSheet.create({
     },
     subtitle: {
         fontSize: 14,
+        lineHeight: 20,
         color: TOKENS.textMuted,
         marginTop: 6,
-        textAlign: 'center',
     },
     headerLink: {
-        marginTop: 8,
-        paddingVertical: 6,
+        alignSelf: 'flex-start',
+        marginTop: 4,
+        paddingVertical: 12,
         fontSize: 14,
         fontWeight: '600',
         color: TOKENS.primaryInk,
@@ -55,23 +48,6 @@ export const styles = StyleSheet.create({
     setupSection: {
         flexDirection: 'row',
         marginBottom: 20,
-    },
-    stepIndicator: {
-        width: 30,
-        height: 30,
-        borderRadius: 10,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 14,
-        marginTop: 2,
-    },
-    stepNumber: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: TOKENS.primary,
     },
     setupContent: {
         flex: 1,
@@ -196,14 +172,12 @@ export const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
+    // Rows under a hairline, not a grey box inside the card.
     summaryBox: {
-        paddingVertical: 16,
-        paddingHorizontal: 16,
+        paddingTop: 16,
         marginBottom: 16,
-        borderRadius: 12,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: TOKENS.hairline,
     },
     summaryRow: {
         flexDirection: 'row',

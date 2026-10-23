@@ -15,19 +15,15 @@ export const styles = StyleSheet.create({
     },
 
     // Empty State
+    // Left-aligned, like the list it stands in for.
     emptyContainer: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 60,
-        paddingHorizontal: 28,
+        paddingTop: 32,
+        paddingBottom: 60,
+        paddingHorizontal: 20,
     },
     emptyIcon: {
-        width: 80,
-        height: 80,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 20,
+        marginBottom: 12,
     },
     emptyText: {
         fontSize: 16,
@@ -39,7 +35,6 @@ export const styles = StyleSheet.create({
     emptySubtext: {
         fontSize: 14,
         color: TOKENS.textMuted,
-        textAlign: 'center',
         marginBottom: 24,
         lineHeight: 21,
         fontWeight: '400',

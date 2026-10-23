@@ -4,12 +4,11 @@ import { Pressable, Text, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { styles } from './styles';
 
-// One view at a time. Near me and Best value re-sort the same results;
-// Covered narrows them to parkades.
+// How the list is sorted; they only re-order the same results. What kind of
+// parking is shown is the Filters' job (Parking type).
 export const HOME_VIEWS = [
     { key: 'near', label: 'Near me' },
     { key: 'value', label: 'Best value' },
-    { key: 'covered', label: 'Covered' },
 ];
 
 const ViewChips = ({ view, onChange }) => (

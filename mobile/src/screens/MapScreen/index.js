@@ -22,6 +22,8 @@ import { DEFAULT_LOCATION } from '../../constants/config';
 import { MOTION, TOKENS } from '../../constants/theme';
 
 // logs
+import { useFilters } from '../../context/FilterContext';
+import { apiTypeFor, applyType } from '../../utils/filters';
 import { distanceMeters, nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
 import { pickTopSpot, rankSpots } from '../../utils/spotPresentation';
@@ -71,8 +73,8 @@ function MapScreen({ route, navigation }) {
     // data state
     const [region, setRegion] = useState(DEFAULT_LOCATION);
     const [userLocation, setUserLocation] = useState(null);
-    const [filterType, setFilterType] = useState('all');
-    const [searchRadius, setSearchRadius] = useState(150);
+    // Type and distance, shared with Home (context/FilterContext).
+    const { type: filterType, setType: setFilterType, radius: searchRadius, setRadius: setSearchRadius } = useFilters();
     const [selectedSpot, setSelectedSpot] = useState(null);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [searchFocusSignal, setSearchFocusSignal] = useState(0);
@@ -94,11 +96,12 @@ function MapScreen({ route, navigation }) {
     // calculate search spots
     const searchLocation = (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
 
-    const { spots, loading: spotsLoading, error: spotsError, savedAt, stale, refetch } = useParkingSpots(
+    const { spots: found, loading: spotsLoading, error: spotsError, savedAt, stale, refetch } = useParkingSpots(
         searchLocation,
         searchRadius,
-        filterType
+        apiTypeFor(filterType)
     );
+    const spots = useMemo(() => applyType(found, filterType), [found, filterType]);
     // get initial location and record permission outcome
     useEffect(() => {
         (async () => {

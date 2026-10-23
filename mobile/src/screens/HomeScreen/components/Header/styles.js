@@ -21,16 +21,17 @@ export const styles = StyleSheet.create({
         gap: SPACING.md,
         paddingHorizontal: SPACING.xl,
     },
+    // A quiet hello: smaller than the spot names it sits above.
     greeting: {
         flex: 1,
-        fontSize: 24,
-        lineHeight: 30,
+        fontSize: 18,
+        lineHeight: 24,
         fontWeight: '600',
-        letterSpacing: -0.5,
+        letterSpacing: -0.2,
         color: TOKENS.text,
     },
     greetingPin: {
-        marginTop: -4,
+        marginTop: -2,
     },
 
     statusBanner: {
@@ -160,13 +161,6 @@ export const styles = StyleSheet.create({
     filterOptionTextSelected: {
         color: TOKENS.surface,
         fontWeight: '600',
-    },
-    filterNote: {
-        paddingHorizontal: SPACING.lg,
-        marginTop: -SPACING.xs,
-        fontSize: 12,
-        lineHeight: 16,
-        color: TOKENS.textMuted,
     },
 
     // View chips

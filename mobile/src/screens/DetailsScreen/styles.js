@@ -121,13 +121,11 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: SPACING.md,
     },
+    // A plain glyph beside the line, not a tinted tile.
     lineIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: RADIUS.md,
+        width: 22,
+        paddingTop: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: TOKENS.primaryWash,
     },
     lineText: {
         flex: 1,
@@ -186,14 +184,12 @@ export const styles = StyleSheet.create({
     },
 
     missing: {
-        alignItems: 'center',
         justifyContent: 'center',
         gap: SPACING.lg,
-        paddingHorizontal: SPACING['2xl'],
+        paddingHorizontal: SPACING.xl,
     },
     missingText: {
         fontSize: 16,
         color: TOKENS.surface,
-        textAlign: 'center',
     },
 });

@@ -1,5 +1,4 @@
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import BrandPin from '../../../../components/BrandPin';
 import { chargedCost, parseChargeHours } from '../../../../utils/chargeHours';
 import { formatCost } from '../../../../utils/formatters';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
@@ -33,9 +32,6 @@ export default function EndSummary({ session, onParkAgain, onFindParking }) {
     return (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-                <View style={styles.iconContainer}>
-                    <BrandPin size={64} />
-                </View>
                 <Text style={styles.title} accessibilityRole="header">Session ended</Text>
                 {place ? <Text style={styles.subtitle}>{place}</Text> : null}
             </View>
