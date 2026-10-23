@@ -3,6 +3,7 @@ import BrandPin from '../../../../components/BrandPin';
 import { getPayLine } from '../../../../utils/parkPlus';
 import { formatClock } from '../../../../utils/sessionHelpers';
 import {
+    getChargeHours,
     getHourlyRate,
     getMaxStayMinutes,
     getRateDisplay,
@@ -86,6 +87,7 @@ const EmptyState = ({
                 onStartSession={onStartSession}
                 rate={rate}
                 rateNote={rate === null ? getRateDisplay(spot).note : null}
+                chargeHours={spot ? getChargeHours(spot) : null}
                 maxMinutes={spot ? getMaxStayMinutes(spot) : null}
                 zoneLabel={zoneLabel}
                 payLine={getPayLine({ zone: zoneLabel, lot: spot?.spot_type === 'off_street' })}

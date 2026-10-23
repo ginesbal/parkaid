@@ -11,6 +11,7 @@ import { logger } from '../../utils/loggers';
 import { getSpotName } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
 import EmptyState from './components/EmptyState';
+import EndSummary from './components/EmptyState/EndSummary';
 import { ELSEWHERE } from './components/EmptyState/SpotPicker';
 import { styles } from './SessionScreen.styles';
 
@@ -50,7 +51,11 @@ export default function SessionScreen({ route, navigation }) {
     progress,
     startSession,
     endSession,
+    finishSession,
     extendSession,
+    undoExtend,
+    endedSession,
+    dismissEnded,
     vehiclePlate,
     setVehiclePlate,
     selectedDuration,
@@ -70,6 +75,8 @@ export default function SessionScreen({ route, navigation }) {
   React.useEffect(() => {
     if (!routeSpot || !isLoaded) return;
     navigation?.setParams({ spot: undefined });
+    // A new spot to park at replaces the last session's summary.
+    dismissEnded();
     // Keep the new spot either way: if a session is running, it is set up
     // as soon as that session ends, as the notice promises.
     setPendingSpot(routeSpot);
@@ -79,7 +86,7 @@ export default function SessionScreen({ route, navigation }) {
         `You\u2019re already parked${session.locationName ? ` at ${session.locationName}` : ''}. End this session to park at ${getSpotName(routeSpot).title}.`
       );
     }
-  }, [routeSpot, isLoaded, session, navigation]);
+  }, [routeSpot, isLoaded, session, navigation, dismissEnded]);
 
   // Without a spot from Details, pick up one handed over before the app
   // was closed. Once only, so a started session's spot does not come back.
@@ -181,6 +188,19 @@ export default function SessionScreen({ route, navigation }) {
     endSession();
   }, [endSession, elapsedTime, totalCost]);
 
+  // Time is up: end it, and maybe go and look for somewhere else.
+  const handleDone = React.useCallback(() => {
+    logger.log('session_done', { elapsedSec: elapsedTime });
+    finishSession();
+  }, [finishSession, elapsedTime]);
+
+  const findParking = React.useCallback(() => {
+    logger.log('session_find_parking', { hadSession: hasSession });
+    if (hasSession) finishSession();
+    dismissEnded();
+    navigation?.navigate('Home');
+  }, [finishSession, dismissEnded, hasSession, navigation]);
+
   const prevFormRef = React.useRef({
     plate: vehiclePlate,
     duration: selectedDuration,
@@ -206,6 +226,15 @@ export default function SessionScreen({ route, navigation }) {
         <LiveStage style={styles.loading}>
           <BrandLoader size={88} label="Checking your session" delay={250} live />
         </LiveStage>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hasSession && endedSession && !pendingSpot) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+        <ScreenStatusBar style="dark" />
+        <EndSummary session={endedSession} onParkAgain={dismissEnded} onFindParking={findParking} />
       </SafeAreaView>
     );
   }
@@ -248,7 +277,10 @@ export default function SessionScreen({ route, navigation }) {
         maxExtendMinutes={maxExtendMinutes}
         notice={notice}
         onExtend={handleExtend}
+        onUndo={undoExtend}
         onEnd={handleEnd}
+        onDone={handleDone}
+        onFindParking={findParking}
       />
     </SafeAreaView>
   );

@@ -51,8 +51,13 @@ export const styles = StyleSheet.create({
     timeWarning: {
         color: TOKENS.warningInk,
     },
-    timeDanger: {
-        color: TOKENS.danger,
+    // Said once, in plain ink: the card's one instruction carries the rest.
+    expiredTitle: {
+        fontSize: 34,
+        lineHeight: 40,
+        fontWeight: '600',
+        letterSpacing: -0.6,
+        color: TOKENS.text,
     },
 
     track: {
@@ -72,9 +77,6 @@ export const styles = StyleSheet.create({
     fillWarning: {
         backgroundColor: TOKENS.warning,
     },
-    fillDanger: {
-        backgroundColor: TOKENS.danger,
-    },
     endsAt: {
         marginTop: SPACING.sm,
         fontSize: 14,
@@ -91,18 +93,12 @@ export const styles = StyleSheet.create({
         borderRadius: RADIUS.md,
         backgroundColor: TOKENS.warningSoft,
     },
-    warningDanger: {
-        backgroundColor: TOKENS.dangerSoft,
-    },
     warningText: {
         flex: 1,
         fontSize: 14,
         lineHeight: 20,
         fontWeight: '500',
         color: TOKENS.warningInk,
-    },
-    warningTextDanger: {
-        color: TOKENS.danger,
     },
 
     place: {
@@ -169,6 +165,55 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.surface,
         textAlign: 'center',
+        fontVariant: ['tabular-nums'],
+    },
+    extendNote: {
+        marginTop: 2,
+        fontSize: 13,
+        color: alpha(TOKENS.surface, 0.85),
+        textAlign: 'center',
+        fontVariant: ['tabular-nums'],
+    },
+
+    // Under Extend for a few seconds: what changed, and a way back.
+    undo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
+        marginTop: SPACING.md,
+        paddingVertical: SPACING.sm,
+        paddingLeft: SPACING.lg,
+        paddingRight: SPACING.xs,
+        borderRadius: RADIUS.lg,
+        backgroundColor: alpha(TOKENS.surface, 0.08),
+    },
+    undoText: {
+        flex: 1,
+    },
+    undoTitle: {
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '600',
+        color: TOKENS.surface,
+        fontVariant: ['tabular-nums'],
+    },
+    undoBody: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.inkMuted,
+    },
+    undoButton: {
+        minWidth: 64,
+        minHeight: 44,
+        paddingHorizontal: SPACING.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    undoButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.surface,
+        textDecorationLine: 'underline',
     },
     capped: {
         padding: SPACING.lg,
@@ -195,18 +240,27 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    // When time is up, ending is the main thing left to do.
-    endPrimary: {
-        marginTop: SPACING.lg,
-        backgroundColor: TOKENS.surface,
-        borderColor: TOKENS.surface,
-    },
     endText: {
         fontSize: 15,
         fontWeight: '600',
         color: TOKENS.surface,
     },
-    endTextPrimary: {
+
+    // Time is up: Done first, then somewhere else to park.
+    done: {
+        minHeight: 54,
+        paddingVertical: SPACING.md,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    doneText: {
+        fontSize: 16,
+        fontWeight: '600',
         color: TOKENS.text,
+    },
+    findParking: {
+        marginTop: SPACING.md,
     },
 });

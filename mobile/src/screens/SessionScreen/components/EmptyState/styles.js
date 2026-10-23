@@ -227,6 +227,12 @@ export const styles = StyleSheet.create({
         color: TOKENS.primary,
         fontVariant: ['tabular-nums'],
     },
+    summaryNote: {
+        marginTop: 6,
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+    },
     summaryDivider: {
         height: StyleSheet.hairlineWidth,
         backgroundColor: TOKENS.divider,
@@ -261,6 +267,23 @@ export const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 10,
         elevation: 2,
+    },
+    secondaryButton: {
+        minHeight: 50,
+        marginTop: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: TOKENS.primaryBorder,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    secondaryButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+    summaryRows: {
+        marginBottom: 20,
     },
     primaryButtonDisabled: {
         backgroundColor: alpha(TOKENS.textMuted, 0.2),

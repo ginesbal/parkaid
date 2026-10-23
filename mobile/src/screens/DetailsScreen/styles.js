@@ -98,6 +98,14 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.primaryInk,
     },
+    freeNow: {
+        marginTop: SPACING.xs,
+        fontSize: 15,
+        lineHeight: 21,
+        fontWeight: '600',
+        color: TOKENS.success,
+        fontVariant: ['tabular-nums'],
+    },
     rateBasis: {
         marginTop: SPACING.xs,
         fontSize: 13,

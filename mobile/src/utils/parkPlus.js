@@ -32,6 +32,14 @@ export function getPayLine({ zone = null, lot = false } = {}) {
     return 'ParkAid only keeps time. Pay at the meter or in ParkPlus.';
 }
 
+// Once time is up: the one thing to do.
+export function getExpiredLine(session) {
+    const zone = getSessionZone(session);
+    return zone
+        ? `Move your car, or add time in ParkPlus with ${zone.toLowerCase()}.`
+        : 'Move your car, or add time where you paid.';
+}
+
 // The same for a stored session, whose spotId is its zone or its lot kind.
 export function getSessionPayLine(session) {
     const zone = getSessionZone(session);

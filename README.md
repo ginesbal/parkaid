@@ -23,8 +23,9 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
   ParkPlus zone to pay at, the maximum stay, the walk, and directions.
 - Times your parking. Pick where you parked from your last search, or give
   the zone from the sign. You see the end time and the cost before you start,
-  durations stay within the posted maximum, and it tells you when it is time
-  to walk back.
+  counting only the hours the City charges. Durations stay within the posted
+  maximum, added time can be undone, and it tells you when it is time to walk
+  back.
 - Says plainly that it does not pay the City. Copy the zone and open
   MyParking, the City's ParkPlus app, to pay.
 - Keeps working when the network drops. Responses are cached on the phone, so

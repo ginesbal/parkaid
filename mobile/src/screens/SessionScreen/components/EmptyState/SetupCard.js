@@ -4,8 +4,9 @@ import { AppState, Linking, Text, TextInput, TouchableOpacity, View } from 'reac
 import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS } from '../../../../constants/session';
 import { REMINDERS_SUPPORTED, remindersBlocked } from '../../../../services/reminders';
-import { formatMoney } from '../../../../utils/formatters';
-import { calculateCost, formatClock, formatDuration } from '../../../../utils/sessionHelpers';
+import { chargedCost, chargedMinutes, describeFreeNow } from '../../../../utils/chargeHours';
+import { formatCost, formatMoney } from '../../../../utils/formatters';
+import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
 
 // Quick picks that fit the spot's maximum stay, plus the maximum itself when
@@ -33,6 +34,8 @@ export function snapDuration(options, selected) {
  * above Start it says where to pay, since starting the timer pays for nothing.
  *
  * rate:     the spot's hourly rate, or null with a rateNote: no price is made up
+ * chargeHours: when the City charges (utils/chargeHours); only those minutes
+ *           are priced. null: every minute is
  * maxMinutes: the spot's posted maximum; durations stay within it
  * where:    the place picker, shown as the first step
  */
@@ -45,6 +48,7 @@ const SetupCard = ({
     onStartSession,
     rate = null,
     rateNote = null,
+    chargeHours = null,
     maxMinutes = null,
     zoneLabel = null,
     payLine,
@@ -52,7 +56,15 @@ const SetupCard = ({
 }) => {
     const durations = useMemo(() => durationsFor(maxMinutes), [maxMinutes]);
     const duration = snapDuration(durations, selectedDuration);
-    const totalCost = rate === null ? null : calculateCost(duration, rate);
+    const costFor = (minutes) => chargedCost(rate, chargeHours, now, minutes);
+    const totalCost = costFor(duration);
+    // Why the cost is less than rate times time, when it is.
+    let costNote = null;
+    if (rate !== null) {
+        const charged = chargedMinutes(chargeHours, now, duration);
+        costNote = describeFreeNow(chargeHours, now)
+            ?? (charged < duration ? `Only ${formatDuration(charged)} of it is charged.` : null);
+    }
 
     // The shown duration is what Start uses. The driver's own pick is kept, so
     // trying a spot with a shorter maximum does not lose it.
@@ -130,7 +142,7 @@ const SetupCard = ({
                                     aria-checked={selected}
                                     accessibilityLabel={rate === null
                                         ? formatDuration(option.value)
-                                        : `${formatDuration(option.value)}, ${formatMoney(calculateCost(option.value, rate))}`}
+                                        : `${formatDuration(option.value)}, ${formatCost(costFor(option.value))}`}
                                 >
                                     <Text
                                         style={[styles.durationTime, selected && styles.durationTimeActive]}
@@ -145,7 +157,7 @@ const SetupCard = ({
                                             style={[styles.durationCost, selected && styles.durationCostActive]}
                                             numberOfLines={1}
                                         >
-                                            {formatMoney(calculateCost(option.value, rate))}
+                                            {formatCost(costFor(option.value))}
                                         </Text>
                                     ) : null}
                                 </TouchableOpacity>
@@ -180,8 +192,9 @@ const SetupCard = ({
                         <View style={styles.summaryDivider} />
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Cost for {formatDuration(duration)}</Text>
-                            <Text style={styles.summaryValueLarge}>{formatMoney(totalCost)}</Text>
+                            <Text style={styles.summaryValueLarge}>{formatCost(totalCost)}</Text>
                         </View>
+                        {costNote ? <Text style={styles.summaryNote}>{costNote}</Text> : null}
                     </>
                 ) : null}
             </View>

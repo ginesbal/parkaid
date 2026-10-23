@@ -8,9 +8,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapThumb from '../../components/MapThumb';
 import ParkPlusActions from '../../components/ParkPlusActions';
 import { TOKENS } from '../../constants/theme';
+import { describeFreeNow } from '../../utils/chargeHours';
 import { logger } from '../../utils/loggers';
 import {
     formatEnforceableTime,
+    getChargeHours,
     getDirectionsUrl,
     getMaxStayLabel,
     getRateDisplay,
@@ -102,6 +104,8 @@ export default function DetailsScreen({ route, navigation }) {
     const rate = getRateDisplay(spot);
     const zone = getZoneLabel(spot);
     const paidHours = formatEnforceableTime(spot?.zone_info?.enforceable_time);
+    // Outside charging hours the rate does not apply yet; say so first.
+    const freeNow = rate.amount ? describeFreeNow(getChargeHours(spot)) : null;
     const lines = buildLines(spot);
     const directionsUrl = getDirectionsUrl(spot);
     const canStart = spot.spot_type !== 'residential';
@@ -167,6 +171,7 @@ export default function DetailsScreen({ route, navigation }) {
                                 <Text style={styles.kindText}>{kind}</Text>
                             </View>
                         </View>
+                        {freeNow ? <Text style={styles.freeNow}>{freeNow}</Text> : null}
                         {rateBasis ? <Text style={styles.rateBasis}>{rateBasis}</Text> : null}
 
                         <View style={styles.lines}>

@@ -30,6 +30,9 @@ export const formatMoney = (amount) => {
     return `$${amount.toFixed(2)}`;
 };
 
+// A cost that may fall wholly outside charging hours: "$3.00" or "Free".
+export const formatCost = (amount) => (amount === 0 ? 'Free' : formatMoney(amount));
+
 /**
  * Format date to time string
  * @param {Date} date - Date object

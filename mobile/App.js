@@ -21,6 +21,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen/index';
 
 // services
 import BrandLoader from './src/components/BrandLoader';
+import ConfirmHost from './src/components/ConfirmHost';
 import LiveStage from './src/components/LiveStage';
 import SessionStrip from './src/components/SessionStrip';
 import { SessionProvider, useSessionStatus } from './src/context/SessionContext';
@@ -247,6 +248,8 @@ export default function App() {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
                 <AppNavigation />
+                {/* Web's yes/no questions (see utils/confirm); phones use the system alert. */}
+                {Platform.OS === 'web' ? <ConfirmHost /> : null}
             </SafeAreaProvider>
         </GestureHandlerRootView>
     );

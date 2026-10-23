@@ -6,6 +6,8 @@
 //   off-street:  "CPA Lot 24: 825 Macleod Trail SE"
 //   residential: "00 Block COLLINGWOOD PL NW"
 
+import { parseChargeHours } from './chargeHours';
+
 const KIND_LABELS = {
     on_street: 'Street',
     off_street: 'Lot',
@@ -142,6 +144,12 @@ export function formatEnforceableTime(raw) {
     if (out.some((o) => o === null)) return raw;
     const text = out.join('; ');
     return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// When the City charges at a street spot (see utils/chargeHours); null when
+// the data does not say, as for lots.
+export function getChargeHours(spot) {
+    return parseChargeHours(spot?.zone_info?.enforceable_time);
 }
 
 export function getCoordinates(spot) {

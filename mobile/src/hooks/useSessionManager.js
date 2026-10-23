@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Alert, AppState } from 'react-native';
 import { DEFAULT_VALUES, DEFAULT_WALK_MINUTES, HEAD_BACK_BUFFER, STORAGE_KEYS } from '../constants/session.js';
 import { cancelSessionReminders, scheduleSessionReminders } from '../services/reminders';
+import { chargedCost, parseChargeHours } from '../utils/chargeHours';
 import { confirm } from '../utils/confirm';
 import {
     calculateProgress,
@@ -28,12 +29,26 @@ const warnMinutesFor = (session) => getWarnAtMinutes(
     HEAD_BACK_BUFFER
 );
 
+// What the session's time costs in ParkPlus: charged minutes only, null when
+// the rate is unknown. Sessions saved before charging hours were kept count
+// every minute.
+const sessionCost = (session) => chargedCost(
+    session.hourlyRate ?? null,
+    parseChargeHours(session.chargeHours),
+    session.startedAt,
+    session.duration
+);
+
 export const useSessionManager = () => {
     // core state
     const [session, setSession] = useState(null);
     // false until storage has been read, so the screen does not flash the setup form
     const [isLoaded, setIsLoaded] = useState(false);
     const [now, setNow] = useState(Date.now()); // ms
+    // The session that just ended, for a short summary on Park.
+    const [endedSession, setEndedSession] = useState(null);
+    // The session before the last Extend, for its undo.
+    const undoRef = useRef(null);
 
     // form state for new sessions
     const [vehiclePlate, setVehiclePlate] = useState('');
@@ -131,14 +146,8 @@ export const useSessionManager = () => {
         [timeRemainingMs]
     );
 
-    const totalCost = useMemo(() => {
-        if (!session) return 0;
-        // Spots without a known rate (lots, unpriced blocks) have no total.
-        if (session.hourlyRate === null) return null;
-        const totalMin = session.duration || 60;
-        const hours = totalMin / 60;
-        return Number((hours * session.hourlyRate).toFixed(2));
-    }, [session]);
+    // Spots without a known rate (lots, unpriced blocks) have no total.
+    const totalCost = useMemo(() => (session ? sessionCost(session) : 0), [session]);
 
     const progress = useMemo(
         () => calculateProgress(elapsedTime, session?.duration),
@@ -197,11 +206,15 @@ export const useSessionManager = () => {
             startedAt: startTime.toISOString(),
             scheduledEnd: endTime.toISOString(),
             vehiclePlate: plate,
-            totalCost: hourlyRate === null ? null : (duration / 60) * hourlyRate,
             rateNote: hourlyRate === null ? getRateDisplay(spot).note : null,
+            // When the City charges here ("0910-1750 MON-SAT"); null for lots.
+            chargeHours: spot?.zone_info?.enforceable_time ?? null,
         };
+        newSession.totalCost = sessionCost(newSession);
 
         await saveSession(newSession);
+        setEndedSession(null);
+        undoRef.current = null;
         // The first Start is when we ask to send reminders; the setup card
         // says why just above the button.
         scheduleSessionReminders(newSession, warnMinutesFor(newSession), { ask: true });
@@ -223,11 +236,10 @@ export const useSessionManager = () => {
             ...session,
             scheduledEnd: newEnd.toISOString(),
             duration: newDuration,
-            totalCost: session.hourlyRate === null
-                ? null
-                : session.totalCost + (additionalMinutes / 60) * session.hourlyRate,
         };
+        updatedSession.totalCost = sessionCost(updatedSession);
 
+        undoRef.current = session;
         await saveSession(updatedSession);
         scheduleSessionReminders(updatedSession, warnMinutesFor(updatedSession));
 
@@ -237,22 +249,45 @@ export const useSessionManager = () => {
         );
     }, [session, saveSession]);
 
+    // Takes back the last Extend, while the session it extended still runs.
+    const undoExtend = useCallback(async () => {
+        const previous = undoRef.current;
+        undoRef.current = null;
+        if (!previous || previous.id !== session?.id) return;
+        await saveSession(previous);
+        scheduleSessionReminders(previous, warnMinutesFor(previous));
+        AccessibilityInfo.announceForAccessibility?.(
+            `Undone. Ends at ${formatClock(previous.scheduledEnd)}.`
+        );
+    }, [session, saveSession]);
+
+    const dismissEnded = useCallback(() => setEndedSession(null), []);
+
+    // Ends at once: for a session whose time is already up.
+    const finishSession = useCallback(() => {
+        if (!session) return;
+        cancelSessionReminders();
+        undoRef.current = null;
+        setEndedSession({ ...session, endedAt: new Date().toISOString() });
+        saveSession(null);
+        AccessibilityInfo.announceForAccessibility?.('Session ended.');
+    }, [session, saveSession]);
+
+    // Asks first while there is time left.
     const endSession = useCallback(() => {
         if (!session) return;
-
+        if (timeRemaining <= 0) {
+            finishSession();
+            return;
+        }
         confirm({
             title: 'End this session?',
-            message: timeRemaining > 0
-                ? `You still have ${formatDuration(timeRemaining)} left.`
-                : undefined,
+            message: `You still have ${formatDuration(timeRemaining)} left.`,
             confirmText: 'End session',
             destructive: true,
-            onConfirm: () => {
-                cancelSessionReminders();
-                saveSession(null);
-            },
+            onConfirm: finishSession,
         });
-    }, [session, timeRemaining, saveSession]);
+    }, [session, timeRemaining, finishSession]);
 
     return {
         // session data
@@ -270,10 +305,15 @@ export const useSessionManager = () => {
         startTime,
         endTime,
 
+        endedSession,       // the session just ended, with endedAt
+
         // actions
         startSession,
         endSession,
+        finishSession,
         extendSession,
+        undoExtend,
+        dismissEnded,
 
         // form state
         vehiclePlate,
