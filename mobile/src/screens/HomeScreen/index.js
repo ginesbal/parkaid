@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../components/BrandLoader';
 import LiveStage from '../../components/LiveStage';
 import Header from './components/Header';
-import ParkingList from './components/ParkingList';
+import SpotRow from '../../components/SpotRow';
 import EmptyState from './components/ParkingList/EmptyState';
 import LoadingState from './components/ParkingList/LoadingState';
 
@@ -256,10 +256,18 @@ export default function HomeScreen({ navigation }) {
     return <LoadingState searchRadius={searchRadius} phase={isLoadingLocation ? 'location' : 'spots'} />;
   }
 
-  const renderSpot = ({ item }) => (item === PERMIT_HEADING ? (
+  // One grouped inset list per section: the permit heading closes one
+  // group and opens the next.
+  const renderSpot = ({ item, index }) => (item === PERMIT_HEADING ? (
     <Text style={styles.listHeading} accessibilityRole="header">Permit holders only</Text>
   ) : (
-    <ParkingList.Item spot={item} onPress={handleSpotPress} />
+    <SpotRow
+      spot={item}
+      onPress={handleSpotPress}
+      chevron
+      first={index === 0 || listData[index - 1] === PERMIT_HEADING}
+      last={index === listData.length - 1 || listData[index + 1] === PERMIT_HEADING}
+    />
   ));
 
   const emptyComponent = loading ? (

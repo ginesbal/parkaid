@@ -3,7 +3,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import BrandLoader from '../../../components/BrandLoader';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
-import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
+import SpotRow from '../../../components/SpotRow';
 import { MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
 import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
@@ -22,7 +22,6 @@ const SHEET_EXPANDED_TOP_GAP = 18;
 // Inset row separator — aligns under the address text, not the walk-time anchor.
 // The walk block (44) + row padding (20) + gap (10) = 74. Letting the walk column
 // "run free" vertically makes it read as the anchor for each row.
-const RowSeparator = () => <View style={styles.rowSeparator} />;
 
 // Momentum threshold — a quick flick should snap regardless of drag distance.
 // Emil: "Don't require dragging past a threshold. If velocity exceeds ~0.11, dismiss."
@@ -246,13 +245,16 @@ const ParkingBottomSheet = forwardRef(({
         })
     ).current;
 
-    const renderItem = useCallback(({ item }) => (
-        <ParkingListItem
+    const renderItem = useCallback(({ item, index }) => (
+        <SpotRow
             spot={item}
-            isSelected={selectedSpot?.id === item.id}
-            onPress={() => onItemPress(item)}
+            selected={selectedSpot?.id === item.id}
+            onPress={onItemPress}
+            first={index === 0}
+            last={index === spots.length - 1}
+            inset={16}
         />
-    ), [onItemPress, selectedSpot?.id]);
+    ), [onItemPress, selectedSpot?.id, spots.length]);
 
     const pinned = searchMode === 'pinned';
     // The count says how far its places really are: the radius, or the
@@ -437,7 +439,6 @@ const ParkingBottomSheet = forwardRef(({
                 data={spots}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderItem}
-                ItemSeparatorComponent={RowSeparator}
                 contentContainerStyle={[
                     styles.listContent,
                     // The scene already ends above the tab bar.
@@ -635,14 +636,7 @@ const styles = StyleSheet.create({
         color: TOKENS.surface,
     },
     listContent: {
-        paddingTop: 4,
-    },
-    // Inset so the line begins where the address text begins —
-    // padding(20) + walkBlock(44) + gap(10) = 74.
-    rowSeparator: {
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: TOKENS.divider,
-        marginLeft: 74,
+        paddingTop: 12,
     },
     statusSlot: {
         alignItems: 'center',

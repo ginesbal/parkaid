@@ -24,6 +24,7 @@ export const styles = StyleSheet.create({
     listHeading: {
         paddingHorizontal: 20,
         marginTop: 24,
+        marginBottom: 8,
         fontSize: 13,
         fontWeight: '600',
         color: TOKENS.textMuted,

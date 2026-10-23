@@ -219,6 +219,7 @@ export const styles = StyleSheet.create({
     moreLabel: {
         paddingHorizontal: SPACING.xl,
         marginTop: SPACING['2xl'],
+        marginBottom: SPACING.sm,
         fontSize: 13,
         fontWeight: '600',
         color: TOKENS.textMuted,
