@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
     Keyboard,
+    PixelRatio,
+    Platform,
     Pressable,
     Text,
     View,
@@ -303,13 +305,36 @@ function MapScreen({ route, navigation }) {
                 latitudeDelta: 0.005,
                 longitudeDelta: 0.005,
             };
+            // The camera follows the new search area (see the fit below).
             setRegion(newRegion);
-            mapRef.current?.animateToRegion(newRegion, cameraMs(MOTION.duration.slow));
             setPinnedLocation(newRegion);
             setSearchMode('pinned');
             logger.log('search_mode_changed', { to: 'pinned' }, 'INFO');
         }
-    }, [cameraMs]);
+    }, []);
+
+    // Show the whole search area each time it changes (a new place, pin or
+    // radius), so every place in the sheet's count has its pin on screen.
+    // mapPadding already keeps it clear of the header and the sheet.
+    const [mapReady, setMapReady] = useState(false);
+    const searchLat = searchLocation?.latitude;
+    const searchLng = searchLocation?.longitude;
+    useEffect(() => {
+        if (!mapReady || !Number.isFinite(searchLat) || !Number.isFinite(searchLng)) return;
+        const dLat = searchRadius / 111320;
+        const dLng = searchRadius / (111320 * Math.cos((searchLat * Math.PI) / 180));
+        // Android reads edgePadding in pixels.
+        const margin = Platform.OS === 'android' ? 24 * PixelRatio.get() : 24;
+        mapRef.current?.fitToCoordinates(
+            [
+                { latitude: searchLat + dLat, longitude: searchLng },
+                { latitude: searchLat - dLat, longitude: searchLng },
+                { latitude: searchLat, longitude: searchLng + dLng },
+                { latitude: searchLat, longitude: searchLng - dLng },
+            ],
+            { edgePadding: { top: margin, bottom: margin, left: margin, right: margin }, animated: !reduceMotion }
+        );
+    }, [mapReady, searchLat, searchLng, searchRadius, reduceMotion]);
 
     return (
         <View
@@ -329,6 +354,7 @@ function MapScreen({ route, navigation }) {
                 style={styles.map}
                 provider={PROVIDER_GOOGLE}
                 initialRegion={region}
+                onMapReady={() => setMapReady(true)}
                 onRegionChangeComplete={setRegion}
                 onPanDrag={handleMapPanDrag}
                 onPress={handleMapPress}

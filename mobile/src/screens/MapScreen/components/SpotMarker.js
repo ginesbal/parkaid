@@ -9,7 +9,7 @@ import { memo, useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { getCoordinates, getSpotName } from '../../../utils/spotPresentation';
-import SpotPill, { SpotBadge, getPillLabel } from './SpotPill';
+import SpotPill, { SpotBadge, getMarkerDescription } from './SpotPill';
 
 // See SpotBadge: Android crops custom markers to 100x100 px.
 const MarkerBody = Platform.OS === 'android' ? SpotBadge : SpotPill;
@@ -28,7 +28,6 @@ function SpotMarker({ spot, selected, onPress }) {
 
     if (!coordinate) return null;
 
-    const label = getPillLabel(spot);
     const { title } = getSpotName(spot);
 
     return (
@@ -38,7 +37,7 @@ function SpotMarker({ spot, selected, onPress }) {
             tracksViewChanges={!ready}
             anchor={{ x: 0.5, y: 0.5 }}
             zIndex={selected ? 10 : 1}
-            accessibilityLabel={`${title}${label ? `, ${label} per hour` : ''}`}
+            accessibilityLabel={`${title}, ${getMarkerDescription(spot)}`}
         >
             {/* iOS: a clear 44 pt box around the pill is the tap target. Android
                 cannot draw past 100 px, so there the map's own tap handler

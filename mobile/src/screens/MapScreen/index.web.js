@@ -12,9 +12,10 @@ import PlacesSearchBar from '../../components/PlacesAutocomplete/PlacesSearchBar
 import { RADIUS, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
-import { getCoordinates, pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
+import { distanceMeters } from '../../utils/geo';
+import { getCoordinates, getSpotName, pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
-import SpotPill from './components/SpotPill';
+import SpotPill, { getMarkerDescription } from './components/SpotPill';
 
 const SEARCH_RADIUS = 250;
 const METERS_PER_DEG_LAT = 110540;
@@ -65,7 +66,13 @@ export default function MapScreen({ route, navigation }) {
     const topInset = insets.top + 104;
     const cx = size.width / 2;
     const cy = topInset + Math.max(0, (size.height - peek - topInset) / 2);
-    const pxPerMeter = Math.max(0.1, (Math.min(size.width, size.height - peek - topInset) * 0.42) / SEARCH_RADIUS);
+    // Fit the search circle, or the farthest spot if one lies beyond it, so
+    // every place in the sheet's count has its pin on screen.
+    const reach = useMemo(() => Math.max(SEARCH_RADIUS, ...(spots || []).map((spot) => {
+        const coords = getCoordinates(spot);
+        return coords ? distanceMeters(origin, coords) : 0;
+    })), [spots, origin]);
+    const pxPerMeter = Math.max(0.1, (Math.min(size.width, size.height - peek - topInset) * 0.42) / reach);
 
     const project = useCallback((coords) => {
         const dy = (coords.latitude - origin.latitude) * METERS_PER_DEG_LAT;
@@ -126,7 +133,7 @@ export default function MapScreen({ route, navigation }) {
                             onPress={() => setSelectedSpot(spot)}
                             style={[styles.marker, { left: x, top: y, zIndex: selected ? 2 : 1 }]}
                             accessibilityRole="button"
-                            accessibilityLabel={`Select ${spot.address}`}
+                            accessibilityLabel={`Select ${getSpotName(spot).title}, ${getMarkerDescription(spot)}`}
                         >
                             <SpotPill spot={spot} selected={selected} />
                         </Pressable>

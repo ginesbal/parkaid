@@ -240,7 +240,10 @@ const ParkingBottomSheet = forwardRef(({
     ), [onItemPress, selectedSpot?.id]);
 
     const pinned = searchMode === 'pinned';
-    const within = getDistanceLabel(searchRadius);
+    // The count says how far its places really are: the radius, or the
+    // farthest place (to the next 50 m) if one lies beyond it.
+    const farthest = Math.max(0, ...spots.map((s) => Number(s.distance) || 0));
+    const within = getDistanceLabel(Math.max(searchRadius, Math.ceil(farthest / 50) * 50));
     const failure = error && !loading && spots.length === 0 ? getLoadError(error) : null;
     const saved = describeSaved({ savedAt, stale });
     let countLine;
