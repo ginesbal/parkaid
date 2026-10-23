@@ -72,7 +72,7 @@ describe('useParkingSpots', () => {
     });
 
     it('handles errors properly', async () => {
-        parkingAPI.findNearbySpots.mockRejectedValue(new Error('Network error'));
+        parkingAPI.findNearbySpots.mockRejectedValue(Object.assign(new Error('Network error'), { kind: 'offline' }));
 
         const { result } = renderHook(() =>
             useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500)
@@ -82,7 +82,7 @@ describe('useParkingSpots', () => {
             jest.advanceTimersByTime(300);
         });
 
-        expect(result.current.error).toBe('Network error');
+        expect(result.current.error).toBe('offline');
         expect(result.current.spots).toEqual([]);
     });
 

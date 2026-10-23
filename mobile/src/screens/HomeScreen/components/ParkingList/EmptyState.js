@@ -1,26 +1,29 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import { TOKENS, alpha } from '../../../../constants/theme';
+import { getLoadError } from '../../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
 /**
- * EmptyState - Shown when no parking spots are available or loading fails
+ * EmptyState - Shown when no parking spots are available or loading fails.
+ * A failure is said once, by what went wrong (`error`: 'offline', 'timeout'
+ * or 'server'), with a neutral icon and one way forward: try again.
  */
 const MAX_RADIUS = 1000;
 
-const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, view, searchRadius }) => {
-    const isError = Boolean(errorMessage);
+const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, view, searchRadius }) => {
+    const isError = Boolean(error);
     const covered = view === 'covered';
     // At the widest radius there is nothing left to expand; the map is the next step.
     const canExpand = !isError && searchRadius < MAX_RADIUS;
     const within = getDistanceLabel(searchRadius);
+    const failure = isError ? getLoadError(error) : null;
 
     let title = 'Nothing nearby right now';
     let body = 'Try widening the search radius, or switch to the map to look around the next block.';
     if (isError) {
-        title = 'Can\u2019t reach parking data';
-        body = `${String(errorMessage).replace(/\.?$/, '.')} Try again, or switch to the map to browse a different area.`;
+        ({ title, body } = failure);
     } else if (covered) {
         title = `No parkades within ${within}`;
         body = canExpand
@@ -33,11 +36,11 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, view, se
 
     return (
         <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIcon, isError && styles.emptyIconError]}>
+            <View style={styles.emptyIcon}>
                 <MaterialCommunityIcons
-                    name={isError ? 'wifi-alert' : 'parking'}
+                    name={isError ? failure.icon : 'parking'}
                     size={64}
-                    color={isError ? TOKENS.danger : alpha(TOKENS.text, 0.15)}
+                    color={alpha(TOKENS.text, 0.15)}
                 />
             </View>
 
@@ -53,7 +56,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, view, se
                         ]}
                         onPress={isError ? onRetry : onExpandSearch}
                         accessibilityRole="button"
-                        accessibilityLabel={isError ? 'Retry loading parking spots' : 'Expand search radius'}
+                        accessibilityLabel={isError ? 'Try again' : 'Expand search radius'}
                     >
                         <MaterialCommunityIcons
                             name={isError ? 'refresh' : 'radar'}
@@ -61,30 +64,33 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, errorMessage, view, se
                             color="#fff"
                         />
                         <Text style={styles.emptyButtonText}>
-                            {isError ? 'Retry' : `Search ${getDistanceLabel(MAX_RADIUS)}`}
+                            {isError ? 'Try again' : `Search ${getDistanceLabel(MAX_RADIUS)}`}
                         </Text>
                     </Pressable>
                 ) : null}
 
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.emptyButton,
-                        styles.emptyButtonSecondary,
-                        pressed && styles.emptyButtonPressed,
-                    ]}
-                    onPress={onViewMap}
-                    accessibilityRole="button"
-                    accessibilityLabel="View parking map"
-                >
-                    <MaterialCommunityIcons
-                        name="map-search-outline"
-                        size={16}
-                        color={TOKENS.text}
-                    />
-                    <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
-                        View Map
-                    </Text>
-                </Pressable>
+                {/* The map needs the same connection, so it is no way out of a failure. */}
+                {isError ? null : (
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.emptyButton,
+                            styles.emptyButtonSecondary,
+                            pressed && styles.emptyButtonPressed,
+                        ]}
+                        onPress={onViewMap}
+                        accessibilityRole="button"
+                        accessibilityLabel="View parking map"
+                    >
+                        <MaterialCommunityIcons
+                            name="map-search-outline"
+                            size={16}
+                            color={TOKENS.text}
+                        />
+                        <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
+                            View Map
+                        </Text>
+                    </Pressable>
+                )}
             </View>
         </View>
     );

@@ -2,10 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { parkingAPI } from '../services/api';
 import { rememberSearch } from '../services/recentSearch';
 
+// spots, loading, refetch, and:
+// error:   why the last load failed with nothing to show ('offline',
+//          'timeout' or 'server'; see utils/loadStatus), else null
+// savedAt: when the shown spots were fetched (ms)
+// stale:   why an older copy is shown instead of fresh data, else null
 export function useParkingSpots(location, radius, filterType = 'all') {
     const [spots, setSpots] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [saved, setSaved] = useState({ savedAt: null, stale: null });
 
     // track if component is mounted to prevent state updates after unmount
     const isMountedRef = useRef(true);
@@ -65,13 +71,15 @@ export function useParkingSpots(location, radius, filterType = 'all') {
 
                 if (isCurrent()) {
                     setSpots(response?.data || []);
+                    setSaved({ savedAt: response?.savedAt ?? null, stale: response?.staleBecause ?? null });
                     // Offered on Park as where the car might be.
                     rememberSearch(response?.data);
                 }
             } catch (err) {
                 if (isCurrent()) {
-                    setError(err.message || 'Failed to load parking spots');
+                    setError(err?.kind || 'server');
                     setSpots([]);
+                    setSaved({ savedAt: null, stale: null });
                 }
             } finally {
                 if (isCurrent()) {
@@ -91,5 +99,5 @@ export function useParkingSpots(location, radius, filterType = 'all') {
         };
     }, [location?.latitude, location?.longitude, radius, filterType, nonce]);
 
-    return { spots, loading, error, refetch };
+    return { spots, loading, error, refetch, savedAt: saved.savedAt, stale: saved.stale };
 }   

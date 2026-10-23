@@ -90,7 +90,7 @@ function MapScreen({ route, navigation }) {
     // calculate search spots
     const searchLocation = (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
 
-    const { spots, loading: spotsLoading } = useParkingSpots(
+    const { spots, loading: spotsLoading, error: spotsError, savedAt, stale, refetch } = useParkingSpots(
         searchLocation,
         searchRadius,
         filterType
@@ -412,6 +412,10 @@ function MapScreen({ route, navigation }) {
                 spots={spots}
                 // Waiting for a location counts as loading, not as "no spots".
                 loading={spotsLoading || !searchLocation}
+                error={spotsError}
+                savedAt={savedAt}
+                stale={stale}
+                onRetry={refetch}
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
                 searchMode={searchMode}

@@ -5,6 +5,7 @@ import BrandLoader from '../../../components/BrandLoader';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import ParkingListItem from '../../../components/ParkingList/ParkingListItem';
 import { MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
+import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
     getRateDisplay,
@@ -39,6 +40,12 @@ const EXPANDED_Y = 0;
 const ParkingBottomSheet = forwardRef(({
     spots,
     loading = false,
+    // Why the last load failed ('offline', 'timeout', 'server'; see
+    // utils/loadStatus), and how old the shown spots are.
+    error = null,
+    savedAt = null,
+    stale = null,
+    onRetry,
     selectedSpot,
     featuredSpot,
     searchMode,
@@ -234,10 +241,14 @@ const ParkingBottomSheet = forwardRef(({
 
     const pinned = searchMode === 'pinned';
     const within = getDistanceLabel(searchRadius);
+    const failure = error && !loading && spots.length === 0 ? getLoadError(error) : null;
+    const saved = describeSaved({ savedAt, stale });
     let countLine;
     if (loading && spots.length === 0) countLine = 'Finding spots\u2026';
     else if (loading) countLine = 'Updating for this area\u2026';
+    else if (failure) countLine = failure.title;
     else if (spots.length === 0) countLine = `No places within ${within}`;
+    else if (saved) countLine = `${spots.length} ${spots.length === 1 ? 'place' : 'places'} \u00B7 ${saved}`;
     else countLine = `${spots.length} ${spots.length === 1 ? 'place' : 'places'} within ${within}`;
 
     const featured = featuredSpot ? {
@@ -341,6 +352,19 @@ const ParkingBottomSheet = forwardRef(({
                     <View style={[styles.featuredWrap, styles.statusSlot, { minHeight: featuredHeight }]}>
                         {loading ? (
                             <BrandLoader size={40} label="Finding spots around here" delay={150} />
+                        ) : failure ? (
+                            <>
+                                <Text style={styles.emptyHint}>{failure.body}</Text>
+                                {onRetry ? (
+                                    <Pressable
+                                        onPress={onRetry}
+                                        style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
+                                        accessibilityRole="button"
+                                    >
+                                        <Text style={styles.retryText}>Try again</Text>
+                                    </Pressable>
+                                ) : null}
+                            </>
                         ) : (
                             <>
                                 <Text style={styles.emptyTitle}>No spots in this area</Text>
@@ -559,6 +583,20 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         textAlign: 'center',
         maxWidth: 260,
+    },
+    retry: {
+        minHeight: 44,
+        marginTop: SPACING.sm,
+        paddingHorizontal: SPACING.lg,
+        justifyContent: 'center',
+    },
+    retryPressed: {
+        opacity: 0.6,
+    },
+    retryText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
     },
 });
 

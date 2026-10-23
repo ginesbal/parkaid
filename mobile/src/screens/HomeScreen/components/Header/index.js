@@ -9,12 +9,12 @@ import { styles } from './styles';
 
 /**
  * Home header: greeting, search, view chips, optional filters, and the top pick.
- * Everything above the list rows.
+ * Everything above the list rows. `statusMessage` is about the location;
+ * `savedNote` says how old the list is (utils/loadStatus).
  */
 const Header = ({
     greeting,
     statusMessage,
-    statusTone = 'info',
     onSearchPress,
     view,
     onViewChange,
@@ -28,7 +28,7 @@ const Header = ({
     topPick,
     onViewSpot,
     moreCount,
-    isUpdating,
+    savedNote,
 }) => {
     const filterLabel = filterCount > 0 ? `Filters, ${filterCount} active` : 'Filters';
 
@@ -42,18 +42,8 @@ const Header = ({
             </View>
 
             {statusMessage ? (
-                <View
-                    style={[
-                        styles.statusBanner,
-                        statusTone === 'warning' ? styles.statusBannerWarning : styles.statusBannerInfo,
-                    ]}
-                    accessibilityRole="alert"
-                >
-                    <MaterialCommunityIcons
-                        name={statusTone === 'warning' ? 'wifi-alert' : 'crosshairs-question'}
-                        size={16}
-                        color={statusTone === 'warning' ? TOKENS.warning : TOKENS.primary}
-                    />
+                <View style={[styles.statusBanner, styles.statusBannerInfo]} accessibilityRole="alert">
+                    <MaterialCommunityIcons name="crosshairs-question" size={16} color={TOKENS.primary} />
                     <Text style={styles.statusBannerText}>{statusMessage}</Text>
                 </View>
             ) : null}
@@ -112,7 +102,7 @@ const Header = ({
                         <Text style={styles.sectionTitle} accessibilityRole="header">
                             A good place to start
                         </Text>
-                        {isUpdating ? <Text style={styles.sectionNote}>Updating…</Text> : null}
+                        {savedNote ? <Text style={styles.sectionNote}>{savedNote}</Text> : null}
                     </View>
                     <TopPick spot={topPick} view={view} onView={onViewSpot} />
                     {moreCount > 0 ? (

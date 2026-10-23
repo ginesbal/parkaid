@@ -17,6 +17,7 @@ import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 
 import { getGreeting } from '../../utils/greeting';
+import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
 import { isCovered, pickTopSpot, sortByDistance, sortByValue } from '../../utils/spotPresentation';
 
@@ -52,7 +53,7 @@ export default function HomeScreen({ navigation }) {
     (searchRadius !== DEFAULT_SEARCH_RADIUS ? 1 : 0);
 
   // data fetching hook
-  const { spots, loading, error, refetch } = useParkingSpots(location, searchRadius, requestType);
+  const { spots, loading, error, refetch, savedAt, stale } = useParkingSpots(location, searchRadius, requestType);
 
   // local UI state
   const [refreshing, setRefreshing] = useState(false);
@@ -235,7 +236,7 @@ export default function HomeScreen({ navigation }) {
       onExpandSearch={handleExpandSearch}
       onViewMap={handleMapPress}
       onRetry={handleRefresh}
-      errorMessage={error}
+      error={error}
       view={view}
       searchRadius={searchRadius}
     />
@@ -254,8 +255,7 @@ export default function HomeScreen({ navigation }) {
             ListHeaderComponent={
               <Header
                 greeting={greeting}
-                statusMessage={error || locationError}
-                statusTone={error ? 'warning' : 'info'}
+                statusMessage={locationError}
                 onSearchPress={handleSearchPress}
                 view={view}
                 onViewChange={handleViewChange}
@@ -269,7 +269,7 @@ export default function HomeScreen({ navigation }) {
                 topPick={topPick}
                 onViewSpot={handleSpotPress}
                 moreCount={restSpots.length}
-                isUpdating={loading}
+                savedNote={describeSaved({ savedAt, stale, updating: loading })}
               />
             }
             ListEmptyComponent={topPick ? null : emptyComponent}

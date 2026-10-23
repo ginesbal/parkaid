@@ -29,7 +29,9 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 - Says plainly that it does not pay the City. Copy the zone and open
   MyParking, the City's ParkPlus app, to pay.
 - Keeps working when the network drops. Responses are cached on the phone, so
-  the app shows the last data it had instead of an error.
+  the app shows the last data it had and says when it was saved. When there
+  is nothing saved, it says plainly whether you are offline, the data is
+  slow to answer, or the service has a problem.
 - Respects the phone's Reduce Motion setting and screen reader labels.
 
 ## Screens

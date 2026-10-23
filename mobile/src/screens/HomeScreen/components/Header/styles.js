@@ -43,9 +43,6 @@ export const styles = StyleSheet.create({
     statusBannerInfo: {
         backgroundColor: 'transparent',
     },
-    statusBannerWarning: {
-        backgroundColor: 'transparent',
-    },
     statusBannerText: {
         flex: 1,
         fontSize: 13,
@@ -216,8 +213,12 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
     },
     sectionNote: {
+        flexShrink: 1,
+        marginLeft: SPACING.md,
         fontSize: 13,
         color: TOKENS.textMuted,
+        textAlign: 'right',
+        fontVariant: ['tabular-nums'],
     },
     moreLabel: {
         paddingHorizontal: SPACING.xl,

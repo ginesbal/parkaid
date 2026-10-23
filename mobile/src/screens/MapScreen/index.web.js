@@ -27,7 +27,7 @@ export default function MapScreen({ navigation }) {
     const [peek, setPeek] = useState(200);
     const [selectedSpot, setSelectedSpot] = useState(null);
 
-    const { spots, loading } = useParkingSpots(DEFAULT_LOCATION, SEARCH_RADIUS, 'all');
+    const { spots, loading, error, savedAt, stale, refetch } = useParkingSpots(DEFAULT_LOCATION, SEARCH_RADIUS, 'all');
 
     const featuredSpot = useMemo(
         () => selectedSpot || pickTopSpot(sortByDistance(spots || [])),
@@ -109,6 +109,10 @@ export default function MapScreen({ navigation }) {
             <ParkingBottomSheet
                 spots={spots}
                 loading={loading}
+                error={error}
+                savedAt={savedAt}
+                stale={stale}
+                onRetry={refetch}
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
                 searchMode="current"

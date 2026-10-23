@@ -29,7 +29,6 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 20,
     },
-    emptyIconError: {},
     emptyText: {
         fontSize: 16,
         fontWeight: '600',
