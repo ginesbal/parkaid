@@ -197,6 +197,16 @@ export const SHADOWS = {
 
 // Deliberate 5-step type scale. Three weights only: 400 body, 500 numerics, 600 titles.
 // All numeric displays use tabular-nums for alignment.
+// Six text sizes, and only these (a test holds every screen to them):
+//   12 caption: badges, map pills, small notes
+//   14 secondary: meta lines, hints, labels
+//   16 body: text, buttons, inputs, and every spot name in a list or card
+//   20 title: screen and section titles
+//   28 display: the Details title, Welcome, big prices
+//   40 numeral: the session's time left
+// Numbers (prices, times, counts) are weight 500 with tabular figures.
+export const TYPE_SCALE = [12, 14, 16, 20, 28, 40];
+
 export const TYPOGRAPHY = {
     // Welcome headline only. The one place the scale goes to 700.
     hero: {
@@ -240,15 +250,15 @@ export const TYPOGRAPHY = {
         color: TOKENS.textMuted,
     },
     caption: {
-        fontSize: 11,
-        lineHeight: 14,
+        fontSize: 12,
+        lineHeight: 16,
         fontWeight: '500',
         letterSpacing: 0.4,
         textTransform: 'uppercase',
         color: TOKENS.textMuted,
     },
     numLarge: {
-        fontSize: 32,
+        fontSize: 28,
         lineHeight: 34,
         fontWeight: '500',
         letterSpacing: -0.8,

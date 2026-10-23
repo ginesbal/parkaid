@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     showAllText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.primaryInk,
     },
@@ -550,12 +550,12 @@ const styles = StyleSheet.create({
         opacity: 0.8,
     },
     clearButtonText: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '500',
         color: TOKENS.textMuted,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 20,
         lineHeight: 24,
         fontWeight: '600',
         color: TOKENS.text,
@@ -597,14 +597,14 @@ const styles = StyleSheet.create({
         color: TOKENS.text,
     },
     featuredMeta: {
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
     },
     featuredPrice: {
         fontSize: 20,
         lineHeight: 24,
-        fontWeight: '600',
+        fontWeight: '500',
         color: TOKENS.text,
         textAlign: 'right',
         fontVariant: ['tabular-nums'],
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
     },
     featuredNote: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: TOKENS.textMuted,
     },
@@ -643,13 +643,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emptyTitle: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.text,
         marginBottom: 6,
     },
     emptyHint: {
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
         textAlign: 'center',
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     retryText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.primaryInk,
     },

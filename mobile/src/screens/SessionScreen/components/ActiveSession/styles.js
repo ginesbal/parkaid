@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
         paddingTop: SPACING.lg,
     },
     screenTitle: {
-        fontSize: 18,
+        fontSize: 20,
         lineHeight: 24,
         fontWeight: '600',
         color: TOKENS.surface,
@@ -42,9 +42,9 @@ export const styles = StyleSheet.create({
     },
     time: {
         ...TYPOGRAPHY.numLarge,
-        fontSize: 44,
-        lineHeight: 50,
-        fontWeight: '600',
+        fontSize: 40,
+        lineHeight: 46,
+        fontWeight: '500',
         letterSpacing: -1,
         marginTop: 2,
     },
@@ -53,8 +53,8 @@ export const styles = StyleSheet.create({
     },
     // Said once, in plain ink: the card's one instruction carries the rest.
     expiredTitle: {
-        fontSize: 34,
-        lineHeight: 40,
+        fontSize: 28,
+        lineHeight: 34,
         fontWeight: '600',
         letterSpacing: -0.6,
         color: TOKENS.text,
@@ -109,7 +109,7 @@ export const styles = StyleSheet.create({
         borderTopColor: TOKENS.hairline,
     },
     placeName: {
-        fontSize: 17,
+        fontSize: 16,
         lineHeight: 22,
         fontWeight: '600',
         color: TOKENS.text,
@@ -142,8 +142,8 @@ export const styles = StyleSheet.create({
         color: TOKENS.textMuted,
     },
     kvValue: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '500',
         color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
@@ -169,7 +169,7 @@ export const styles = StyleSheet.create({
     },
     extendNote: {
         marginTop: 2,
-        fontSize: 13,
+        fontSize: 14,
         color: alpha(TOKENS.surface, 0.85),
         textAlign: 'center',
         fontVariant: ['tabular-nums'],
@@ -198,7 +198,7 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
     undoBody: {
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 18,
         color: TOKENS.inkMuted,
     },
@@ -210,7 +210,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     undoButtonText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.surface,
         textDecorationLine: 'underline',
@@ -241,7 +241,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     endText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.surface,
     },

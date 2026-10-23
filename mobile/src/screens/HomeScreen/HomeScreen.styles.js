@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginTop: 24,
         marginBottom: 8,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: TOKENS.textMuted,
     },

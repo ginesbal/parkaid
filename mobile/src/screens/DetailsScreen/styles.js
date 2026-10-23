@@ -47,7 +47,7 @@ export const styles = StyleSheet.create({
     },
     subtitle: {
         marginTop: SPACING.xs,
-        fontSize: 15,
+        fontSize: 14,
         lineHeight: 21,
         color: TOKENS.inkMuted,
     },
@@ -70,10 +70,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: SPACING.md,
     },
-    price: {
-        ...TYPOGRAPHY.numLarge,
-        fontWeight: '600',
-    },
+    price: TYPOGRAPHY.numLarge,
     priceUnit: {
         fontSize: 14,
         fontWeight: '400',
@@ -94,13 +91,13 @@ export const styles = StyleSheet.create({
         backgroundColor: TOKENS.primarySoft,
     },
     kindText: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: TOKENS.primaryInk,
     },
     freeNow: {
         marginTop: SPACING.xs,
-        fontSize: 15,
+        fontSize: 14,
         lineHeight: 21,
         fontWeight: '600',
         color: TOKENS.success,
@@ -108,7 +105,7 @@ export const styles = StyleSheet.create({
     },
     rateBasis: {
         marginTop: SPACING.xs,
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
     },
@@ -178,7 +175,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     secondaryText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.primaryInk,
     },

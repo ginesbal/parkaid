@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     footnote: {
-        fontSize: 13,
+        fontSize: 12,
         lineHeight: 18,
         color: TOKENS.textMuted,
         textAlign: 'center',

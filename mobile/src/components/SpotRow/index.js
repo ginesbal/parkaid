@@ -91,14 +91,14 @@ const styles = StyleSheet.create({
     },
     meta: {
         marginTop: 2,
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
     },
     price: {
-        fontSize: 15,
+        fontSize: 16,
         lineHeight: 20,
-        fontWeight: '600',
+        fontWeight: '500',
         color: TOKENS.text,
         textAlign: 'right',
         fontVariant: ['tabular-nums'],
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     },
     note: {
         maxWidth: 96,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '500',
         color: TOKENS.textMuted,
         textAlign: 'right',

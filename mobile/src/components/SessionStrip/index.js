@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
         color: TOKENS.inkMuted,
     },
     left: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '500',
         fontVariant: ['tabular-nums'],
         color: TOKENS.surface,
     },

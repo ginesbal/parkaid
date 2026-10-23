@@ -24,8 +24,8 @@ export const styles = StyleSheet.create({
     // A quiet hello: smaller than the spot names it sits above.
     greeting: {
         flex: 1,
-        fontSize: 18,
-        lineHeight: 24,
+        fontSize: 16,
+        lineHeight: 22,
         fontWeight: '600',
         letterSpacing: -0.2,
         color: TOKENS.text,
@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
     },
     statusBannerText: {
         flex: 1,
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
     },
@@ -76,7 +76,7 @@ export const styles = StyleSheet.create({
     },
     searchText: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 16,
         color: TOKENS.textLight,
     },
     filterButton: {
@@ -95,12 +95,12 @@ export const styles = StyleSheet.create({
     },
     filterBadge: {
         position: 'absolute',
-        top: -5,
-        right: -5,
-        minWidth: 18,
-        height: 18,
+        top: -6,
+        right: -6,
+        minWidth: 20,
+        height: 20,
         paddingHorizontal: 4,
-        borderRadius: 9,
+        borderRadius: 10,
         borderWidth: 2,
         borderColor: TOKENS.bg,
         backgroundColor: TOKENS.primary,
@@ -108,8 +108,8 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     filterBadgeText: {
-        fontSize: 10,
-        lineHeight: 12,
+        fontSize: 12,
+        lineHeight: 14,
         fontWeight: '600',
         color: TOKENS.surface,
         fontVariant: ['tabular-nums'],
@@ -131,7 +131,7 @@ export const styles = StyleSheet.create({
     },
     filterGroupLabel: {
         paddingHorizontal: SPACING.lg,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: TOKENS.textMuted,
     },
@@ -202,7 +202,7 @@ export const styles = StyleSheet.create({
         marginBottom: SPACING.md,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 20,
         lineHeight: 24,
         fontWeight: '600',
         letterSpacing: -0.2,
@@ -211,7 +211,7 @@ export const styles = StyleSheet.create({
     sectionNote: {
         flexShrink: 1,
         marginLeft: SPACING.md,
-        fontSize: 13,
+        fontSize: 12,
         color: TOKENS.textMuted,
         textAlign: 'right',
         fontVariant: ['tabular-nums'],
@@ -220,7 +220,7 @@ export const styles = StyleSheet.create({
         paddingHorizontal: SPACING.xl,
         marginTop: SPACING['2xl'],
         marginBottom: SPACING.sm,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: TOKENS.textMuted,
     },

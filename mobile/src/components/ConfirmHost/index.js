@@ -82,14 +82,14 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.surface,
     },
     title: {
-        fontSize: 18,
+        fontSize: 20,
         lineHeight: 24,
         fontWeight: '600',
         color: TOKENS.text,
     },
     message: {
         marginTop: SPACING.sm,
-        fontSize: 15,
+        fontSize: 16,
         lineHeight: 21,
         color: TOKENS.textMuted,
     },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         borderColor: TOKENS.hairlineStrong,
     },
     cancelText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.text,
     },
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.danger,
     },
     confirmText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.surface,
         textAlign: 'center',

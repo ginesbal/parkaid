@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.surface,
     },
     label: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
         color: TOKENS.text,
         fontVariant: ['tabular-nums'],
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
     },
     labelSelected: {
-        fontSize: 15,
+        fontSize: 14,
         color: TOKENS.surface,
     },
 

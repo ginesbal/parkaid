@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '500',
     color: TOKENS.text,
     padding: 0,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
 
   mainText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '500',
     color: TOKENS.text,
     marginBottom: 3,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   },
 
   secondaryText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '400',
     color: TOKENS.textMuted,
     lineHeight: 18,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
 
   emptyStateText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     color: TOKENS.textMuted,
     lineHeight: 18,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     color: TOKENS.dangerInk,
     textAlign: 'center',
