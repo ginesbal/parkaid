@@ -34,6 +34,13 @@ describe('buildSessionReminders', () => {
         expect(timesUp.body).toMatch(/add time where you paid\.$/);
     });
 
+    it('does without a name when the driver parked somewhere else', () => {
+        const elsewhere = { ...SESSION, locationName: null, spotId: null, walkMinutes: null };
+        const [headBack, timesUp] = buildSessionReminders(elsewhere, 12, NOW);
+        expect(headBack.body).toMatch(/^Your parking ends at .+\.$/);
+        expect(timesUp.body).toMatch(/^Your parking ended at .+\. Move your car, or add time where you paid\.$/);
+    });
+
     it('has nothing to say without a session', () => {
         expect(buildSessionReminders(null, 12, NOW)).toEqual([]);
         expect(buildSessionReminders({ scheduledEnd: 'not a date' }, 12, NOW)).toEqual([]);

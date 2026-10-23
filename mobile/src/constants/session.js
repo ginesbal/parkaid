@@ -7,13 +7,16 @@ export const STORAGE_KEYS = {
     LAST_PLATE: 'parkaid.lastPlate',
     // The spot handed over from Details, until its session starts.
     PENDING_SPOT: 'parkaid.pendingSpot',
+    // The closest places from the last search (see services/recentSearch).
+    RECENT_SEARCH: 'parkaid.recentSearch',
 };
 
 // How long a handed-over spot is kept if its session never starts.
 export const PENDING_SPOT_MAX_AGE = 12 * 60 * 60 * 1000;
+// How long the last search is offered as where the car might be.
+export const RECENT_SEARCH_MAX_AGE = 3 * 60 * 60 * 1000;
 
 export const DEFAULT_VALUES = {
-    RATE: 2.5,
     DURATION: 60, // minutes
     LOCATION: 'Downtown Calgary',
     MAX_PLATE_LENGTH: 10,
@@ -26,12 +29,6 @@ export const DURATION_OPTIONS = [
     { value: 180, label: '3 hours', quickSelect: true },
     { value: 240, label: '4 hours', quickSelect: false },
     { value: 480, label: '8 hours', quickSelect: false },
-];
-
-export const RATE_OPTIONS = [
-    { value: 1.5, label: '$1.50/hr', tier: 'economy' },
-    { value: 2.5, label: '$2.50/hr', tier: 'standard' },
-    { value: 3.5, label: '$3.50/hr', tier: 'premium' },
 ];
 
 export const EXTENSION_OPTIONS = [
@@ -49,7 +46,7 @@ export const SESSION_STATES = {
 
 // Minutes of buffer, on top of the walk back, before we say "head back".
 export const HEAD_BACK_BUFFER = 10;
-// Default walk when a session has no spot (the demo flow).
+// Default walk when a session has no spot ("Somewhere else").
 export const DEFAULT_WALK_MINUTES = 5;
 // The one-tap extension on the active session.
 export const EXTEND_STEP = 30;
@@ -59,30 +56,6 @@ export const ALERTS = {
     URGENT_THRESHOLD: 5, // minutes
     UPDATE_INTERVAL: 30000, // milliseconds (30 seconds)
 };
-
-export const DEMO_LOCATIONS = [
-    {
-        id: 'meter_217',
-        name: 'Downtown Calgary',
-        address: '4th Avenue SW',
-        spotId: 'Meter 217',
-        coordinates: { lat: 51.0447, lng: -114.0719 },
-    },
-    {
-        id: 'meter_318',
-        name: 'Kensington',
-        address: 'Kensington Road NW',
-        spotId: 'Meter 318',
-        coordinates: { lat: 51.0522, lng: -114.1253 },
-    },
-    {
-        id: 'lot_a42',
-        name: 'Airport Parking',
-        address: 'Calgary International Airport',
-        spotId: 'Lot A-42',
-        coordinates: { lat: 51.1215, lng: -114.0076 },
-    },
-];
 
 export const VALIDATION = {
     PLATE: {

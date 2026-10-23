@@ -29,6 +29,14 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         color: TOKENS.textMuted,
         marginTop: 6,
+        textAlign: 'center',
+    },
+    headerLink: {
+        marginTop: 8,
+        paddingVertical: 6,
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
     },
 
     setupCard: {
@@ -92,6 +100,56 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
 
+    places: {
+        gap: 8,
+    },
+    place: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        minHeight: 56,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: TOKENS.surfaceMuted,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+    },
+    placeActive: {
+        backgroundColor: TOKENS.primaryWash,
+        borderColor: TOKENS.primary,
+    },
+    placePressed: {
+        opacity: 0.8,
+    },
+    placeText: {
+        flex: 1,
+        minWidth: 0,
+    },
+    placeTitle: {
+        fontSize: 15,
+        lineHeight: 20,
+        fontWeight: '600',
+        color: TOKENS.text,
+    },
+    placeDetail: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+        fontVariant: ['tabular-nums'],
+    },
+    zoneInput: {
+        minHeight: 50,
+        borderRadius: 12,
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
+    },
+
     durationGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -138,35 +196,6 @@ export const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-    rateOptions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    rateOption: {
-        flex: 1,
-        minHeight: 44,
-        borderRadius: 10,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    rateOptionActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
-    rateText: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.text,
-        fontVariant: ['tabular-nums'],
-    },
-    rateTextActive: {
-        color: '#fff',
-        fontWeight: '600',
-    },
-
     summaryBox: {
         paddingVertical: 16,
         paddingHorizontal: 16,
@@ -202,6 +231,21 @@ export const styles = StyleSheet.create({
         height: StyleSheet.hairlineWidth,
         backgroundColor: TOKENS.divider,
         marginVertical: 10,
+    },
+
+    // Directly above Start: the timer pays for nothing.
+    payLine: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        marginBottom: 12,
+    },
+    payLineText: {
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
+        color: TOKENS.text,
     },
 
     primaryButton: {

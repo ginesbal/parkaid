@@ -20,6 +20,7 @@
     "@react-navigation/native-stack": "^6.9.13",
     "@teovilla/react-native-web-maps": "^0.9.5",
     "expo": "~54.0.0",
+    "expo-clipboard": "~8.0.8",
     "expo-device": "~8.0.7",
     "expo-location": "~19.0.7",
     "expo-notifications": "~0.32.17",
@@ -51,6 +52,9 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "setupFiles": [
+      "./jest.setup.js"
+    ],
     "testMatch": [
       "**/__tests__/**/*.test.js"
     ]

@@ -137,6 +137,9 @@ export const styles = StyleSheet.create({
         lineHeight: 20,
         color: TOKENS.textMuted,
     },
+    lineActions: {
+        marginTop: SPACING.md,
+    },
 
     actions: {
         marginTop: SPACING['3xl'],

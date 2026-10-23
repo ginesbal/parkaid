@@ -37,7 +37,6 @@ export const useSessionManager = () => {
 
     // form state for new sessions
     const [vehiclePlate, setVehiclePlate] = useState('');
-    const [selectedRate, setSelectedRate] = useState(DEFAULT_VALUES.RATE);
     const [selectedDuration, setSelectedDuration] = useState(DEFAULT_VALUES.DURATION);
 
 
@@ -162,8 +161,11 @@ export const useSessionManager = () => {
 
 
     // action handlers
-    // `spot` is the spot handed over from Details; without one this is the demo flow.
-    const startSession = useCallback(async (spot = null) => {
+    // `spot`: the place picked on Park or handed over from Details. Without
+    // one the driver is "somewhere else", with the zone from the sign if
+    // they gave it, and no rate: ParkAid never makes one up.
+    // `duration`: the minutes shown on the setup, else the stored pick.
+    const startSession = useCallback(async (spot = null, { zone = null, duration: minutes = selectedDuration } = {}) => {
         if (!vehiclePlate.trim()) {
             Alert.alert(
                 'License Plate Required',
@@ -173,21 +175,20 @@ export const useSessionManager = () => {
         }
 
         const plate = vehiclePlate.trim().toUpperCase();
-        const spotRate = spot ? getHourlyRate(spot) : null;
-        // A real spot uses its own rate, or none when the data has none; only
-        // the demo flow uses the picked rate.
-        const hourlyRate = spot ? spotRate : selectedRate;
+        const hourlyRate = spot ? getHourlyRate(spot) : null;
         const maxDuration = spot ? getMaxStayMinutes(spot) : null;
-        const duration = maxDuration ? Math.min(selectedDuration, maxDuration) : selectedDuration;
+        const duration = maxDuration ? Math.min(minutes, maxDuration) : minutes;
         const startTime = new Date();
         const endTime = new Date(startTime.getTime() + duration * 60000);
         const name = spot ? getSpotName(spot) : null;
+        const zoneLabel = zone ? `Zone ${zone}` : null;
 
         const newSession = {
             id: `session_${Date.now()}`,
-            locationName: name?.title || 'Downtown Calgary',
-            locationAddress: spot ? (name.detail || getSpotKind(spot)) : '4th Avenue SW',
-            spotId: spot ? (getZoneLabel(spot) || getSpotKind(spot)) : 'Meter 217',
+            locationName: spot ? name.title : zoneLabel,
+            locationAddress: spot ? (name.detail || getSpotKind(spot)) : null,
+            // The ParkPlus zone ("Zone 1684"), or a lot's kind (see utils/parkPlus).
+            spotId: spot ? (getZoneLabel(spot) || getSpotKind(spot)) : zoneLabel,
             parkingSpotId: spot?.id ?? null,
             hourlyRate,
             duration, // minutes
@@ -197,7 +198,7 @@ export const useSessionManager = () => {
             scheduledEnd: endTime.toISOString(),
             vehiclePlate: plate,
             totalCost: hourlyRate === null ? null : (duration / 60) * hourlyRate,
-            rateNote: spot && hourlyRate === null ? getRateDisplay(spot).note : null,
+            rateNote: hourlyRate === null ? getRateDisplay(spot).note : null,
         };
 
         await saveSession(newSession);
@@ -210,7 +211,7 @@ export const useSessionManager = () => {
             console.warn('Failed to remember plate:', error);
         }
         return true;
-    }, [vehiclePlate, selectedRate, selectedDuration, saveSession]);
+    }, [vehiclePlate, selectedDuration, saveSession]);
 
     const extendSession = useCallback(async (additionalMinutes) => {
         if (!session) return;
@@ -277,8 +278,6 @@ export const useSessionManager = () => {
         // form state
         vehiclePlate,
         setVehiclePlate,
-        selectedRate,
-        setSelectedRate,
         selectedDuration,
         setSelectedDuration,
     };

@@ -6,6 +6,7 @@ import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapThumb from '../../components/MapThumb';
+import ParkPlusActions from '../../components/ParkPlusActions';
 import { TOKENS } from '../../constants/theme';
 import { logger } from '../../utils/loggers';
 import {
@@ -20,7 +21,7 @@ import {
 } from '../../utils/spotPresentation';
 import { styles } from './styles';
 
-function InfoLine({ icon, title, body }) {
+function InfoLine({ icon, title, body, zone }) {
     return (
         <View style={styles.line}>
             <View style={styles.lineIcon}>
@@ -29,6 +30,7 @@ function InfoLine({ icon, title, body }) {
             <View style={styles.lineText}>
                 <Text style={styles.lineTitle}>{title}</Text>
                 {body ? <Text style={styles.lineBody}>{body}</Text> : null}
+                {zone ? <ParkPlusActions zone={zone} style={styles.lineActions} /> : null}
             </View>
         </View>
     );
@@ -64,10 +66,12 @@ function buildLines(spot) {
 
     const zone = getZoneLabel(spot);
     if (zone) {
+        // ParkAid takes no payment; hand off to the City's app to pay.
         lines.push({
             icon: 'cellphone-text',
             title: `Pay at ${zone.toLowerCase()}`,
-            body: 'Enter this zone number in the ParkPlus app or at the pay station.',
+            body: 'Pay with this zone number in MyParking, the City’s ParkPlus app, or at a pay station.',
+            zone,
         });
     } else if (spot?.spot_type === 'off_street') {
         lines.push({ icon: 'boom-gate-outline', title: 'Pay at the lot', body: 'Rates and hours are posted at the entrance.' });

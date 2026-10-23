@@ -6,16 +6,20 @@ import BrandLoader from '../../components/BrandLoader';
 import LiveStage from '../../components/LiveStage';
 import { PENDING_SPOT_MAX_AGE, STORAGE_KEYS } from '../../constants/session';
 import { useSession } from '../../context/SessionContext';
+import { recallSearch } from '../../services/recentSearch';
 import { logger } from '../../utils/loggers';
 import { getSpotName } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
 import EmptyState from './components/EmptyState';
+import { ELSEWHERE } from './components/EmptyState/SpotPicker';
 import { styles } from './SessionScreen.styles';
 
 /**
  * SessionScreen - parking session management. Details hands a spot over as
  * the `spot` route param; it prefills the setup for that spot, and is kept
  * on the phone until its session starts, in case the app is closed first.
+ * Without one, the driver picks where they parked from the last search's
+ * closest places, or somewhere else.
  * The session itself lives in SessionContext, shared with Home and Map.
  */
 
@@ -49,8 +53,6 @@ export default function SessionScreen({ route, navigation }) {
     extendSession,
     vehiclePlate,
     setVehiclePlate,
-    selectedRate,
-    setSelectedRate,
     selectedDuration,
     setSelectedDuration,
     totalCost,
@@ -74,7 +76,7 @@ export default function SessionScreen({ route, navigation }) {
     rememberPendingSpot(routeSpot);
     if (session) {
       setNotice(
-        `You\u2019re already parked at ${session.locationName}. End this session to park at ${getSpotName(routeSpot).title}.`
+        `You\u2019re already parked${session.locationName ? ` at ${session.locationName}` : ''}. End this session to park at ${getSpotName(routeSpot).title}.`
       );
     }
   }, [routeSpot, isLoaded, session, navigation]);
@@ -89,6 +91,31 @@ export default function SessionScreen({ route, navigation }) {
       if (spot) setPendingSpot((current) => current ?? spot);
     });
   }, [isLoaded, routeSpot]);
+
+  // Where the car might be: the last search's closest places, read again
+  // each time Park opens, since Home or Map may have searched since.
+  const [recent, setRecent] = React.useState(null);
+  React.useEffect(() => {
+    if (hasSession || !navigation) return undefined;
+    const recall = () => recallSearch().then(setRecent);
+    recall();
+    return navigation.addListener('focus', recall);
+  }, [hasSession, navigation]);
+  const places = recent?.spots ?? [];
+
+  // The picked place's id, or ELSEWHERE. Until the driver picks, and if the
+  // pick is no longer offered, it is the closest place.
+  const [choice, setChoice] = React.useState(null);
+  const [zone, setZone] = React.useState('');
+  const picked = choice === ELSEWHERE
+    ? null
+    : places.find((spot) => String(spot.id) === choice) ?? places[0] ?? null;
+  const spot = pendingSpot ?? picked;
+
+  const pickAnother = React.useCallback(() => {
+    setPendingSpot(null);
+    rememberPendingSpot(null);
+  }, []);
 
   // The notice only applies to the session it was about.
   React.useEffect(() => {
@@ -120,19 +147,22 @@ export default function SessionScreen({ route, navigation }) {
     logger.log('session_view_empty');
   }, [hasSession, progress, timeRemaining]);
 
-  const handleStart = React.useCallback(() => {
+  // `duration`: what the setup shows, within the spot's maximum.
+  const handleStart = React.useCallback((duration) => {
     logger.log('session_start_request', {
       plate: vehiclePlate || null,
-      rate: selectedRate,
-      durationMin: selectedDuration,
-      spotId: pendingSpot?.id ?? null,
+      durationMin: duration,
+      spotId: spot?.id ?? null,
+      handedOver: Boolean(pendingSpot),
     });
-    startSession(pendingSpot).then((started) => {
+    startSession(spot, { zone: spot ? null : zone || null, duration }).then((started) => {
       if (!started) return;
       setPendingSpot(null);
       rememberPendingSpot(null);
+      setChoice(null);
+      setZone('');
     });
-  }, [vehiclePlate, selectedRate, selectedDuration, startSession, pendingSpot]);
+  }, [vehiclePlate, startSession, spot, pendingSpot, zone]);
 
   const handleExtend = React.useCallback((minutes) => {
     logger.log('session_extend_request', {
@@ -153,7 +183,6 @@ export default function SessionScreen({ route, navigation }) {
 
   const prevFormRef = React.useRef({
     plate: vehiclePlate,
-    rate: selectedRate,
     duration: selectedDuration,
   });
 
@@ -164,15 +193,11 @@ export default function SessionScreen({ route, navigation }) {
       logger.log('form_plate_changed', { plateLen: vehiclePlate?.length || 0 });
       prev.plate = vehiclePlate;
     }
-    if (selectedRate !== prev.rate) {
-      logger.log('form_rate_changed', { rate: selectedRate });
-      prev.rate = selectedRate;
-    }
     if (selectedDuration !== prev.duration) {
       logger.log('form_duration_changed', { minutes: selectedDuration });
       prev.duration = selectedDuration;
     }
-  }, [vehiclePlate, selectedRate, selectedDuration]);
+  }, [vehiclePlate, selectedDuration]);
 
   if (!isLoaded) {
     return (
@@ -190,12 +215,18 @@ export default function SessionScreen({ route, navigation }) {
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
         <ScreenStatusBar style="dark" />
         <EmptyState
-          spot={pendingSpot}
+          spot={spot}
+          handedOver={Boolean(pendingSpot)}
+          places={places}
+          searchedAt={recent?.savedAt ?? null}
+          choice={picked ? String(picked.id) : ELSEWHERE}
+          onChoose={setChoice}
+          onPickAnother={pickAnother}
+          zone={zone}
+          setZone={setZone}
           now={Date.now()}
           vehiclePlate={vehiclePlate}
           setVehiclePlate={setVehiclePlate}
-          selectedRate={selectedRate}
-          setSelectedRate={setSelectedRate}
           selectedDuration={selectedDuration}
           setSelectedDuration={setSelectedDuration}
           onStartSession={handleStart}

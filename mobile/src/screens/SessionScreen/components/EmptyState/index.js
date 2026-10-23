@@ -1,5 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 import BrandPin from '../../../../components/BrandPin';
+import { getPayLine } from '../../../../utils/parkPlus';
+import { formatClock } from '../../../../utils/sessionHelpers';
 import {
     getHourlyRate,
     getMaxStayMinutes,
@@ -8,30 +10,49 @@ import {
     getSpotName,
     getZoneLabel,
 } from '../../../../utils/spotPresentation';
-import InfoCard from '../shared/InfoCard';
 import SetupCard from './SetupCard';
+import SpotPicker from './SpotPicker';
 import { styles } from './styles';
 
 /**
- * EmptyState - no active session. Sets one up, either for the spot handed
- * over from Details or, without one, as the downtown demo.
+ * EmptyState - no active session. Sets one up for the spot handed over from
+ * Details or, without one, asks where the car is: one of the closest places
+ * from the last search, or somewhere else.
+ *
+ * spot:      the spot to set up (handed over, or picked); null for somewhere else
+ * handedOver: true when `spot` came from Details, so there is nothing to pick
+ * places:    the last search's closest places; searchedAt, when it ran (ms)
+ * zone:      for somewhere else, the zone number from the sign ('' for none)
  */
 const EmptyState = ({
     spot = null,
+    handedOver = false,
+    places = [],
+    searchedAt = null,
+    choice,
+    onChoose,
+    onPickAnother,
+    zone,
+    setZone,
     now,
     vehiclePlate,
     setVehiclePlate,
-    selectedRate,
-    setSelectedRate,
     selectedDuration,
     setSelectedDuration,
     onStartSession,
 }) => {
     const name = spot ? getSpotName(spot) : null;
-    const zone = spot ? getZoneLabel(spot) : null;
-    const subtitle = spot
-        ? [name.detail || getSpotKind(spot), zone].filter(Boolean).join(' · ')
-        : 'Set up a session for downtown Calgary';
+    const zoneLabel = spot ? getZoneLabel(spot) : (zone ? `Zone ${zone}` : null);
+    const rate = spot ? getHourlyRate(spot) : null;
+
+    let subtitle;
+    if (handedOver) {
+        subtitle = [name.detail || getSpotKind(spot), zoneLabel].filter(Boolean).join(' · ');
+    } else if (places.length) {
+        subtitle = `Closest to your search at ${formatClock(searchedAt)}`;
+    } else {
+        subtitle = 'Use the zone on the nearest parking sign.';
+    }
 
     return (
         <ScrollView
@@ -44,30 +65,31 @@ const EmptyState = ({
                     <BrandPin size={64} />
                 </View>
                 <Text style={styles.title} accessibilityRole="header">
-                    {spot ? `Park at ${name.title}` : 'You’re not parked yet'}
+                    {handedOver ? `Park at ${name.title}` : 'Where are you parked?'}
                 </Text>
                 <Text style={styles.subtitle}>{subtitle}</Text>
+                {handedOver ? (
+                    <Text style={styles.headerLink} onPress={onPickAnother} accessibilityRole="button">
+                        Parked somewhere else?
+                    </Text>
+                ) : null}
             </View>
 
             <SetupCard
+                where={handedOver ? null : (
+                    <SpotPicker places={places} choice={choice} onChoose={onChoose} zone={zone} setZone={setZone} />
+                )}
                 vehiclePlate={vehiclePlate}
                 setVehiclePlate={setVehiclePlate}
-                selectedRate={selectedRate}
-                setSelectedRate={setSelectedRate}
                 selectedDuration={selectedDuration}
                 setSelectedDuration={setSelectedDuration}
                 onStartSession={onStartSession}
-                fixedRate={spot ? getHourlyRate(spot) : null}
-                rateNote={spot && getHourlyRate(spot) === null ? getRateDisplay(spot).note : null}
+                rate={rate}
+                rateNote={rate === null ? getRateDisplay(spot).note : null}
                 maxMinutes={spot ? getMaxStayMinutes(spot) : null}
-                zoneLabel={zone}
+                zoneLabel={zoneLabel}
+                payLine={getPayLine({ zone: zoneLabel, lot: spot?.spot_type === 'off_street' })}
                 now={now}
-            />
-
-            <InfoCard
-                icon="information-outline"
-                text="This is a demo session, so no payment is taken. Session details stay on this device."
-                type="info"
             />
         </ScrollView>
     );

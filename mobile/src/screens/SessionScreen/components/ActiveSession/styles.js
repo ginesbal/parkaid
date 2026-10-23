@@ -35,13 +35,6 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    demo: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: TOKENS.textMuted,
-        letterSpacing: 0.3,
-        textTransform: 'uppercase',
-    },
     timeLabel: {
         marginTop: SPACING.md,
         fontSize: 14,
@@ -130,6 +123,17 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
         color: TOKENS.textMuted,
+    },
+    // Read before anything else under the place: the timer pays for nothing.
+    pay: {
+        marginTop: SPACING.md,
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
+        color: TOKENS.text,
+    },
+    payActions: {
+        marginTop: SPACING.md,
     },
     kv: {
         flexDirection: 'row',

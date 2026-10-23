@@ -35,32 +35,4 @@ export const styles = StyleSheet.create({
     statusTextDanger: {
         color: TOKENS.danger,
     },
-
-    // InfoCard → hairline divider rows, no bg
-    infoCard: {
-        marginTop: 18,
-        flexDirection: 'row',
-        gap: 10,
-        paddingVertical: 14,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: TOKENS.hairline,
-    },
-    infoCardWarning: {},
-    infoCardError: {},
-    infoIcon: {
-        color: TOKENS.textMuted,
-    },
-    infoIconWarning: {
-        color: TOKENS.warning,
-    },
-    infoIconError: {
-        color: TOKENS.danger,
-    },
-    infoText: {
-        flex: 1,
-        fontSize: 13,
-        lineHeight: 18,
-        color: TOKENS.textMuted,
-        fontWeight: '400',
-    },
 });

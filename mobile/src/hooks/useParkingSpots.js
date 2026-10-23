@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { parkingAPI } from '../services/api';
+import { rememberSearch } from '../services/recentSearch';
 
 export function useParkingSpots(location, radius, filterType = 'all') {
     const [spots, setSpots] = useState([]);
@@ -64,6 +65,8 @@ export function useParkingSpots(location, radius, filterType = 'all') {
 
                 if (isCurrent()) {
                     setSpots(response?.data || []);
+                    // Offered on Park as where the car might be.
+                    rememberSearch(response?.data);
                 }
             } catch (err) {
                 if (isCurrent()) {

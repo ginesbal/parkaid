@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
+import ParkPlusActions from '../../../../components/ParkPlusActions';
 import { MOTION, TOKENS } from '../../../../constants/theme';
 import { formatMoney } from '../../../../utils/formatters';
+import { getSessionPayLine, getSessionZone } from '../../../../utils/parkPlus';
 import { formatClock, formatDuration, formatRemaining } from '../../../../utils/sessionHelpers';
 import StatusBadge from '../shared/StatusBadge';
 import { styles } from './styles';
@@ -21,6 +23,7 @@ function Row({ label, value }) {
 /**
  * TimerCard - the white card on the ink canvas: time left as people say it,
  * when it ends, where, and a plain-text warning when it is time to head back.
+ * It says the timer pays for nothing, and hands off to ParkPlus to pay.
  */
 export default function TimerCard({ session, sessionState, timeRemainingMs, endTime, totalCost }) {
     const total = Math.max(1, (session?.duration || 1) * 60000);
@@ -42,6 +45,11 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
     const walk = session?.walkMinutes;
     const remaining = formatRemaining(timeRemainingMs);
     const endsAt = formatClock(endTime);
+    const zone = getSessionZone(session);
+    // "Somewhere else" with a zone is named after it; say it once.
+    const placeDetail = [session.locationAddress, session.spotId]
+        .filter((part) => part && part !== session.locationName)
+        .join(' · ');
 
     let warning = null;
     if (expired) {
@@ -56,7 +64,6 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
         <View style={styles.card}>
             <View style={styles.cardTop}>
                 <StatusBadge state={sessionState} />
-                <Text style={styles.demo}>Demo</Text>
             </View>
 
             <Text style={styles.timeLabel}>{expired ? 'Session ended' : 'Time left'}</Text>
@@ -96,10 +103,10 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
             ) : null}
 
             <View style={styles.place}>
-                <Text style={styles.placeName}>{session.locationName}</Text>
-                <Text style={styles.placeDetail}>
-                    {[session.locationAddress, session.spotId].filter(Boolean).join(' · ')}
-                </Text>
+                {session.locationName ? <Text style={styles.placeName}>{session.locationName}</Text> : null}
+                {placeDetail ? <Text style={styles.placeDetail}>{placeDetail}</Text> : null}
+                <Text style={styles.pay}>{getSessionPayLine(session)}</Text>
+                {zone ? <ParkPlusActions zone={zone} style={styles.payActions} /> : null}
             </View>
 
             <Row label="Vehicle" value={session.vehiclePlate} />
@@ -111,7 +118,7 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
                     : `${formatMoney(session.hourlyRate)} / hour`}
             />
             {totalCost !== null ? (
-                <Row label={`Total for ${formatDuration(session.duration)}`} value={formatMoney(totalCost)} />
+                <Row label={`Cost for ${formatDuration(session.duration)}`} value={formatMoney(totalCost)} />
             ) : null}
         </View>
     );

@@ -21,9 +21,12 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
   somewhere else.
 - Opens a details page for each spot: the rate and when it is charged, the
   ParkPlus zone to pay at, the maximum stay, the walk, and directions.
-- Runs a demo parking session for that spot. You see the end time and total
-  before you start, durations stay within the posted maximum, and it tells
-  you when it is time to walk back.
+- Times your parking. Pick where you parked from your last search, or give
+  the zone from the sign. You see the end time and the cost before you start,
+  durations stay within the posted maximum, and it tells you when it is time
+  to walk back.
+- Says plainly that it does not pay the City. Copy the zone and open
+  MyParking, the City's ParkPlus app, to pay.
 - Keeps working when the network drops. Responses are cached on the phone, so
   the app shows the last data it had instead of an error.
 - Respects the phone's Reduce Motion setting and screen reader labels.

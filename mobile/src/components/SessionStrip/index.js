@@ -38,18 +38,20 @@ export default function SessionStrip({ navigation, hidden }) {
     const expired = sessionState === 'expired';
     const left = expired ? 'Time’s up' : `${formatRemaining(timeRemainingMs)} left`;
     const ends = expired ? `Ended at ${formatClock(endTime)}` : `Ends at ${formatClock(endTime)}`;
+    // "Somewhere else" without a zone has no name.
+    const parked = session.locationName ? `Parked at ${session.locationName}` : 'You’re parked';
 
     return (
         <Pressable
             onPress={() => navigation.navigate('Park')}
             style={({ pressed }) => [styles.strip, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel={`Parked at ${session.locationName}. ${left}. ${ends}.`}
+            accessibilityLabel={`${parked}. ${left}. ${ends}.`}
             accessibilityHint="Opens your parking session"
         >
             <View style={[styles.dot, { backgroundColor: DOT[sessionState] || DOT.active }]} />
             <View style={styles.place}>
-                <Text style={styles.title} numberOfLines={1}>Parked at {session.locationName}</Text>
+                <Text style={styles.title} numberOfLines={1}>{parked}</Text>
                 <Text style={styles.ends} numberOfLines={1}>{ends}</Text>
             </View>
             <Text style={styles.left} numberOfLines={1}>{left}</Text>
