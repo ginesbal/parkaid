@@ -200,7 +200,7 @@ function AppNavigation() {
     if (!initialRoute) {
         return (
             <LiveStage style={navStyles.boot} insetBottom={insets.bottom}>
-                <BrandLoader size={88} delay={400} live />
+                <BrandLoader size={140} delay={400} live />
             </LiveStage>
         );
     }

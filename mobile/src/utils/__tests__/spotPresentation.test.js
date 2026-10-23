@@ -103,3 +103,26 @@ describe('time limits', () => {
         expect(getMaxStayLabel({})).toBeNull();
     });
 });
+
+describe('ranking', () => {
+    const { permitLast, rankSpots, sortByWalk } = require('../spotPresentation');
+    const spot = (id, distance, price, type = 'on_street') => ({
+        id, distance, walkingTime: Math.ceil(distance / 80), price_per_hour: price, spot_type: type,
+    });
+
+    it('puts the cheaper spot first when the walk is the same', () => {
+        const ranked = sortByWalk([spot('a', 140, 6), spot('b', 150, 3), spot('c', 60, 9)]);
+        expect(ranked.map((s) => s.id)).toEqual(['c', 'b', 'a']);
+    });
+
+    it('keeps a known rate ahead of an unknown one for the same walk', () => {
+        const ranked = sortByWalk([spot('lot', 100, 0, 'off_street'), spot('street', 120, 4)]);
+        expect(ranked.map((s) => s.id)).toEqual(['street', 'lot']);
+    });
+
+    it('lists permit-only blocks last, unless asked for', () => {
+        const spots = [spot('p', 40, 0, 'residential'), spot('a', 140, 6)];
+        expect(rankSpots(spots).map((s) => s.id)).toEqual(['a', 'p']);
+        expect(permitLast(sortByWalk(spots), 'residential').map((s) => s.id)).toEqual(['p', 'a']);
+    });
+});

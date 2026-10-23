@@ -1,6 +1,6 @@
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, FlatList, LayoutAnimation, Linking, Platform, RefreshControl, UIManager, View } from 'react-native';
+import { Animated, FlatList, LayoutAnimation, Linking, Platform, RefreshControl, Text, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BrandLoader from '../../components/BrandLoader';
@@ -20,11 +20,14 @@ import { describeLocation } from '../../utils/geo';
 import { getGreeting } from '../../utils/greeting';
 import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
-import { isCovered, pickTopSpot, sortByDistance, sortByValue } from '../../utils/spotPresentation';
+import { isCovered, permitLast, pickTopSpot, rankSpots, sortByValue } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
 import { styles } from './HomeScreen.styles';
+
+// Marks where permit-only blocks start in the list.
+const PERMIT_HEADING = { heading: 'permit' };
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -92,12 +95,14 @@ export default function HomeScreen({ navigation }) {
     wasLoadingRef.current = loading;
   }, [loading]);
 
+  // Nearest by walk (the cheaper first for the same walk), or cheapest first;
+  // permit-only blocks after everywhere a visitor can park.
   const visibleSpots = useMemo(() => {
     const list = Array.isArray(spots) ? spots : [];
-    if (view === 'covered') return sortByDistance(list.filter(isCovered));
-    if (view === 'value') return sortByValue(list);
-    return sortByDistance(list);
-  }, [spots, view]);
+    if (view === 'covered') return rankSpots(list.filter(isCovered));
+    if (view === 'value') return permitLast(sortByValue(list), activeFilter);
+    return rankSpots(list, activeFilter);
+  }, [spots, view, activeFilter]);
 
   const topPick = useMemo(
     () => (visibleSpots.length ? pickTopSpot(visibleSpots, activeFilter) : null),
@@ -107,6 +112,13 @@ export default function HomeScreen({ navigation }) {
     () => visibleSpots.filter((s) => s !== topPick),
     [visibleSpots, topPick]
   );
+  // Permit-only blocks get their own heading, unless that is all the driver asked for.
+  const { parkable, listData } = useMemo(() => {
+    if (activeFilter === 'residential') return { parkable: restSpots, listData: restSpots };
+    const open = restSpots.filter((s) => s.spot_type !== 'residential');
+    const permits = restSpots.filter((s) => s.spot_type === 'residential');
+    return { parkable: open, listData: permits.length ? [...open, PERMIT_HEADING, ...permits] : open };
+  }, [restSpots, activeFilter]);
 
   // Re-read on each render; a screen left open past noon should say so.
   const greeting = getGreeting();
@@ -248,9 +260,11 @@ export default function HomeScreen({ navigation }) {
     return <LoadingState searchRadius={searchRadius} phase={isLoadingLocation ? 'location' : 'spots'} />;
   }
 
-  const renderSpot = ({ item }) => (
+  const renderSpot = ({ item }) => (item === PERMIT_HEADING ? (
+    <Text style={styles.listHeading} accessibilityRole="header">Permit holders only</Text>
+  ) : (
     <ParkingList.Item spot={item} onPress={handleSpotPress} />
-  );
+  ));
 
   const emptyComponent = loading ? (
     <View style={styles.updating}>
@@ -274,9 +288,9 @@ export default function HomeScreen({ navigation }) {
         <LiveStage>
           <Animated.View style={[styles.content, contentIn]}>
           <FlatList
-            data={restSpots}
+            data={listData}
             renderItem={renderSpot}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => (item === PERMIT_HEADING ? 'permit-heading' : String(item.id))}
             ListHeaderComponent={
               <Header
                 greeting={greeting}
@@ -295,7 +309,7 @@ export default function HomeScreen({ navigation }) {
                 setSearchRadius={setSearchRadius}
                 topPick={topPick}
                 onViewSpot={handleSpotPress}
-                moreCount={restSpots.length}
+                moreCount={parkable.length}
                 savedNote={describeSaved({ savedAt, stale, updating: loading })}
               />
             }

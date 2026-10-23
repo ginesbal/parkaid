@@ -13,7 +13,7 @@ import { RADIUS, SPACING, TOKENS, alpha } from '../../constants/theme';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { distanceMeters } from '../../utils/geo';
-import { getCoordinates, getSpotName, pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
+import { getCoordinates, getSpotName, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
 import SpotPill, { getMarkerDescription } from './components/SpotPill';
 
@@ -56,9 +56,11 @@ export default function MapScreen({ route, navigation }) {
 
     const { spots, loading, error, savedAt, stale, refetch } = useParkingSpots(center, SEARCH_RADIUS, 'all');
 
+    // The sheet's order, as on Home: by walk, permit-only last.
+    const rankedSpots = useMemo(() => rankSpots(spots), [spots]);
     const featuredSpot = useMemo(
-        () => selectedSpot || pickTopSpot(sortByDistance(spots || [])),
-        [selectedSpot, spots]
+        () => selectedSpot || pickTopSpot(rankedSpots),
+        [selectedSpot, rankedSpots]
     );
 
     // Centre the search area in the space above the sheet's peek, below the
@@ -153,7 +155,7 @@ export default function MapScreen({ route, navigation }) {
             />
 
             <ParkingBottomSheet
-                spots={spots}
+                spots={rankedSpots}
                 // Waiting for a location counts as loading, not as "no spots".
                 loading={loading || !center}
                 error={error}

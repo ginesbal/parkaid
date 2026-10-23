@@ -20,4 +20,12 @@ export const styles = StyleSheet.create({
     footer: {
         height: 24,
     },
+    // Matches "7 more nearby" above the list (Header styles.moreLabel).
+    listHeading: {
+        paddingHorizontal: 20,
+        marginTop: 24,
+        fontSize: 13,
+        fontWeight: '600',
+        color: TOKENS.textMuted,
+    },
 });

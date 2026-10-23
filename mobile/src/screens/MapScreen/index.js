@@ -24,7 +24,7 @@ import { MOTION } from '../../constants/theme';
 // logs
 import { nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
-import { pickTopSpot, sortByDistance } from '../../utils/spotPresentation';
+import { pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 
 // files specific to this screen
 import { useParkingSpots } from '../../hooks/useParkingSpots';
@@ -231,10 +231,14 @@ function MapScreen({ route, navigation }) {
         navigation?.navigate('Details', { spot });
     }, [navigation]);
 
+    // The sheet's order, as on Home: by walk, the cheaper first for the same
+    // walk, permit-only last.
+    const rankedSpots = useMemo(() => rankSpots(spots, filterType), [spots, filterType]);
+
     // Selected spot, else the closest worthwhile suggestion.
     const featuredSpot = useMemo(
-        () => selectedSpot || pickTopSpot(sortByDistance(spots || []), filterType),
-        [selectedSpot, spots, filterType]
+        () => selectedSpot || pickTopSpot(rankedSpots, filterType),
+        [selectedSpot, rankedSpots, filterType]
     );
 
     const searchCenter = useMemo(() => (
@@ -454,7 +458,7 @@ function MapScreen({ route, navigation }) {
             {/* parking bottom sheet */}
             <ParkingBottomSheet
                 ref={bottomSheetRef}
-                spots={spots}
+                spots={rankedSpots}
                 // Waiting for a location counts as loading, not as "no spots".
                 loading={spotsLoading || !searchLocation}
                 error={spotsError}

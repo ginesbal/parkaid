@@ -93,6 +93,42 @@ export function sortByDistance(spots) {
     return [...spots].sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 }
 
+const walkMinutes = (spot) => {
+    const minutes = Number(spot?.walkingTime);
+    return Number.isFinite(minutes) ? minutes : Math.ceil((spot?.distance ?? Infinity) / 80);
+};
+
+// Nearest by walk; for the same walk, the cheaper known rate first (an
+// unknown rate after a known one), then the nearer.
+export function sortByWalk(spots) {
+    return [...spots].sort((a, b) => {
+        const wa = walkMinutes(a);
+        const wb = walkMinutes(b);
+        if (wa !== wb) return wa - wb;
+        const ra = getHourlyRate(a);
+        const rb = getHourlyRate(b);
+        if (ra !== null && rb !== null && ra !== rb) return ra - rb;
+        if (ra === null && rb !== null) return 1;
+        if (rb === null && ra !== null) return -1;
+        return (a.distance ?? Infinity) - (b.distance ?? Infinity);
+    });
+}
+
+// Permit-only blocks after everywhere a visitor can park, unless the driver
+// asked for permit zones.
+export function permitLast(spots, activeFilter = 'all') {
+    if (activeFilter === 'residential') return spots;
+    return [
+        ...spots.filter((s) => s.spot_type !== 'residential'),
+        ...spots.filter((s) => s.spot_type === 'residential'),
+    ];
+}
+
+// The order every list and map uses for "near": by walk, permit-only last.
+export function rankSpots(spots, activeFilter = 'all') {
+    return permitLast(sortByWalk(spots || []), activeFilter);
+}
+
 // The first spot worth suggesting from an already-sorted list. Permit-only
 // blocks are a poor first suggestion unless the driver asked for them.
 export function pickTopSpot(spots, activeFilter = 'all') {
