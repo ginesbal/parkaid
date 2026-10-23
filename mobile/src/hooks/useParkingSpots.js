@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { parkingAPI } from '../services/api';
+import { FALLBACK_TIMEOUT, FRESH_FOR, parkingAPI } from '../services/api';
 import { rememberSearch } from '../services/recentSearch';
 
 // spots, loading, refetch, and:
@@ -59,22 +59,32 @@ export function useParkingSpots(location, radius, filterType = 'all') {
             setLoading(true);
             setError(null);
 
-            try {
-                const params = filterType !== 'all' ? { type: filterType } : {};
-                const response = await parkingAPI.findNearbySpots(
-                    location.latitude,
-                    location.longitude,
-                    radius,
-                    params,
-                    { fresh }
-                );
+            const { latitude, longitude } = location;
+            const params = filterType !== 'all' ? { type: filterType } : {};
+            const show = (response) => {
+                setSpots(response?.data || []);
+                setSaved({ savedAt: response?.savedAt ?? null, stale: response?.staleBecause ?? null });
+                // Offered on Park as where the car might be.
+                rememberSearch(response?.data);
+            };
 
-                if (isCurrent()) {
-                    setSpots(response?.data || []);
-                    setSaved({ savedAt: response?.savedAt ?? null, stale: response?.staleBecause ?? null });
-                    // Offered on Park as where the car might be.
-                    rememberSearch(response?.data);
+            try {
+                // A saved copy first, so the list shows at once; it is refreshed
+                // below unless it is only minutes old. (Refresh and Retry skip
+                // it: the list on screen stays until the new one comes.)
+                const saved = fresh ? null : await parkingAPI.peekNearbySpots(latitude, longitude, radius, params);
+                if (saved && isCurrent()) {
+                    show(saved);
+                    if (Date.now() - saved.savedAt < FRESH_FOR) return;
                 }
+                if (!isCurrent()) return;
+
+                // With something to fall back on, give up on a slow network sooner.
+                const response = await parkingAPI.findNearbySpots(latitude, longitude, radius, params, {
+                    fresh: true,
+                    timeout: saved ? FALLBACK_TIMEOUT : undefined,
+                });
+                if (isCurrent()) show(response);
             } catch (err) {
                 if (isCurrent()) {
                     setError(err?.kind || 'server');

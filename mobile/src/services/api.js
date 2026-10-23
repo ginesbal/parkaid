@@ -19,7 +19,12 @@ export class ApiError extends Error {
   }
 }
 
+// How long to wait for an answer. With a saved copy on screen to fall back
+// on, ParkAid gives up sooner (see useParkingSpots).
 const REQUEST_TIMEOUT = 8000;
+export const FALLBACK_TIMEOUT = 4000;
+// A saved copy younger than this is used without asking the network.
+export const FRESH_FOR = CACHE_TTL;
 
 class ParkingAPI {
   constructor() {
@@ -99,7 +104,7 @@ class ParkingAPI {
 
   async _performRequest(url, options, cacheKey) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    const timeout = setTimeout(() => controller.abort(), options.timeout || REQUEST_TIMEOUT);
 
     try {
       console.log(`Fetching: ${url}`);
@@ -164,7 +169,7 @@ class ParkingAPI {
   }
 
   // API Methods
-  async findNearbySpots(lat, lng, radius = 500, params = {}, { fresh = false } = {}) {
+  nearbyEndpoint(lat, lng, radius, params = {}) {
     const queryParams = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
@@ -172,8 +177,18 @@ class ParkingAPI {
       ...(params.type && params.type !== 'all' ? { type: params.type } : {}),
       ...(params.free ? { free: 'true' } : {})
     });
+    return `/api/parking/nearby?${queryParams}`;
+  }
 
-    return this.request(`/api/parking/nearby?${queryParams}`, { fresh });
+  async findNearbySpots(lat, lng, radius = 500, params = {}, { fresh = false, timeout } = {}) {
+    return this.request(this.nearbyEndpoint(lat, lng, radius, params), { fresh, timeout });
+  }
+
+  // The saved copy of a search, however old (up to a day), without asking the
+  // network: { ...response, savedAt }, or null.
+  async peekNearbySpots(lat, lng, radius = 500, params = {}) {
+    const entry = await this.getCache(this.getCacheKey(this.nearbyEndpoint(lat, lng, radius, params)), OFFLINE_TTL);
+    return entry ? { ...entry.data, savedAt: entry.timestamp, staleBecause: null } : null;
   }
 
   // utilities

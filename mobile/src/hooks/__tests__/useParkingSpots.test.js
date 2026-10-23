@@ -3,8 +3,11 @@ import { parkingAPI } from '../../services/api';
 import { useParkingSpots } from '../useParkingSpots';
 
 jest.mock('../../services/api', () => ({
+    FALLBACK_TIMEOUT: 4000,
+    FRESH_FOR: 300000,
     parkingAPI: {
         findNearbySpots: jest.fn(),
+        peekNearbySpots: jest.fn(),
     },
 }));
 
@@ -14,6 +17,7 @@ describe('useParkingSpots', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
+        parkingAPI.peekNearbySpots.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -52,7 +56,7 @@ describe('useParkingSpots', () => {
             -114.0,
             500,
             {},
-            { fresh: false }
+            { fresh: true, timeout: undefined }
         );
     });
 
@@ -93,7 +97,7 @@ describe('useParkingSpots', () => {
         await act(async () => {
             jest.advanceTimersByTime(300);
         });
-        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: false });
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true, timeout: undefined });
 
         await act(async () => {
             result.current.refetch();
@@ -103,7 +107,37 @@ describe('useParkingSpots', () => {
         });
 
         expect(parkingAPI.findNearbySpots).toHaveBeenCalledTimes(2);
-        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true });
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true, timeout: undefined });
+        // Refresh does not go back to the saved copy first.
+        expect(parkingAPI.peekNearbySpots).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a saved copy at once, then the fresh answer', async () => {
+        let answer;
+        parkingAPI.peekNearbySpots.mockResolvedValue({ data: [{ id: 'saved' }], savedAt: Date.now() - 20 * 60000 });
+        parkingAPI.findNearbySpots.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.spots).toEqual([{ id: 'saved' }]);
+        expect(result.current.loading).toBe(true);
+        // Something to fall back on: give up on the network sooner.
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true, timeout: 4000 });
+        await act(async () => answer({ data: [{ id: 'fresh' }], savedAt: Date.now() }));
+        expect(result.current.spots).toEqual([{ id: 'fresh' }]);
+        expect(result.current.loading).toBe(false);
+    });
+
+    it('uses a saved copy only minutes old without asking the network', async () => {
+        parkingAPI.peekNearbySpots.mockResolvedValue({ data: [{ id: 'saved' }], savedAt: Date.now() - 60000 });
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.spots).toEqual([{ id: 'saved' }]);
+        expect(result.current.loading).toBe(false);
+        expect(parkingAPI.findNearbySpots).not.toHaveBeenCalled();
     });
 
     it('ignores a slower, older response', async () => {

@@ -247,7 +247,8 @@ export default function HomeScreen({ navigation }) {
   const [scrolled, setScrolled] = useState(false);
 
   // The loader hands over to the list with one soft rise, not a hard cut.
-  const showLoader = isLoadingLocation || (!hasFetched && !error);
+  // A saved list on screen ends it at once; the header then says "Updating…".
+  const showLoader = isLoadingLocation || (!hasFetched && !error && !spots?.length);
   const [contentIn] = useEntrance(1, !showLoader);
 
   // initial loading state
