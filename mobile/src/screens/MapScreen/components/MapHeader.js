@@ -3,7 +3,7 @@ import { memo, useCallback, useState } from 'react';
 import { LayoutAnimation, Platform, Pressable, Text, UIManager, View } from 'react-native';
 import PlacesSearchBar from '../../../components/PlacesAutocomplete/PlacesSearchBar';
 import { DEFAULT_SEARCH_RADIUS } from '../../../constants/parking';
-import { TOKENS } from '../../../constants/theme';
+import { SELECTED, TOKENS } from '../../../constants/theme';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import { DISTANCE_OPTIONS, TYPE_OPTIONS } from '../../../utils/filters';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
@@ -69,7 +69,7 @@ function MapHeader({
                     <MaterialCommunityIcons
                         name="tune-vertical"
                         size={20}
-                        color={filtersExpanded ? '#fff' : TOKENS.primaryAlt}
+                        color={filtersExpanded ? SELECTED.icon : TOKENS.primaryAlt}
                     />
                     {activeFilterCount > 0 && !filtersExpanded && (
                         <View style={styles.filterBadge}>
@@ -93,7 +93,7 @@ function MapHeader({
                         <MaterialCommunityIcons
                             name="map-marker"
                             size={20}
-                            color={searchMode === 'pinned' ? '#fff' : TOKENS.primaryAlt}
+                            color={searchMode === 'pinned' ? SELECTED.icon : TOKENS.primaryAlt}
                         />
                     </Pressable>
                 ) : (
@@ -139,6 +139,7 @@ function MapHeader({
                             accessibilityRole="button"
                             aria-selected={filterType === f.key}
                         >
+                            {filterType === f.key ? <MaterialCommunityIcons name="check" size={14} color={SELECTED.icon} /> : null}
                             <Text style={[
                                 styles.miniChipText,
                                 filterType === f.key && styles.miniChipTextActive,
@@ -165,6 +166,7 @@ function MapHeader({
                             accessibilityRole="button"
                             aria-selected={searchRadius === meters}
                         >
+                            {searchRadius === meters ? <MaterialCommunityIcons name="check" size={14} color={SELECTED.icon} /> : null}
                             <Text style={[
                                 styles.miniChipText,
                                 searchRadius === meters && styles.miniChipTextActive,

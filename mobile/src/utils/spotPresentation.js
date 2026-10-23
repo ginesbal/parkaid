@@ -29,6 +29,19 @@ export function getSpotKind(spot) {
     return KIND_LABELS[spot?.spot_type] || 'Parking';
 }
 
+// Words kept in capitals when a shouted City name is put in title case.
+const KEEP_CAPS = new Set(['NW', 'NE', 'SW', 'SE', 'CPA']);
+
+// "6 AV SW" -> "6 Av SW", "COLLINGWOOD PL NW" -> "Collingwood Pl NW",
+// "6TH ST" -> "6th St". Text already in mixed case is left alone.
+export function tidyName(text) {
+    const value = (text || '').replace(/\s+/g, ' ').trim();
+    if (/[a-z]/.test(value)) return value;
+    return value.split(' ').map((word) => (
+        KEEP_CAPS.has(word) ? word : word.charAt(0) + word.slice(1).toLowerCase()
+    )).join(' ');
+}
+
 // { title, detail }: "Eau Claire Av SW" + "4 St SW to 5 St SW"
 export function getSpotName(spot) {
     const address = (spot?.address || '').trim();
@@ -38,15 +51,22 @@ export function getSpotName(spot) {
 
     const block = address.match(/^(.+?)\s*,\s*Fr\s+(.+?)\s+To\s+(.+)$/i);
     if (block) {
-        return { title: block[1].trim(), detail: `${block[2].trim()} to ${block[3].trim()}` };
+        return { title: tidyName(block[1]), detail: `${tidyName(block[2])} to ${tidyName(block[3])}` };
+    }
+
+    // Permit zones: "00 Block 6 AV SW" is the 0 to 99 block of 6 Av SW.
+    const hundred = address.match(/^(\d+)\s+Block\s+(.+)$/i);
+    if (hundred) {
+        const start = Number(hundred[1]);
+        return { title: tidyName(hundred[2]), detail: `Block ${start}–${start + 99}` };
     }
 
     const colon = address.indexOf(':');
     if (colon > 0) {
-        return { title: address.slice(0, colon).trim(), detail: address.slice(colon + 1).trim() };
+        return { title: tidyName(address.slice(0, colon)), detail: tidyName(address.slice(colon + 1)) };
     }
 
-    return { title: address, detail: '' };
+    return { title: tidyName(address), detail: '' };
 }
 
 // The ParkPlus zone a driver types to pay. On-street only.

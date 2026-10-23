@@ -98,7 +98,8 @@ export const TOKENS = {
     accentAlt: PALETTE.cerulean[400],
 
     // semantic — single value each, no ramps
-    danger: '#B5524A',
+    danger: '#B5524A',                                 // fills and icons; 4.4:1, too light for text
+    dangerInk: '#9C3F37',                              // danger as text: 6.6:1 on white
     dangerSoft: 'rgba(181, 82, 74, 0.08)',
     success: '#2C7A6B',
     successSoft: 'rgba(44, 122, 107, 0.08)',
@@ -110,14 +111,31 @@ export const TOKENS = {
     inkSurface: PALETTE.prussian[500],
     inkMuted: '#A3B1BF',                               // 8:1 on inkSurface
 
-    // map illustration — thumbnails and the web map preview, not the live map
+    // map illustration — the web map preview, not the live map
     mapLand: '#E3E9EE',
     mapWater: '#CFE2EC',
     mapPark: '#DCEADB',
+    // "you are here", the blue every phone map uses for it
+    locationDot: '#2F7DF6',
 
     shadow: '#0F1A26',
     focus: alpha(PALETTE.cerulean[500], 0.22),
     focusRing: alpha(PALETTE.cerulean[500], 0.22),
+};
+
+// One look for "this one is chosen", on every chip, option, tile and toggle:
+// a cerulean fill with ink-blue text or icon, plus a check or radio mark so
+// it never rests on colour alone. Spread onto the unselected style.
+export const SELECTED = {
+    surface: {
+        backgroundColor: TOKENS.primaryFill,
+        borderColor: TOKENS.primaryFill,
+    },
+    text: {
+        color: TOKENS.primaryInk,
+        fontWeight: '600',
+    },
+    icon: TOKENS.primaryInk,
 };
 
 export const SPACING = {

@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
         width: 18,
         height: 18,
         borderRadius: 9,
-        backgroundColor: '#2F7DF6',
+        backgroundColor: TOKENS.locationDot,
         borderWidth: 3,
         borderColor: TOKENS.surface,
     },

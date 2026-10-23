@@ -24,6 +24,19 @@ const street = (over = {}) => ({
 });
 
 describe('getSpotName', () => {
+    it('reads a permit block as its street and block', () => {
+        expect(getSpotName({ spot_type: 'residential', address: '00 Block 6 AV SW' }))
+            .toEqual({ title: '6 Av SW', detail: 'Block 0–99' });
+        expect(getSpotName({ spot_type: 'residential', address: '1200 Block COLLINGWOOD PL NW' }))
+            .toEqual({ title: 'Collingwood Pl NW', detail: 'Block 1200–1299' });
+    });
+
+    it('puts shouted names in title case, keeping quadrants and CPA', () => {
+        expect(getSpotName({ address: 'CPA LOT 11: 640 7TH AV SW' }))
+            .toEqual({ title: 'CPA Lot 11', detail: '640 7th Av SW' });
+        expect(getSpotName({ address: 'CPA Lot 28: 455 6th St SW' }).detail).toBe('455 6th St SW');
+    });
+
     it('splits a block face into street and cross streets', () => {
         expect(getSpotName(street())).toEqual({ title: 'Eau Claire Av SW', detail: '4 St SW to 5 St SW' });
     });

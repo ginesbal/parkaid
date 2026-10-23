@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     fontWeight: '500',
-    color: TOKENS.danger,
+    color: TOKENS.dangerInk,
     textAlign: 'center',
     lineHeight: 18,
   },

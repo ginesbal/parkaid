@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, SPACING, TOKENS } from '../../../../constants/theme';
+import { RADIUS, SELECTED, SPACING, TOKENS } from '../../../../constants/theme';
 
 // Every tappable control here is at least 44pt tall.
 const CONTROL = 48;
@@ -141,6 +141,9 @@ export const styles = StyleSheet.create({
         paddingHorizontal: SPACING.lg,
     },
     filterOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
         minHeight: 44,
         paddingHorizontal: SPACING.lg,
         borderRadius: RADIUS.md,
@@ -150,18 +153,15 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     filterOptionSelected: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
+        ...SELECTED.surface,
+        paddingLeft: SPACING.md,
     },
     filterOptionText: {
         fontSize: 14,
         fontWeight: '500',
         color: TOKENS.text,
     },
-    filterOptionTextSelected: {
-        color: TOKENS.surface,
-        fontWeight: '600',
-    },
+    filterOptionTextSelected: SELECTED.text,
 
     // View chips
     chipRow: {
@@ -183,18 +183,15 @@ export const styles = StyleSheet.create({
         borderColor: TOKENS.hairlineStrong,
     },
     chipSelected: {
+        ...SELECTED.surface,
         paddingLeft: SPACING.md,
-        backgroundColor: TOKENS.primaryFill,
-        borderColor: 'transparent',
     },
     chipText: {
         fontSize: 14,
         fontWeight: '600',
         color: TOKENS.text,
     },
-    chipTextSelected: {
-        color: TOKENS.primaryInk,
-    },
+    chipTextSelected: SELECTED.text,
 
     sectionHead: {
         flexDirection: 'row',

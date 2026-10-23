@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS, alpha } from '../../../../constants/theme';
+import { SELECTED, TOKENS, alpha } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     scrollContent: {
@@ -91,10 +91,7 @@ export const styles = StyleSheet.create({
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
     },
-    placeActive: {
-        backgroundColor: TOKENS.primaryWash,
-        borderColor: TOKENS.primary,
-    },
+    placeActive: SELECTED.surface,
     placePressed: {
         opacity: 0.8,
     },
@@ -144,22 +141,21 @@ export const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 10,
     },
-    durationOptionActive: {
-        backgroundColor: TOKENS.primaryWash,
-        borderColor: TOKENS.primary,
+    durationOptionActive: SELECTED.surface,
+    durationHead: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginBottom: 4,
     },
     durationTime: {
         fontSize: 16,
         fontWeight: '600',
         color: TOKENS.text,
-        marginBottom: 4,
         textAlign: 'center',
         fontVariant: ['tabular-nums'],
     },
-    durationTimeActive: {
-        color: TOKENS.primary,
-        fontWeight: '600',
-    },
+    durationTimeActive: SELECTED.text,
     durationCost: {
         fontSize: 12,
         color: TOKENS.textMuted,
@@ -168,8 +164,7 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
     durationCostActive: {
-        color: TOKENS.primary,
-        fontWeight: '500',
+        color: SELECTED.text.color,
     },
 
     // Rows under a hairline, not a grey box inside the card.
@@ -198,7 +193,7 @@ export const styles = StyleSheet.create({
     summaryValueLarge: {
         fontSize: 20,
         fontWeight: '600',
-        color: TOKENS.primary,
+        color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
     summaryNote: {

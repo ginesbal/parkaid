@@ -79,7 +79,8 @@ const styles = StyleSheet.create({
         fontSize: 15,
         lineHeight: 20,
         fontWeight: '600',
-        color: TOKENS.primaryInk,
+        // Prices in ink: cerulean is for actions and selection.
+        color: TOKENS.text,
         marginTop: SPACING.xs,
     },
     rateUnit: {

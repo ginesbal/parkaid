@@ -33,6 +33,6 @@ export const styles = StyleSheet.create({
         color: TOKENS.warningInk,
     },
     statusTextDanger: {
-        color: TOKENS.danger,
+        color: TOKENS.dangerInk,
     },
 });

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, TOKENS, alpha } from '../../constants/theme';
+import { RADIUS, SELECTED, TOKENS, alpha } from '../../constants/theme';
 import { SHEET_MIN_HEIGHT } from './constants';
 
 export const styles = StyleSheet.create({
@@ -67,10 +67,7 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    quickActionActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
+    quickActionActive: SELECTED.surface,
 
     quickActionPressed: {
         opacity: 0.6,
@@ -114,6 +111,9 @@ export const styles = StyleSheet.create({
 
     // 36 pt to the eye; CHIP_SLOP (MapHeader) makes it 44 pt to the finger.
     miniChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
         minHeight: 36,
         justifyContent: 'center',
         paddingHorizontal: 12,
@@ -125,8 +125,8 @@ export const styles = StyleSheet.create({
     },
 
     miniChipActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
+        ...SELECTED.surface,
+        paddingLeft: 8,
     },
 
     miniChipText: {
@@ -135,10 +135,7 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
     },
 
-    miniChipTextActive: {
-        color: '#fff',
-        fontWeight: '600',
-    },
+    miniChipTextActive: SELECTED.text,
 
     chipDivider: {
         width: 3,
@@ -369,10 +366,7 @@ export const styles = StyleSheet.create({
         borderColor: TOKENS.hairline,
     },
 
-    topToggleActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
-    },
+    topToggleActive: SELECTED.surface,
 
     topTogglePressed: {
         opacity: 0.6,
@@ -384,10 +378,7 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
     },
 
-    topToggleTextActive: {
-        color: '#fff',
-        fontWeight: '600',
-    },
+    topToggleTextActive: SELECTED.text,
 
     sheetContent: {
         flex: 1,
