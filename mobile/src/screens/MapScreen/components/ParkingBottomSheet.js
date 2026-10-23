@@ -92,8 +92,12 @@ const ParkingBottomSheet = forwardRef(({
     // Under reduce motion the sheet snaps instead of springing.
     const reduceMotion = useReduceMotion();
 
+    // Whether the list is open; said by the handle and the Show all button.
+    const [expanded, setExpanded] = useState(false);
+
     // Tighter spring for expand (user is waiting to see content)
     const expandTo = useCallback((velocity = 0) => {
+        setExpanded(true);
         if (reduceMotion) {
             translateY.stopAnimation();
             translateY.setValue(EXPANDED_Y);
@@ -109,6 +113,7 @@ const ParkingBottomSheet = forwardRef(({
 
     // Slightly faster spring for collapse — exit should feel snappier than enter
     const collapseTo = useCallback((velocity = 0) => {
+        setExpanded(false);
         if (reduceMotion) {
             translateY.stopAnimation();
             translateY.setValue(PEEK_Y);
@@ -137,6 +142,16 @@ const ParkingBottomSheet = forwardRef(({
         present: () => expandTo(),
         dismiss: () => collapseTo(),
     }));
+
+    // Not only by dragging: a tap on the handle or Show all, or a screen
+    // reader's expand and collapse actions.
+    const toggle = useCallback(() => (expanded ? collapseTo() : expandTo()), [expanded, expandTo, collapseTo]);
+    const handleAccessibilityAction = useCallback((event) => {
+        const action = event.nativeEvent.actionName;
+        if (action === 'expand') expandTo();
+        else if (action === 'collapse') collapseTo();
+        else if (action === 'activate') toggle();
+    }, [expandTo, collapseTo, toggle]);
 
     const handleHeaderLayout = useCallback((event) => {
         // Use the header's true measured height — no artificial floor.
@@ -278,7 +293,23 @@ const ParkingBottomSheet = forwardRef(({
             ]}
         >
             <View style={styles.header} onLayout={handleHeaderLayout} {...panResponder.panHandlers}>
-                <View style={styles.handle} />
+                <Pressable
+                    onPress={toggle}
+                    style={styles.grabber}
+                    hitSlop={{ top: 12, bottom: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="List of places"
+                    accessibilityHint={expanded ? 'Hides the list' : 'Shows the list'}
+                    aria-expanded={expanded}
+                    accessibilityActions={[
+                        { name: 'activate' },
+                        { name: 'expand', label: 'Show all places' },
+                        { name: 'collapse', label: 'Hide the list' },
+                    ]}
+                    onAccessibilityAction={handleAccessibilityAction}
+                >
+                    <View style={styles.handle} />
+                </Pressable>
 
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
@@ -380,6 +411,25 @@ const ParkingBottomSheet = forwardRef(({
                         )}
                     </View>
                 )}
+
+                {/* The list, by a tap as well as a drag */}
+                {spots.length > 1 ? (
+                    <Pressable
+                        onPress={toggle}
+                        style={({ pressed }) => [styles.showAll, pressed && styles.showAllPressed]}
+                        accessibilityRole="button"
+                        aria-expanded={expanded}
+                    >
+                        <Text style={styles.showAllText}>
+                            {expanded ? 'Hide the list' : `Show all ${spots.length} places`}
+                        </Text>
+                        <MaterialCommunityIcons
+                            name={expanded ? 'chevron-down' : 'chevron-up'}
+                            size={18}
+                            color={TOKENS.primaryInk}
+                        />
+                    </Pressable>
+                ) : null}
             </View>
 
             <Animated.FlatList
@@ -438,13 +488,37 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: TOKENS.divider,
     },
+    // A visible handle that also toggles the list; 44 pt tall with its slop.
+    grabber: {
+        alignSelf: 'stretch',
+        height: 24,
+        marginTop: -12,
+        marginBottom: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     handle: {
-        alignSelf: 'center',
-        backgroundColor: alpha(TOKENS.text, 0.12),
-        width: 36,
-        height: 3,
-        borderRadius: 2,
-        marginBottom: 12,
+        backgroundColor: alpha(TOKENS.text, 0.28),
+        width: 40,
+        height: 5,
+        borderRadius: 3,
+    },
+    showAll: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        minHeight: 44,
+        marginTop: 4,
+        marginBottom: -10,
+    },
+    showAllPressed: {
+        opacity: 0.6,
+    },
+    showAllText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
     },
     headerContent: {
         flexDirection: 'row',

@@ -19,10 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // app constants/services
 import ScreenStatusBar from '../../components/ScreenStatusBar';
 import { DEFAULT_LOCATION } from '../../constants/config';
-import { MOTION } from '../../constants/theme';
+import { MOTION, TOKENS } from '../../constants/theme';
 
 // logs
-import { nearestSpot } from '../../utils/geo';
+import { distanceMeters, nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
 import { pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 
@@ -59,8 +59,6 @@ function MapScreen({ route, navigation }) {
     // refs
     const mapRef = useRef(null);
     const bottomSheetRef = useRef(null);
-    const lastMapInteraction = useRef(null);
-    const hideControlsTimer = useRef(null);
     // Tracks the last time the search input became focused. Used to suppress
     // the spurious MapView.onPress that Google Maps' native gesture recognizer
     // fires on iOS when the user taps the search bar (the native recognizer
@@ -68,8 +66,6 @@ function MapScreen({ route, navigation }) {
     const searchFocusAtRef = useRef(0);
 
     // animations
-    const controlsOpacity = useRef(new Animated.Value(1)).current;
-    const controlsTranslateY = useRef(new Animated.Value(0)).current;
     const pinDropAnim = useRef(new Animated.Value(0)).current;
 
     // data state
@@ -140,44 +136,13 @@ function MapScreen({ route, navigation }) {
                 logger.log('location_error_fallback_default', DEFAULT_LOCATION, 'ERROR');
             }
         })();
-
-        return () => {
-            if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-        };
     }, []);
 
 
-    // Map controls fade; they also slide unless reduce motion is on.
     const reduceMotion = useReduceMotion();
-    const fadeControls = useCallback((visible) => {
-        const timing = (value, toValue) => Animated.timing(value, {
-            toValue,
-            duration: MOTION.duration.base,
-            easing: MOTION.easing,
-            useNativeDriver: true,
-        });
-        Animated.parallel([
-            timing(controlsOpacity, visible ? 1 : 0),
-            timing(controlsTranslateY, visible || reduceMotion ? 0 : -50),
-        ]).start();
-    }, [controlsOpacity, controlsTranslateY, reduceMotion]);
 
     // Camera moves are big motion; under reduce motion they jump instead.
     const cameraMs = useCallback((ms) => (reduceMotion ? 0 : ms), [reduceMotion]);
-
-    const showControls = useCallback(() => fadeControls(true), [fadeControls]);
-    const hideControls = useCallback(() => fadeControls(false), [fadeControls]);
-
-    const handleMapInteraction = useCallback(() => {
-        lastMapInteraction.current = Date.now();
-        showControls();
-        if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-        hideControlsTimer.current = setTimeout(() => {
-            if (Date.now() - lastMapInteraction.current >= 3000) {
-                hideControls();
-            }
-        }, 3000);
-    }, [hideControls, showControls]);
 
     // long press to drop pin and switch mode
     const handleMapLongPress = (event) => {
@@ -290,10 +255,6 @@ function MapScreen({ route, navigation }) {
         else setSelectedSpot(null);
     }, [isSearchFocused, region, windowWidth, spots, selectSpot]);
 
-    const handleMapPanDrag = useCallback(() => {
-        handleMapInteraction();
-    }, [handleMapInteraction]);
-
     // Stable setSearchMode wrapper for MapHeader — keeps memo(MapHeader) intact.
     const handleSearchModeChange = useCallback((mode) => {
         logger.log('search_mode_changed', { to: mode }, 'INFO');
@@ -317,6 +278,20 @@ function MapScreen({ route, navigation }) {
         }
     }, []);
 
+    // The driver has dragged the map well off the searched area: offer to
+    // search there instead. (Camera moves of our own, like centring on a
+    // selected pin, do not count.)
+    const [panned, setPanned] = useState(false);
+    const movedAway = panned && Boolean(searchLocation) && Number.isFinite(region?.latitude)
+        && distanceMeters(region, searchLocation) > Math.max(150, searchRadius * 0.6);
+    const searchThisArea = useCallback(() => {
+        const center = { latitude: region.latitude, longitude: region.longitude };
+        logger.log('search_this_area', center, 'UI_EVENT');
+        setSelectedSpot(null);
+        setPinnedLocation({ ...region });
+        setSearchMode('pinned');
+    }, [region]);
+
     // Show the whole search area each time it changes (a new place, pin or
     // radius), so every place in the sheet's count has its pin on screen.
     // mapPadding already keeps it clear of the header and the sheet.
@@ -325,6 +300,7 @@ function MapScreen({ route, navigation }) {
     const searchLng = searchLocation?.longitude;
     useEffect(() => {
         if (!mapReady || !Number.isFinite(searchLat) || !Number.isFinite(searchLng)) return;
+        setPanned(false);
         const dLat = searchRadius / 111320;
         const dLng = searchRadius / (111320 * Math.cos((searchLat * Math.PI) / 180));
         // Android reads edgePadding in pixels.
@@ -359,8 +335,8 @@ function MapScreen({ route, navigation }) {
                 provider={PROVIDER_GOOGLE}
                 initialRegion={region}
                 onMapReady={() => setMapReady(true)}
+                onPanDrag={() => setPanned(true)}
                 onRegionChangeComplete={setRegion}
-                onPanDrag={handleMapPanDrag}
                 onPress={handleMapPress}
                 onLongPress={handleMapLongPress}
                 showsUserLocation
@@ -418,22 +394,30 @@ function MapScreen({ route, navigation }) {
                 </Animated.View>
             )}
 
-            {/* floating recenter button */}
-            <Animated.View
-                style={[
-                    styles.fabContainer,
-                    {
-                        opacity: controlsOpacity,
-                        transform: [{ translateY: Animated.multiply(controlsTranslateY, -1) }],
-                        bottom: BOTTOM_UI_OFFSET - 4,
-                    }
-                ]}
-                pointerEvents="auto"
-            >
+            {/* Search this area: shown once the map has moved off the search area */}
+            {movedAway ? (
+                <View style={[styles.searchArea, { top: navigationHeight + 12 }]} pointerEvents="box-none">
+                    <Pressable
+                        onPress={searchThisArea}
+                        style={({ pressed }) => [styles.searchAreaButton, pressed && styles.fabPressed]}
+                        accessibilityRole="button"
+                        accessibilityHint="Lists parking around the middle of the map"
+                    >
+                        <MaterialCommunityIcons name="magnify" size={18} color={TOKENS.primaryInk} />
+                        <Text style={styles.searchAreaText}>Search this area</Text>
+                    </Pressable>
+                </View>
+            ) : null}
+
+            {/* Recenter: always shown, unlike the controls that fade */}
+            <View style={[styles.fabContainer, { bottom: BOTTOM_UI_OFFSET - 4 }]} pointerEvents="box-none">
                 <Pressable
                     style={({ pressed }) => [styles.fab, styles.fabPrimary, pressed && styles.fabPressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={searchMode === 'pinned' ? 'Back to your pin' : 'Back to your location'}
                     onPress={() => {
                         logger.log('ui_recenter_pressed', { mode: searchMode }, 'UI_EVENT');
+                        setPanned(false);
 
                         const targetLocation =
                             (searchMode === 'pinned' && pinnedLocation) ? pinnedLocation : userLocation;
@@ -453,7 +437,7 @@ function MapScreen({ route, navigation }) {
                         color="#fff"
                     />
                 </Pressable>
-            </Animated.View>
+            </View>
 
             {/* parking bottom sheet */}
             <ParkingBottomSheet

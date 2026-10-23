@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS, alpha } from '../../constants/theme';
+import { RADIUS, TOKENS, alpha } from '../../constants/theme';
 import { SHEET_MIN_HEIGHT } from './constants';
 
 export const styles = StyleSheet.create({
@@ -211,6 +211,35 @@ export const styles = StyleSheet.create({
     },
 
     // ===== FABs =====
+    searchArea: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        zIndex: 600,
+    },
+    searchAreaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minHeight: 44,
+        paddingHorizontal: 16,
+        borderRadius: RADIUS.pill,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairlineStrong,
+        shadowColor: TOKENS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    searchAreaText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+
     fabContainer: {
         position: 'absolute',
         right: 16,
