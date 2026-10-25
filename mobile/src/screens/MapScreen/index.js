@@ -24,7 +24,8 @@ import { MOTION, TOKENS } from '../../constants/theme';
 // logs
 import { useFilters } from '../../context/FilterContext';
 import { apiTypeFor, applyType } from '../../utils/filters';
-import { distanceMeters, nearestSpot } from '../../utils/geo';
+import { LOCATION_STORAGE_KEY } from '../../constants/parking';
+import { distanceMeters, isInCalgary, nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
 import { pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 
@@ -73,6 +74,8 @@ function MapScreen({ route, navigation }) {
     // data state
     const [region, setRegion] = useState(DEFAULT_LOCATION);
     const [userLocation, setUserLocation] = useState(null);
+    // The map fell back to downtown (no permission, no fix, or outside Calgary).
+    const [fromDowntown, setFromDowntown] = useState(false);
     // Type and distance, shared with Home (context/FilterContext).
     const { type: filterType, setType: setFilterType, radius: searchRadius, setRadius: setSearchRadius } = useFilters();
     const [selectedSpot, setSelectedSpot] = useState(null);
@@ -113,6 +116,7 @@ function MapScreen({ route, navigation }) {
                 if (status !== 'granted') {
                     setUserLocation(DEFAULT_LOCATION);
                     setRegion(DEFAULT_LOCATION);
+                    setFromDowntown(true);
                     // important: fallback location to keep app usable
                     logger.log('location_fallback_default', DEFAULT_LOCATION, 'WARN');
                     return;
@@ -127,14 +131,27 @@ function MapScreen({ route, navigation }) {
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01,
                 };
+                // Outside Calgary there is no City data: show downtown, and say so.
+                if (!isInCalgary(coords)) {
+                    setUserLocation(DEFAULT_LOCATION);
+                    setRegion(DEFAULT_LOCATION);
+                    setFromDowntown(true);
+                    return;
+                }
                 setUserLocation(coords);
                 setRegion(coords);
-                await AsyncStorage.setItem('userLocation', JSON.stringify(coords));
+                // The same shape Home's useLocationManager saves.
+                await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({
+                    latitude: coords.latitude,
+                    longitude: coords.longitude,
+                    savedAt: Date.now(),
+                }));
                 // important: capture starting coordinates for debugging
                 logger.log('location_acquired', { lat: coords.latitude, lng: coords.longitude }, 'INFO');
             } catch {
                 setUserLocation(DEFAULT_LOCATION);
                 setRegion(DEFAULT_LOCATION);
+                setFromDowntown(true);
                 // important: catch-all failure path with fallback
                 logger.log('location_error_fallback_default', DEFAULT_LOCATION, 'ERROR');
             }
@@ -455,6 +472,7 @@ function MapScreen({ route, navigation }) {
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
                 searchMode={searchMode}
+                fromDowntown={fromDowntown}
                 searchRadius={searchRadius}
                 onPeekHeightChange={setSheetPeekHeight}
                 tabBarHeight={tabBarHeight}

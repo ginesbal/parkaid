@@ -48,6 +48,8 @@ const ParkingBottomSheet = forwardRef(({
     selectedSpot,
     featuredSpot,
     searchMode,
+    // The search is around downtown, not the driver (see MapScreen).
+    fromDowntown = false,
     searchRadius,
     onItemPress,
     onViewSpot,
@@ -274,7 +276,7 @@ const ParkingBottomSheet = forwardRef(({
     const featured = featuredSpot ? {
         reason: selectedSpot?.id === featuredSpot.id
             ? 'Selected'
-            : pinned ? 'Closest to your pin' : 'Closest to you',
+            : pinned ? 'Closest to your pin' : fromDowntown ? 'Closest to downtown' : 'Closest to you',
         name: getSpotName(featuredSpot).title,
         // Zone and walk fit one line; the maximum stay is on Details.
         meta: [getZoneLabel(featuredSpot), getWalkLabel(featuredSpot)]
@@ -316,7 +318,7 @@ const ParkingBottomSheet = forwardRef(({
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
                         <Text style={styles.headerTitle} accessibilityRole="header">
-                            {pinned ? 'Spots around your pin' : 'Spots around you'}
+                            {pinned ? 'Spots around your pin' : fromDowntown ? 'Spots around downtown' : 'Spots around you'}
                         </Text>
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {countLine}

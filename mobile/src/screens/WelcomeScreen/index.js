@@ -77,7 +77,7 @@ export default function WelcomeScreen({ navigation }) {
                         A little less circling.{'\n'}A little more city.
                     </Animated.Text>
                     <Animated.Text style={[styles.body, rise[1]]}>
-                        Find a place to park,{'\n'}then get on with your day.
+                        Find a spot to park,{'\n'}then get on with your day.
                     </Animated.Text>
 
                     <Animated.View style={[styles.footer, rise[2]]}>

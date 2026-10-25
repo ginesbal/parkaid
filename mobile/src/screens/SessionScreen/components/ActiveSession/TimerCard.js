@@ -53,7 +53,8 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
         .join(' · ');
 
     const warning = walk
-        ? `Time to head back. It’s about a ${walk} minute walk to your car.`
+        // A no-break space keeps the number with its unit when the line wraps.
+        ? `Time to head back. It’s about a ${walk}\u00A0minute walk to your car.`
         : 'Time to head back to your car.';
 
     return (

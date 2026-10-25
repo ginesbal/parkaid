@@ -107,8 +107,6 @@ class ParkingAPI {
     const timeout = setTimeout(() => controller.abort(), options.timeout || REQUEST_TIMEOUT);
 
     try {
-      console.log(`Fetching: ${url}`);
-
       let response;
       try {
         response = await fetch(url, {

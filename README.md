@@ -38,11 +38,11 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
 | Welcome | Home | Map |
 | --- | --- | --- |
-| <img src="docs/screens/01-welcome.png" width="240" alt="Welcome screen with the ParkAid pin and an Explore parking button"> | <img src="docs/screens/02-home.png" width="240" alt="Home with a greeting, search, sort chips and a suggested spot"> | <img src="docs/screens/03-map.png" width="240" alt="Map with priced pins and a selected spot in the bottom sheet"> |
+| <img src="docs/screens/01-welcome.png" width="240" alt="Welcome screen with the ParkAid pin and an Explore parking button"> | <img src="docs/screens/02-home.png" width="240" alt="Home with a greeting, search, sort chips and a suggested spot"> | <img src="docs/screens/03-map.png" width="240" alt="Map with priced, lot and permit pins and a selected spot in the bottom sheet"> |
 
 | Details | Park | Session |
 | --- | --- | --- |
-| <img src="docs/screens/04-details.png" width="240" alt="Details for a street block: rate, zone, walk and maximum stay"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate, duration, end time and total"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, end time and an Extend button"> |
+| <img src="docs/screens/04-details.png" width="240" alt="Details for a street block: rate, zone, walk and maximum stay"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate, duration, end time, cost and where to pay"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, where to pay in ParkPlus and an Add 30 min button"> |
 
 Captured from the web build with sample data. On web the map is a drawn
 preview; the live Google map runs on iOS and Android.

@@ -169,6 +169,7 @@ export default function MapScreen({ route, navigation }) {
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
                 searchMode={place ? 'pinned' : 'current'}
+                fromDowntown={source === 'default' || source === 'outside'}
                 onClearPin={() => setPlace(null)}
                 searchRadius={radius}
                 onPeekHeightChange={setPeek}
