@@ -24,17 +24,14 @@ const SHEET_EXPANDED_TOP_GAP = 18;
 // The walk block (44) + row padding (20) + gap (10) = 74. Letting the walk column
 // "run free" vertically makes it read as the anchor for each row.
 
-// What to try when an area has no parking. The web preview cannot be dragged;
-// there, search is the way to look somewhere else.
-const EMPTY_HINT = Platform.OS === 'web'
-    ? {
-        current: 'Search an address to look somewhere else.',
-        pinned: 'Search another address to look somewhere else.',
-    }
-    : {
-        current: 'Drag the map, then tap Search this area.',
-        pinned: 'Move your pin, or pick a wider distance in the filters.',
-    };
+// What to try when an area has no parking. The web map has no pin to move
+// and no filters, so there it is always the map itself.
+const EMPTY_HINT = {
+    current: 'Drag the map, then tap Search this area.',
+    pinned: Platform.OS === 'web'
+        ? 'Drag the map, then tap Search this area.'
+        : 'Move your pin, or pick a wider distance in the filters.',
+};
 
 // Momentum threshold — a quick flick should snap regardless of drag distance.
 // Emil: "Don't require dragging past a threshold. If velocity exceeds ~0.11, dismiss."
@@ -407,7 +404,7 @@ const ParkingBottomSheet = forwardRef(({
                         </Pressable>
                     </View>
                 ) : (
-                    <View style={[styles.featuredWrap, styles.statusSlot, { minHeight: featuredHeight }]}>
+                    <View style={[styles.featuredWrap, styles.statusSlot, loading && styles.statusLoading, { minHeight: featuredHeight }]}>
                         {loading ? (
                             <BrandLoader size={40} label="Finding parking around here" delay={150} />
                         ) : failure ? (
@@ -669,9 +666,13 @@ const styles = StyleSheet.create({
     listContent: {
         paddingTop: 12,
     },
+    // Empty and failed: said from the left edge, as on Home. The loader sits
+    // in the middle.
     statusSlot: {
-        alignItems: 'center',
         justifyContent: 'center',
+    },
+    statusLoading: {
+        alignItems: 'center',
     },
     emptyTitle: {
         fontSize: 16,
@@ -683,13 +684,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
-        textAlign: 'center',
-        maxWidth: 260,
     },
+    // A text button, lined up with the message above it.
     retry: {
+        alignSelf: 'flex-start',
         minHeight: 44,
-        marginTop: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
+        marginTop: SPACING.xs,
         justifyContent: 'center',
     },
     retryPressed: {

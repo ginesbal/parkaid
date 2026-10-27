@@ -25,6 +25,7 @@ import SessionStrip from './src/components/SessionStrip';
 import { FilterProvider } from './src/context/FilterContext';
 import { SessionProvider, useSessionStatus } from './src/context/SessionContext';
 import { getDeviceId } from './src/utils/device';
+import './src/utils/focusRing';
 import { TOKENS } from './src/constants/theme';
 import { useReduceMotion } from './src/hooks/useReduceMotion';
 import { hasSeenWelcome } from './src/utils/onboarding';

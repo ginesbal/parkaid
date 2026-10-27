@@ -123,6 +123,12 @@ export const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         fontVariant: ['tabular-nums'],
     },
+    // On the selected fill: ink-blue, as on the durations. The grey would
+    // fall below 4.5:1 there.
+    placeTitleActive: SELECTED.text,
+    placeDetailActive: {
+        color: SELECTED.text.color,
+    },
     // How far the place is from the phone now.
     placeAway: {
         fontSize: 14,

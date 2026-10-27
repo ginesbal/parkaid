@@ -60,8 +60,8 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
                     >
                         <MaterialCommunityIcons
                             name={isError ? 'refresh' : 'radar'}
-                            size={16}
-                            color="#fff"
+                            size={18}
+                            color={TOKENS.surface}
                         />
                         <Text style={styles.emptyButtonText}>
                             {isError ? 'Try again' : `Search ${getDistanceLabel(MAX_RADIUS)}`}
@@ -83,8 +83,8 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
                     >
                         <MaterialCommunityIcons
                             name="map-search-outline"
-                            size={16}
-                            color={TOKENS.text}
+                            size={18}
+                            color={TOKENS.primaryInk}
                         />
                         <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
                             View map

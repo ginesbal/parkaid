@@ -40,8 +40,10 @@ function PlaceOption({ title, detail, away = null, selected, folded = false, onP
                 color={selected ? TOKENS.primary : TOKENS.textLight}
             />
             <View style={styles.placeText}>
-                <Text style={styles.placeTitle} numberOfLines={1}>{title}</Text>
-                {detail ? <Text style={styles.placeDetail} numberOfLines={1}>{detail}</Text> : null}
+                <Text style={[styles.placeTitle, selected && styles.placeTitleActive]} numberOfLines={1}>{title}</Text>
+                {detail ? (
+                    <Text style={[styles.placeDetail, selected && styles.placeDetailActive]} numberOfLines={1}>{detail}</Text>
+                ) : null}
             </View>
             {folded ? <Text style={styles.placeChange}>Change</Text> : null}
             {!folded && away !== null ? <Text style={styles.placeAway}>{awayLabel(away)}</Text> : null}

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS } from '../../../../constants/theme';
+import { RADIUS, SPACING, TOKENS } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     // Loading State
@@ -43,32 +43,32 @@ export const styles = StyleSheet.create({
         width: '100%',
         gap: 10,
     },
+    // The app's primary and secondary buttons, as on Details and Park.
     emptyButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 48,
-        paddingHorizontal: 20,
-        paddingVertical: 12,
+        paddingHorizontal: SPACING.xl,
+        paddingVertical: SPACING.md,
         backgroundColor: TOKENS.primary,
-        borderRadius: 10,
-        gap: 8,
+        borderRadius: RADIUS.lg,
+        gap: SPACING.sm,
     },
     emptyButtonSecondary: {
         backgroundColor: 'transparent',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        borderWidth: 1,
+        borderColor: TOKENS.primaryBorder,
     },
     emptyButtonPressed: {
         opacity: 0.6,
     },
     emptyButtonText: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: TOKENS.surface,
     },
     emptyButtonTextSecondary: {
-        color: TOKENS.text,
-        fontWeight: '500',
+        color: TOKENS.primaryInk,
     },
 });
