@@ -13,7 +13,7 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
 ## What it does
 
-- Suggests a good place to park near you, then lists the rest. Sort by
+- Suggests a good spot near you, then lists the rest. Sort by
   closest or by best value. Filters, shared by the list and the map, narrow
   it to street, lot, parkade or permit parking within 150 m to 1 km.
 - Shows spots on a map as pins with their hourly rate, so you can compare
