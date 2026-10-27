@@ -135,8 +135,10 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.textMuted,
     },
+    // Wraps, so every option is in view on a narrow phone.
     filterOptions: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: SPACING.sm,
         paddingHorizontal: SPACING.lg,
     },

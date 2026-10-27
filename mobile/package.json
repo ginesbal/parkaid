@@ -25,6 +25,7 @@
     "expo-location": "~19.0.7",
     "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.8",
+    "maplibre-gl": "5.24.0",
     "metro-minify-terser": "^0.83.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",

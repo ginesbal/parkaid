@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { DISTANCE_OPTIONS, TYPE_OPTIONS, getTypeLabel } from '../../../../utils/filters';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
@@ -8,13 +8,7 @@ function OptionRow({ label, options, selected, onSelect, renderLabel }) {
     return (
         <View style={styles.filterGroup}>
             <Text style={styles.filterGroupLabel}>{label}</Text>
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterOptions}
-                accessibilityRole="radiogroup"
-                accessibilityLabel={label}
-            >
+            <View style={styles.filterOptions} accessibilityRole="radiogroup" accessibilityLabel={label}>
                 {options.map((value) => {
                     const isSelected = selected === value;
                     return (
@@ -35,7 +29,7 @@ function OptionRow({ label, options, selected, onSelect, renderLabel }) {
                         </Pressable>
                     );
                 })}
-            </ScrollView>
+            </View>
         </View>
     );
 }

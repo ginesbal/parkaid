@@ -7,7 +7,7 @@ import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SpotMap from '../../components/SpotMap';
 import ParkPlusActions from '../../components/ParkPlusActions';
-import { TOKENS } from '../../constants/theme';
+import { LAYOUT, TOKENS } from '../../constants/theme';
 import { describeFreeNow } from '../../utils/chargeHours';
 import { logger } from '../../utils/loggers';
 import {
@@ -109,7 +109,7 @@ export default function DetailsScreen({ route, navigation }) {
     const lines = buildLines(spot);
     const directionsUrl = getDirectionsUrl(spot);
     const canStart = spot.spot_type !== 'residential';
-    const thumbWidth = Math.min(width, 520) - 40;
+    const thumbWidth = Math.min(width, LAYOUT.column) - 40;
 
     const rateBasis = rate.amount
         ? [zone ? `${zone} rate` : 'Posted rate', paidHours ? `paid ${paidHours.charAt(0).toLowerCase()}${paidHours.slice(1)}` : null]

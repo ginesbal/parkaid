@@ -152,6 +152,15 @@ export const SPACING = {
     '3xl': 32,
 };
 
+// Wider screens (tablets, a browser on a laptop) keep a phone-width column,
+// centred, and the map's sheet becomes a panel this wide on the left.
+export const LAYOUT = {
+    column: 520,
+    panel: 400,
+    // From this window width, the map's sheet and search are a side panel.
+    wide: 768,
+};
+
 // Radii — softer corners across the board. The redesign calls for a friendlier
 // shape language on cards, rows, and panels. sm/md stay for small chips & tags;
 // lg/xl/2xl are for rows, panels, and the hero card respectively.

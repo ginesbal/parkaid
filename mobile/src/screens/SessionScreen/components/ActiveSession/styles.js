@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, SPACING, TOKENS, TYPOGRAPHY, alpha } from '../../../../constants/theme';
+import { LAYOUT, RADIUS, SPACING, TOKENS, TYPOGRAPHY, alpha } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     // Sits on TOKENS.inkSurface (see SessionScreen).
     scroll: {
         flexGrow: 1,
         width: '100%',
-        maxWidth: 520,
+        maxWidth: LAYOUT.column,
         alignSelf: 'center',
         paddingHorizontal: SPACING.xl,
         paddingTop: SPACING.lg,

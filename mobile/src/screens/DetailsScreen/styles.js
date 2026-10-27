@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../constants/theme';
+import { LAYOUT, RADIUS, SPACING, TOKENS, TYPOGRAPHY } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
     screen: {
@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
     // Phone-width column, centred on tablets and desktop web.
     column: {
         width: '100%',
-        maxWidth: 520,
+        maxWidth: LAYOUT.column,
         alignSelf: 'center',
         paddingHorizontal: SPACING.xl,
     },

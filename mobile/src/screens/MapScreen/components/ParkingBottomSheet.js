@@ -1,10 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BrandLoader from '../../../components/BrandLoader';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import SpotRow from '../../../components/SpotRow';
-import { MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
+import { LAYOUT, MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
 import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
@@ -75,6 +75,7 @@ const ParkingBottomSheet = forwardRef(({
     containerHeight = null,
 }, ref) => {
     const listRef = useRef(null);
+    const wide = useWindowDimensions().width >= LAYOUT.wide;
     // Start conservatively low — onLayout will set the real height on first
     // paint. Undershooting is safer than overshooting: a slightly-too-short
     // peek is corrected upward once measured; a too-tall peek would leak the
@@ -304,6 +305,7 @@ const ParkingBottomSheet = forwardRef(({
         <Animated.View
             style={[
                 styles.sheetContainer,
+                wide && styles.sheetPanel,
                 {
                     bottom: SHEET_BOTTOM_OFFSET,
                     height: maxHeight,
@@ -493,6 +495,13 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 3,
     },
+    // On a wide window: a panel on the left, as maps do in a browser, so the
+    // map keeps the rest of the width.
+    sheetPanel: {
+        left: SPACING.lg,
+        right: undefined,
+        width: LAYOUT.panel,
+    },
     header: {
         // Dragging the header moves the sheet; never start a text selection (web).
         userSelect: 'none',
@@ -506,13 +515,16 @@ const styles = StyleSheet.create({
         borderBottomColor: TOKENS.divider,
     },
     // A visible handle that also toggles the list; 44 pt tall with its slop.
+    // 44 pt to the finger: hitSlop on the phones. The web has no hitSlop, so
+    // there the box itself is taller, with margins that keep the handle put.
     grabber: {
         alignSelf: 'stretch',
-        height: 24,
-        marginTop: -12,
-        marginBottom: 4,
         alignItems: 'center',
         justifyContent: 'center',
+        ...Platform.select({
+            web: { height: 44, marginTop: -22, marginBottom: -6 },
+            default: { height: 24, marginTop: -12, marginBottom: 4 },
+        }),
     },
     handle: {
         backgroundColor: alpha(TOKENS.text, 0.28),

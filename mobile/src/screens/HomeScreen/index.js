@@ -328,7 +328,7 @@ export default function HomeScreen({ navigation }) {
                 colors={[TOKENS.primary]}
               />
             }
-            contentContainerStyle={visibleSpots.length === 0 ? styles.emptyList : null}
+            contentContainerStyle={[styles.list, visibleSpots.length === 0 && styles.emptyList]}
             keyboardShouldPersistTaps="handled"
             onScroll={(e) => setScrolled(Math.abs(e.nativeEvent.contentOffset.y) > 1)}
             scrollEventThrottle={16}

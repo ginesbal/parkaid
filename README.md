@@ -17,8 +17,9 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
   closest or by best value. Filters, shared by the list and the map, narrow
   it to street, lot, parkade or permit parking within 150 m to 1 km.
 - Shows spots on a map as pins with their hourly rate, so you can compare
-  without tapping each one. Drop a pin or search an address to look
-  somewhere else. Search also works in the web preview.
+  without tapping each one. Drop a pin, drag the map and search that area, or
+  search an address to look somewhere else. The web build has a real map
+  too, drawn from OpenStreetMap.
 - Opens a details page for each spot: the rate and when it is charged, the
   ParkPlus zone to pay at, the maximum stay, the walk, and directions.
 - Times your parking. Pick where you parked from your last search, or give
@@ -44,15 +45,17 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 | --- | --- | --- |
 | <img src="docs/screens/04-details.png" width="240" alt="Details for a street block: rate, zone, walk and maximum stay"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate, duration, end time, cost and where to pay"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, where to pay in ParkPlus and an Add 30 min button"> |
 
-Captured from the web build with sample data. On web the map is a drawn
-preview; the live Google map runs on iOS and Android.
+Captured from the web build with sample data. On web the map is MapLibre with
+OpenStreetMap tiles from OpenFreeMap; iOS and Android use Google Maps.
 
 ## Tech stack
 
 Mobile app
 - React Native with Expo SDK 54 (one codebase for iOS, Android, and web)
 - React Navigation for moving between screens
-- React Native Maps for the map and markers
+- React Native Maps (Google Maps) for the map and markers on iOS and Android
+- MapLibre GL JS for the map on web, with free OpenStreetMap tiles from
+  OpenFreeMap (no API key). Map data © OpenStreetMap contributors.
 - Expo Location for GPS
 - AsyncStorage for caching data on the phone
 - Spline for the 3D pin, played live in a WebView (an iframe on web)

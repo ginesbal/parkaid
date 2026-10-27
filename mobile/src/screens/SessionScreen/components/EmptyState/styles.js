@@ -1,11 +1,15 @@
 import { StyleSheet } from 'react-native';
-import { SELECTED, SELECTED_BORDER, TOKENS, alpha } from '../../../../constants/theme';
+import { LAYOUT, SELECTED, SELECTED_BORDER, TOKENS, alpha } from '../../../../constants/theme';
 
 // What the selected border adds over the 1 pt one, taken out of the padding.
 const SELECTED_INSET = SELECTED_BORDER - 1;
 
 export const styles = StyleSheet.create({
+    // A phone-width column, centred on wider screens.
     scrollContent: {
+        width: '100%',
+        maxWidth: LAYOUT.column,
+        alignSelf: 'center',
         paddingHorizontal: 20,
         paddingTop: 24,
         paddingBottom: 40,

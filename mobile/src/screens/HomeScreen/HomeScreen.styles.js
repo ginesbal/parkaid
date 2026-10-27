@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS } from '../../constants/theme';
+import { LAYOUT, TOKENS } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
     container: {
@@ -8,6 +8,12 @@ export const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    // A phone-width column, centred on wider screens.
+    list: {
+        width: '100%',
+        maxWidth: LAYOUT.column,
+        alignSelf: 'center',
     },
     emptyList: {
         flexGrow: 1
