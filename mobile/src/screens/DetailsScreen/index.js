@@ -63,7 +63,7 @@ function buildLines(spot) {
 
     const maxStay = getMaxStayLabel(spot);
     if (maxStay) {
-        lines.push({ icon: 'timer-outline', title: maxStay, body: 'Check posted signs before you leave the car.' });
+        lines.push({ icon: 'timer-outline', title: maxStay, body: 'The signs at the curb have the final say.' });
     }
 
     const zone = getZoneLabel(spot);
@@ -76,7 +76,7 @@ function buildLines(spot) {
             zone,
         });
     } else if (spot?.spot_type === 'off_street') {
-        lines.push({ icon: 'boom-gate-outline', title: 'Pay at the lot', body: 'Rates and hours are posted at the entrance.' });
+        lines.push({ icon: 'boom-gate-outline', title: 'Pay at the lot', body: 'Its hours and how to pay are at the entrance.' });
     }
 
     return lines;
@@ -103,7 +103,7 @@ export default function DetailsScreen({ route, navigation }) {
     const kind = getSpotKind(spot);
     const rate = getRateDisplay(spot);
     const zone = getZoneLabel(spot);
-    const paidHours = formatEnforceableTime(spot?.zone_info?.enforceable_time);
+    const chargedHours = formatEnforceableTime(spot?.zone_info?.enforceable_time);
     // Outside charging hours the rate does not apply yet; say so first.
     const freeNow = rate.amount ? describeFreeNow(getChargeHours(spot)) : null;
     const lines = buildLines(spot);
@@ -111,11 +111,11 @@ export default function DetailsScreen({ route, navigation }) {
     const canStart = spot.spot_type !== 'residential';
     const thumbWidth = Math.min(width, LAYOUT.column) - 40;
 
+    // When the City charges, said the same way as "Free now · charged from".
+    const charged = chargedHours ? `charged ${chargedHours.charAt(0).toLowerCase()}${chargedHours.slice(1)}` : null;
     const rateBasis = rate.amount
-        ? [zone ? `${zone} rate` : 'Posted rate', paidHours ? `paid ${paidHours.charAt(0).toLowerCase()}${paidHours.slice(1)}` : null]
-            .filter(Boolean)
-            .join(' · ')
-        : paidHours;
+        ? [zone ? `${zone} rate` : 'Posted rate', charged].filter(Boolean).join(' · ')
+        : charged && `${charged.charAt(0).toUpperCase()}${charged.slice(1)}`;
 
     const handleStart = () => {
         logger.log('details_start_session', { spotId: spot.id }, 'UI_EVENT');

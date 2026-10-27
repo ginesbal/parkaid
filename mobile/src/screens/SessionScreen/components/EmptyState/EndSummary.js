@@ -38,7 +38,7 @@ export default function EndSummary({ session, onParkAgain, onFindParking }) {
 
             <View style={styles.setupCard}>
                 <View style={styles.summaryRows}>
-                    <Row first label="Timed" value={`${formatClock(start)} to ${formatClock(end)}`} />
+                    <Row first label="Time" value={`${formatClock(start)} to ${formatClock(end)}`} />
                     <Row label="Length" value={formatDuration(minutes)} />
                     {cost !== null ? <Row label={`Cost for ${formatDuration(minutes)}`} value={formatCost(cost)} /> : null}
                 </View>

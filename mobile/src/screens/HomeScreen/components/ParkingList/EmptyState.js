@@ -8,11 +8,12 @@ import { styles } from './styles';
 /**
  * EmptyState - Shown when no parking spots are available or loading fails.
  * A failure is said once, by what went wrong (`error`: 'offline', 'timeout'
- * or 'server'), with a neutral icon and one way forward: try again.
+ * or 'server'), with a neutral icon and two ways forward: try again, or start
+ * a session on Park with the zone on the sign, which needs no data.
  */
 const MAX_RADIUS = 1000;
 
-const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', searchRadius }) => {
+const EmptyState = ({ onExpandSearch, onViewMap, onStartSession, onRetry, error, type = 'all', searchRadius }) => {
     const isError = Boolean(error);
     const parkades = type === 'parkade';
     // At the widest radius there is nothing left to expand; the map is the next step.
@@ -21,9 +22,10 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
     const failure = isError ? getLoadError(error) : null;
 
     let title = 'Nothing nearby right now';
-    let body = 'Try widening the search radius, or switch to the map to look around the next block.';
+    let body = 'Search farther away, or look around the next block on the map.';
     if (isError) {
-        ({ title, body } = failure);
+        title = failure.title;
+        body = `${failure.body} Already parked? You can still start a session with the zone on the sign.`;
     } else if (parkades) {
         title = `No parkades within ${within}`;
         body = canExpand
@@ -56,7 +58,6 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
                         ]}
                         onPress={isError ? onRetry : onExpandSearch}
                         accessibilityRole="button"
-                        accessibilityLabel={isError ? 'Try again' : 'Expand search radius'}
                     >
                         <MaterialCommunityIcons
                             name={isError ? 'refresh' : 'radar'}
@@ -69,28 +70,26 @@ const EmptyState = ({ onExpandSearch, onViewMap, onRetry, error, type = 'all', s
                     </Pressable>
                 ) : null}
 
-                {/* The map needs the same connection, so it is no way out of a failure. */}
-                {isError ? null : (
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.emptyButton,
-                            styles.emptyButtonSecondary,
-                            pressed && styles.emptyButtonPressed,
-                        ]}
-                        onPress={onViewMap}
-                        accessibilityRole="button"
-                        accessibilityLabel="View map"
-                    >
-                        <MaterialCommunityIcons
-                            name="map-search-outline"
-                            size={18}
-                            color={TOKENS.primaryInk}
-                        />
-                        <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
-                            View map
-                        </Text>
-                    </Pressable>
-                )}
+                {/* The map needs the same connection, so after a failure the
+                    way out is a session with the zone on the sign. */}
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.emptyButton,
+                        styles.emptyButtonSecondary,
+                        pressed && styles.emptyButtonPressed,
+                    ]}
+                    onPress={isError ? onStartSession : onViewMap}
+                    accessibilityRole="button"
+                >
+                    <MaterialCommunityIcons
+                        name={isError ? 'timer-outline' : 'map-search-outline'}
+                        size={18}
+                        color={TOKENS.primaryInk}
+                    />
+                    <Text style={[styles.emptyButtonText, styles.emptyButtonTextSecondary]}>
+                        {isError ? 'Start a session' : 'View map'}
+                    </Text>
+                </Pressable>
             </View>
         </View>
     );

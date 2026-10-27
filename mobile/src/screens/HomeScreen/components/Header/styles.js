@@ -195,6 +195,29 @@ export const styles = StyleSheet.create({
     },
     chipTextSelected: SELECTED.text,
 
+    // "Parkades only", and Show all, when the list is narrowed to one type.
+    typeNoteRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
+        paddingHorizontal: SPACING.xl,
+        marginTop: SPACING.xs,
+    },
+    typeNote: {
+        fontSize: 14,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
+    },
+    typeNoteAction: {
+        minHeight: 44,
+        justifyContent: 'center',
+    },
+    typeNoteActionText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+
     // The heading, with how old the list is on its own line under it, so
     // neither squeezes the other.
     sectionHead: {

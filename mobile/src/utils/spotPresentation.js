@@ -86,11 +86,11 @@ export function getSpotName(spot) {
         return { title: tidyName(block[1]), detail: `${tidyName(block[2])} to ${tidyName(block[3])}` };
     }
 
-    // Permit zones: "00 Block 6 AV SW" is the 0 to 99 block of 6 Ave SW.
+    // Permit zones: "00 Block 6 AV SW" is 6 Ave SW from address 0 to 99.
     const hundred = address.match(/^(\d+)\s+Block\s+(.+)$/i);
     if (hundred) {
         const start = Number(hundred[1]);
-        return { title: tidyName(hundred[2]), detail: `Block ${start}–${start + 99}` };
+        return { title: tidyName(hundred[2]), detail: `Addresses ${start}–${start + 99}` };
     }
 
     const colon = address.indexOf(':');

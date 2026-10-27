@@ -171,6 +171,12 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Map', { focusSearch: true });
   };
 
+  // Without parking data, Park still times a session with the zone on the sign.
+  const handleStartSession = () => {
+    logger.log('nav_to_park_from_home', { source: 'load_error' });
+    navigation.navigate('Park');
+  };
+
   const handleSpotPress = useCallback((spot) => {
     logger.log('spot_selected_from_home', {
       spotId: spot?.id,
@@ -279,6 +285,7 @@ export default function HomeScreen({ navigation }) {
     <EmptyState
       onExpandSearch={handleExpandSearch}
       onViewMap={handleMapPress}
+      onStartSession={handleStartSession}
       onRetry={handleRefresh}
       error={error}
       type={activeFilter}

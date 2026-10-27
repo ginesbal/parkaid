@@ -34,7 +34,7 @@ function OptionRow({ label, options, selected, onSelect, renderLabel }) {
     );
 }
 
-// Type and search radius, shared with Map. Lives behind the Filters button on Home.
+// Type and distance, shared with Map. Lives behind the Filters button on Home.
 const FilterBar = ({ activeFilter, setActiveFilter, searchRadius, setSearchRadius }) => (
     <View style={styles.filterPanel}>
         <OptionRow

@@ -23,7 +23,7 @@ import { MOTION, TOKENS } from '../../constants/theme';
 
 // logs
 import { useFilters } from '../../context/FilterContext';
-import { apiTypeFor, applyType } from '../../utils/filters';
+import { apiTypeFor, applyType, getTypeNote } from '../../utils/filters';
 import { LOCATION_STORAGE_KEY } from '../../constants/parking';
 import { distanceMeters, isInCalgary, nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
@@ -473,6 +473,7 @@ function MapScreen({ route, navigation }) {
                 featuredSpot={featuredSpot}
                 searchMode={searchMode}
                 fromDowntown={fromDowntown}
+                typeNote={getTypeNote(filterType)}
                 searchRadius={searchRadius}
                 onPeekHeightChange={setSheetPeekHeight}
                 tabBarHeight={tabBarHeight}

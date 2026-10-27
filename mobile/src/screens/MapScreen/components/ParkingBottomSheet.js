@@ -60,6 +60,8 @@ const ParkingBottomSheet = forwardRef(({
     searchMode,
     // The search is around downtown, not the driver (see MapScreen).
     fromDowntown = false,
+    // "Parkades only" when the list is narrowed to one type (utils/filters).
+    typeNote = null,
     searchRadius,
     onItemPress,
     onViewSpot,
@@ -283,6 +285,8 @@ const ParkingBottomSheet = forwardRef(({
     else if (spots.length === 0) countLine = `No parking within ${within}`;
     else if (saved) countLine = `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} \u00B7 ${saved}`;
     else countLine = `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} within ${within}`;
+    // A list narrowed to one type says so ("Parkades only").
+    if (typeNote && !loading && !failure) countLine = `${countLine} \u00B7 ${typeNote}`;
 
     const featured = featuredSpot ? {
         reason: selectedSpot?.id === featuredSpot.id

@@ -30,9 +30,9 @@ const street = (over = {}) => ({
 describe('getSpotName', () => {
     it('reads a permit block as its street and block', () => {
         expect(getSpotName({ spot_type: 'residential', address: '00 Block 6 AV SW' }))
-            .toEqual({ title: '6 Ave SW', detail: 'Block 0–99' });
+            .toEqual({ title: '6 Ave SW', detail: 'Addresses 0–99' });
         expect(getSpotName({ spot_type: 'residential', address: '1200 Block COLLINGWOOD PL NW' }))
-            .toEqual({ title: 'Collingwood Pl NW', detail: 'Block 1200–1299' });
+            .toEqual({ title: 'Collingwood Pl NW', detail: 'Addresses 1200–1299' });
     });
 
     it('puts shouted names in title case, keeping quadrants and acronyms', () => {

@@ -1,4 +1,4 @@
-import { apiTypeFor, applyType, getTypeLabel } from '../filters';
+import { apiTypeFor, applyType, getTypeLabel, getTypeNote } from '../filters';
 
 const street = { id: 's', spot_type: 'on_street' };
 const parkade = { id: 'p', spot_type: 'off_street', metadata: { parking_type: 'PARKADE' } };
@@ -22,5 +22,13 @@ describe('filters', () => {
     it('names each type', () => {
         expect(getTypeLabel('parkade')).toBe('Parkade');
         expect(getTypeLabel('nope')).toBe('All');
+    });
+
+    it('says which type a list is narrowed to, and nothing when it is not', () => {
+        expect(getTypeNote('parkade')).toBe('Parkades only');
+        expect(getTypeNote('on_street')).toBe('Street parking only');
+        expect(getTypeNote('lot')).toBe('Lots only');
+        expect(getTypeNote('residential')).toBe('Permit zones only');
+        expect(getTypeNote('all')).toBeNull();
     });
 });

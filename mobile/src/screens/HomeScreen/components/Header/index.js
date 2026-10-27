@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import BrandPin from '../../../../components/BrandPin';
 import { TOKENS } from '../../../../constants/theme';
+import { getTypeNote } from '../../../../utils/filters';
 import TopPick from '../TopPick';
 import FilterBar from './FilterBar';
 import ViewChips from './ViewChips';
@@ -35,6 +36,7 @@ const Header = ({
     savedNote,
 }) => {
     const filterLabel = filterCount > 0 ? `Filters, ${filterCount} active` : 'Filters';
+    const typeNote = getTypeNote(activeFilter);
 
     return (
         <View style={styles.header}>
@@ -108,6 +110,21 @@ const Header = ({
             ) : null}
 
             <ViewChips view={view} onChange={onViewChange} />
+
+            {/* A list narrowed to one type says so, with the way back to all */}
+            {typeNote ? (
+                <View style={styles.typeNoteRow}>
+                    <Text style={styles.typeNote}>{typeNote}</Text>
+                    <Pressable
+                        onPress={() => setActiveFilter('all')}
+                        style={({ pressed }) => [styles.typeNoteAction, pressed && styles.pressed]}
+                        accessibilityRole="button"
+                        accessibilityHint="Shows every type of parking"
+                    >
+                        <Text style={styles.typeNoteActionText}>Show all</Text>
+                    </Pressable>
+                </View>
+            ) : null}
 
             {topPick ? (
                 <>

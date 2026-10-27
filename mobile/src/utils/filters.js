@@ -17,6 +17,17 @@ export const DISTANCE_OPTIONS = [150, 250, 500, 1000];
 
 export const getTypeLabel = (type) => TYPE_OPTIONS.find((option) => option.key === type)?.label ?? 'All';
 
+const TYPE_NOTES = {
+    on_street: 'Street parking only',
+    lot: 'Lots only',
+    parkade: 'Parkades only',
+    residential: 'Permit zones only',
+};
+
+// Said beside a list narrowed to one type ("Parkades only"), so a short list
+// reads as filtered, not empty; null when every type is shown.
+export const getTypeNote = (type) => TYPE_NOTES[type] ?? null;
+
 // The type to ask the API for.
 export function apiTypeFor(type) {
     return type === 'lot' || type === 'parkade' ? 'off_street' : type;

@@ -16,7 +16,7 @@ import { useFilters } from '../../context/FilterContext';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
-import { apiTypeFor, applyType } from '../../utils/filters';
+import { apiTypeFor, applyType, getTypeNote } from '../../utils/filters';
 import { distanceMeters } from '../../utils/geo';
 import { getCoordinates, getSpotName, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
@@ -216,6 +216,7 @@ export default function MapScreen({ route, navigation }) {
                 featuredSpot={featuredSpot}
                 searchMode={place ? 'pinned' : 'current'}
                 fromDowntown={source === 'default' || source === 'outside'}
+                typeNote={getTypeNote(type)}
                 onClearPin={() => setPlace(null)}
                 searchRadius={radius}
                 onPeekHeightChange={setPeek}
