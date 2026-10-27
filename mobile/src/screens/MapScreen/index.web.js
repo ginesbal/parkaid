@@ -189,8 +189,9 @@ export default function MapScreen({ route, navigation }) {
                 </View>
             ) : null}
 
-            {/* Back to the search area, as on the phones */}
-            <View style={[mapStyles.fabContainer, { bottom: peek + 12 }]} pointerEvents="box-none">
+            {/* Back to the search area, as on the phones. Under the sheet, so
+                the open list covers it rather than the other way round. */}
+            <View style={[mapStyles.fabContainer, styles.underSheet, { bottom: peek + 12 }]} pointerEvents="box-none">
                 <Pressable
                     onPress={() => {
                         setSelectedSpot(null);
@@ -251,6 +252,9 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.inkSurface,
         borderWidth: 4,
         borderColor: TOKENS.surface,
+    },
+    underSheet: {
+        zIndex: 0,
     },
     // The pill centred on its coordinate, in a 44 pt touch target.
     marker: {

@@ -87,9 +87,9 @@ describe('row lines', () => {
         expect(getCrossStreets(lot)).toBeNull();
     });
 
-    it('calls out a maximum stay under 2 hours', () => {
-        expect(getShortLimit(street({ max_duration_minutes: 20 }))).toBe('20 min max');
-        expect(getShortLimit(street({ max_duration_minutes: 60 }))).toBe('1 hour max');
+    it('calls out a maximum stay under 2 hours, kept on one line', () => {
+        expect(getShortLimit(street({ max_duration_minutes: 20 }))).toBe('20 min max');
+        expect(getShortLimit(street({ max_duration_minutes: 60 }))).toBe('1 hour max');
         expect(getShortLimit(street({ max_duration_minutes: 120 }))).toBeNull();
         expect(getShortLimit(lot)).toBeNull();
     });
@@ -155,11 +155,12 @@ describe('pickTopSpot', () => {
 });
 
 describe('time limits', () => {
-    it('reads the City enforcement format, keeping each time on one line', () => {
-        expect(formatEnforceableTime('0910-1750 MON-SAT')).toBe('9:10 AM–5:50 PM, Mon–Sat');
-        expect(formatEnforceableTime('0001-2359 MON-FRI')).toBe('All day, Mon–Fri');
+    it('reads the City enforcement format, keeping each time and range on one line', () => {
+        // A no-break space inside each time, a word joiner after each dash
+        expect(formatEnforceableTime('0910-1750 MON-SAT')).toBe('9:10 AM–⁠5:50 PM, Mon–⁠Sat');
+        expect(formatEnforceableTime('0001-2359 MON-FRI')).toBe('All day, Mon–⁠Fri');
         expect(formatEnforceableTime('0710-1750 MON-FRI, 0910-1750 SAT'))
-            .toBe('7:10 AM–5:50 PM, Mon–Fri; 9:10 AM–5:50 PM, Sat');
+            .toBe('7:10 AM–⁠5:50 PM, Mon–⁠Fri; 9:10 AM–⁠5:50 PM, Sat');
     });
 
     it('returns text it cannot read unchanged', () => {

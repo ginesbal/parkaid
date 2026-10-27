@@ -87,14 +87,23 @@ const WebMap = forwardRef(function WebMap({
         });
         instance.addControl(new maplibregl.AttributionControl({ compact: true }), credit);
         if (interactive) instance.touchZoomRotate.disableRotation();
+        if (creditCollapsed) {
+            // MapLibre opens the credit once the tiles' attribution arrives,
+            // which can be after 'load'. Close it once everything is drawn,
+            // as MapLibre itself does when the map is dragged.
+            const collapse = () => {
+                const attribution = instance.getContainer().querySelector('.maplibregl-ctrl-attrib.maplibregl-compact');
+                if (!attribution) return;
+                attribution.classList.remove('maplibregl-compact-show');
+                instance.off('idle', collapse);
+            };
+            instance.on('idle', collapse);
+        }
 
         instance.on('load', () => {
             instance.addSource('area', { type: 'geojson', data: EMPTY });
             instance.addLayer({ id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': TOKENS.primary, 'fill-opacity': 0.06 } });
             instance.addLayer({ id: 'area-line', type: 'line', source: 'area', paint: { 'line-color': TOKENS.primary, 'line-opacity': 0.3, 'line-width': 1.5 } });
-            if (creditCollapsed) {
-                instance.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
-            }
             setLoaded(true);
             handlers.current.onLoad?.();
         });

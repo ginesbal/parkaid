@@ -128,10 +128,13 @@ export function getCrossStreets(spot) {
 // A posted maximum under this is called out wherever the spot is listed.
 const SHORT_LIMIT = 120; // minutes
 
-// "20 min max" when the spot's maximum stay is under 2 hours, else null.
+// "20 min max" when the spot's maximum stay is under 2 hours, else null. With
+// no-break spaces, so it never splits across lines.
 export function getShortLimit(spot) {
     const minutes = getMaxStayMinutes(spot);
-    return minutes !== null && minutes < SHORT_LIMIT ? `${formatDuration(minutes)} max` : null;
+    return minutes !== null && minutes < SHORT_LIMIT
+        ? `${formatDuration(minutes)} max`.replace(/ /g, ' ')
+        : null;
 }
 
 // A list row's second line: the block and the walk for street parking
@@ -264,6 +267,8 @@ function clock(hhmm) {
 
 // City format "0910-1750 MON-SAT, 0001-2359 SUN" -> "9:10 AM–5:50 PM, Mon–Sat; all day, Sun".
 // Anything it cannot read comes back unchanged.
+const RANGE_DASH = '–⁠';
+
 export function formatEnforceableTime(raw) {
     if (!raw || typeof raw !== 'string') return null;
     const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
@@ -271,9 +276,10 @@ export function formatEnforceableTime(raw) {
         const m = part.match(/^(\d{4})-(\d{4})\s+([A-Z]{3})(?:-([A-Z]{3}))?$/i);
         if (!m) return null;
         const [, from, to, d1, d2] = m;
-        const days = [d1, d2].filter(Boolean).map((d) => DAY_NAMES[d.toUpperCase()] || d).join('–');
+        // A word joiner after each dash: "Mon–Sat" never splits after "Mon–".
+        const days = [d1, d2].filter(Boolean).map((d) => DAY_NAMES[d.toUpperCase()] || d).join(RANGE_DASH);
         const allDay = from === '0001' || from === '0000';
-        const hours = allDay && (to === '2359' || to === '2400') ? 'all day' : `${clock(from)}–${clock(to)}`;
+        const hours = allDay && (to === '2359' || to === '2400') ? 'all day' : `${clock(from)}${RANGE_DASH}${clock(to)}`;
         return `${hours}, ${days}`;
     });
     if (out.some((o) => o === null)) return raw;

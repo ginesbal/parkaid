@@ -343,6 +343,7 @@ const ParkingBottomSheet = forwardRef(({
                         </Text>
                     </View>
 
+                    {/* A round ×, as maps close a dropped pin, so the title keeps one line */}
                     {pinned && onClearPin && (
                         <Pressable
                             style={({ pressed }) => [
@@ -350,16 +351,11 @@ const ParkingBottomSheet = forwardRef(({
                                 pressed && styles.clearButtonPressed
                             ]}
                             onPress={onClearPin}
-                            hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel="Clear pinned search location"
+                            accessibilityLabel="Clear pin"
+                            accessibilityHint="Lists parking around you again"
                         >
-                            <MaterialCommunityIcons
-                                name="close-circle"
-                                size={14}
-                                color={TOKENS.primary}
-                            />
-                            <Text style={styles.clearButtonText}>Clear pin</Text>
+                            <MaterialCommunityIcons name="close-circle" size={26} color={TOKENS.textMuted} />
                         </Pressable>
                     )}
                 </View>
@@ -561,27 +557,19 @@ const styles = StyleSheet.create({
         gap: 4,
         flex: 1,
     },
+    // 44 pt to the finger; the icon's edge lines up with the sheet's padding.
     clearButton: {
-        flexDirection: 'row',
+        width: 44,
+        height: 44,
+        marginRight: -9,
         alignItems: 'center',
-        gap: 5,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 10,
-        backgroundColor: TOKENS.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.primaryBorder,
+        justifyContent: 'center',
     },
     // Scale-based press feedback instead of opacity-only.
     // Emil: "Buttons must feel responsive. Add scale(0.97) on active."
     clearButtonPressed: {
         transform: [{ scale: 0.97 }],
         opacity: 0.8,
-    },
-    clearButtonText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: TOKENS.textMuted,
     },
     headerTitle: {
         fontSize: 20,
