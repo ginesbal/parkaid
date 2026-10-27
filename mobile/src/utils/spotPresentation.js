@@ -7,6 +7,7 @@
 //   residential: "00 Block COLLINGWOOD PL NW"
 
 import { parseChargeHours } from './chargeHours';
+import { formatDuration } from './sessionHelpers';
 
 const KIND_LABELS = {
     on_street: 'Street',
@@ -69,6 +70,10 @@ export function tidyName(text) {
     return value.replace(STREET_TYPE, (word, kind) => STREET_TYPES.get(kind.toLowerCase()) ?? word);
 }
 
+// A street block: "Eau Claire Av SW ,  Fr 4 St SW To 5 St SW".
+const BLOCK_FACE = /^(.+?)\s*,\s*Fr\s+(.+?)\s+To\s+(.+)$/i;
+const TRAILING_QUADRANT = /\s(NW|NE|SW|SE|N|S|E|W)$/;
+
 // { title, detail }: "Eau Claire Ave SW" + "4 St SW to 5 St SW"
 export function getSpotName(spot) {
     const address = (spot?.address || '').trim();
@@ -76,7 +81,7 @@ export function getSpotName(spot) {
         return { title: getSpotKind(spot), detail: '' };
     }
 
-    const block = address.match(/^(.+?)\s*,\s*Fr\s+(.+?)\s+To\s+(.+)$/i);
+    const block = address.match(BLOCK_FACE);
     if (block) {
         return { title: tidyName(block[1]), detail: `${tidyName(block[2])} to ${tidyName(block[3])}` };
     }
@@ -105,6 +110,34 @@ export function getZoneLabel(spot) {
 export function getWalkLabel(spot) {
     const minutes = Number(spot?.walkingTime);
     return Number.isFinite(minutes) && minutes > 0 ? `${minutes} min walk` : null;
+}
+
+// A street block's cross streets, short: "4 St to 5 St". A cross street keeps
+// its quadrant only when it differs from the block's own ("Centre St S").
+export function getCrossStreets(spot) {
+    const block = (spot?.address || '').trim().match(BLOCK_FACE);
+    if (!block) return null;
+    const quadrant = tidyName(block[1]).match(TRAILING_QUADRANT)?.[1];
+    const short = (name) => {
+        const tidy = tidyName(name);
+        return quadrant && tidy.endsWith(` ${quadrant}`) ? tidy.slice(0, -quadrant.length - 1) : tidy;
+    };
+    return `${short(block[2])} to ${short(block[3])}`;
+}
+
+// A posted maximum under this is called out wherever the spot is listed.
+const SHORT_LIMIT = 120; // minutes
+
+// "20 min max" when the spot's maximum stay is under 2 hours, else null.
+export function getShortLimit(spot) {
+    const minutes = getMaxStayMinutes(spot);
+    return minutes !== null && minutes < SHORT_LIMIT ? `${formatDuration(minutes)} max` : null;
+}
+
+// A list row's second line: the block and the walk for street parking
+// ("4 St to 5 St · 3 min walk"), else the kind and the walk.
+export function getRowMeta(spot) {
+    return [getCrossStreets(spot) || getSpotKind(spot), getWalkLabel(spot)].filter(Boolean).join(' · ');
 }
 
 // Numeric hourly rate when the data has one, else null. A 0 from the API means

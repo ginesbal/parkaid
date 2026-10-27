@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import SpotMap from '../../../../components/SpotMap';
 import {
     getRateDisplay,
+    getShortLimit,
     getSpotKind,
     getSpotName,
     getWalkLabel,
@@ -23,6 +24,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
     const meta = [getZoneLabel(spot) || getSpotKind(spot), getWalkLabel(spot)]
         .filter(Boolean)
         .join(' · ');
+    const limit = getShortLimit(spot);
     const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
     // The whole card is one target; "View spot" shows what a tap does.
@@ -31,7 +33,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
             onPress={() => onView(spot)}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
             accessibilityRole="button"
-            accessibilityLabel={`View spot: ${title}. ${reason}. ${meta}. ${rateSpoken}.`}
+            accessibilityLabel={`View spot: ${[title, reason, meta, limit, rateSpoken].filter(Boolean).join('. ')}.`}
         >
             {({ pressed }) => (
                 <>
@@ -42,7 +44,10 @@ const TopPick = ({ spot, view, onView, fromDowntown = false }) => {
                             </View>
                             <Text style={styles.title} numberOfLines={2}>{title}</Text>
                             {detail ? <Text style={styles.detail} numberOfLines={1}>{detail}</Text> : null}
-                            <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
+                            <Text style={styles.meta} numberOfLines={2}>
+                                {meta}
+                                {limit ? <Text style={styles.limit}>{` · ${limit}`}</Text> : null}
+                            </Text>
                             {rate.amount ? (
                                 <Text style={styles.price}>
                                     {rate.amount}

@@ -54,6 +54,11 @@ export const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         marginTop: 2,
     },
+    // A short maximum stay, in the warning colour: it changes the choice.
+    limit: {
+        fontWeight: '500',
+        color: TOKENS.warningInk,
+    },
     price: {
         ...TYPOGRAPHY.numMedium,
         fontSize: 28,

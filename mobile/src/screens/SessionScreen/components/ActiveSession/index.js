@@ -4,8 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EXTEND_STEP } from '../../../../constants/session';
 import { useEntrance } from '../../../../hooks/useEntrance';
 import { chargedCost, parseChargeHours } from '../../../../utils/chargeHours';
-import { formatMoney } from '../../../../utils/formatters';
-import { getSessionZone } from '../../../../utils/parkPlus';
+import { getExtendNote, getSessionZone } from '../../../../utils/parkPlus';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
@@ -45,11 +44,10 @@ const ActiveSession = ({
     const atMax = maxExtendMinutes !== null && maxExtendMinutes <= 0;
     const newEnd = endTime ? new Date(endTime.getTime() + step * 60000) : null;
     // What the added time costs, charged minutes only; no price when the rate
-    // is unknown, never a made-up one.
+    // is unknown, never a made-up one. Add changes the timer only, and the
+    // note says so.
     const extendCost = chargedCost(session.hourlyRate ?? null, parseChargeHours(session.chargeHours), endTime, step);
-    let extendNote = null;
-    if (extendCost === 0) extendNote = 'Free at that time';
-    else if (extendCost !== null) extendNote = `${formatMoney(extendCost)} more${zone ? ' in ParkPlus' : ''}`;
+    const extendNote = getExtendNote({ cost: extendCost, zone });
 
     // The last Extend, while it can still be undone.
     const [added, setAdded] = useState(null);

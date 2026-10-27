@@ -1,7 +1,10 @@
 import {
     formatEnforceableTime,
+    getCrossStreets,
     getMaxStayLabel,
     getRateDisplay,
+    getRowMeta,
+    getShortLimit,
     getSpotKind,
     getSpotName,
     getZoneLabel,
@@ -71,6 +74,30 @@ describe('getSpotName', () => {
 
     it('falls back to the kind when the address is unknown', () => {
         expect(getSpotName({ spot_type: 'off_street', address: 'Unknown Address' }).title).toBe('Lot');
+    });
+});
+
+describe('row lines', () => {
+    const lot = { spot_type: 'off_street', address: 'CPA Lot 28: 455 6th St SW', metadata: { parking_type: 'PARKADE' }, walkingTime: 4 };
+    const permit = { spot_type: 'residential', address: '00 Block 6 AV SW', walkingTime: 2 };
+
+    it('names a block by its cross streets, without repeating the quadrant', () => {
+        expect(getCrossStreets(street())).toBe('4 St to 5 St');
+        expect(getCrossStreets(street({ address: '3 Av SW ,  Fr Centre St S To 1 St SW' }))).toBe('Centre St S to 1 St');
+        expect(getCrossStreets(lot)).toBeNull();
+    });
+
+    it('calls out a maximum stay under 2 hours', () => {
+        expect(getShortLimit(street({ max_duration_minutes: 20 }))).toBe('20 min max');
+        expect(getShortLimit(street({ max_duration_minutes: 60 }))).toBe('1 hour max');
+        expect(getShortLimit(street({ max_duration_minutes: 120 }))).toBeNull();
+        expect(getShortLimit(lot)).toBeNull();
+    });
+
+    it('describes a row by its block and walk, or its kind and walk', () => {
+        expect(getRowMeta(street({ walkingTime: 3 }))).toBe('4 St to 5 St · 3 min walk');
+        expect(getRowMeta(lot)).toBe('Parkade · 4 min walk');
+        expect(getRowMeta(permit)).toBe('Permit zone · 2 min walk');
     });
 });
 

@@ -1,6 +1,7 @@
-// SpotRow — one spot in a list, on Home and in the Map's sheet: its name,
-// its kind and walk, and the rate on the right. Rows sit in a grouped inset
-// list: `first` and `last` round the group's corners, hairlines run between.
+// SpotRow — one spot in a list, on Home and in the Map's sheet: its name, its
+// block (or kind) and walk, a time limit under 2 hours, and the rate on the
+// right. Rows sit in a grouped inset list: `first` and `last` round the
+// group's corners, hairlines run between.
 // `selected` (the Map's chosen pin) uses the one selection style; `chevron`
 // marks rows that open Details.
 
@@ -8,12 +9,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RADIUS, SELECTED, SPACING, TOKENS } from '../../constants/theme';
-import { getRateDisplay, getSpotKind, getSpotName, getWalkLabel } from '../../utils/spotPresentation';
+import { getRateDisplay, getRowMeta, getShortLimit, getSpotName } from '../../utils/spotPresentation';
 
 function SpotRow({ spot, onPress, selected = false, first = false, last = false, chevron = false, inset = SPACING.xl }) {
     const { title } = getSpotName(spot);
     const rate = getRateDisplay(spot);
-    const meta = [getSpotKind(spot), getWalkLabel(spot)].filter(Boolean).join(' · ');
+    const meta = getRowMeta(spot);
+    const limit = getShortLimit(spot);
     const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
     return (
@@ -22,12 +24,17 @@ function SpotRow({ spot, onPress, selected = false, first = false, last = false,
                 onPress={() => onPress(spot)}
                 style={({ pressed }) => [styles.row, selected && styles.selected, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel={`${title}. ${meta}. ${rateSpoken}.`}
+                accessibilityLabel={[title, meta, limit, rateSpoken].filter(Boolean).join('. ') + '.'}
                 aria-selected={selected}
             >
                 <View style={styles.info}>
                     <Text style={styles.title} numberOfLines={1}>{title}</Text>
-                    {meta ? <Text style={styles.meta} numberOfLines={1}>{meta}</Text> : null}
+                    {meta ? (
+                        <Text style={styles.meta} numberOfLines={2}>
+                            {meta}
+                            {limit ? <Text style={styles.limit}>{` · ${limit}`}</Text> : null}
+                        </Text>
+                    ) : null}
                 </View>
                 {rate.amount ? (
                     <Text style={styles.price}>
@@ -94,6 +101,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
+    },
+    // A short maximum stay, in the warning colour: it changes the choice.
+    limit: {
+        fontWeight: '500',
+        color: TOKENS.warningInk,
     },
     price: {
         fontSize: 16,

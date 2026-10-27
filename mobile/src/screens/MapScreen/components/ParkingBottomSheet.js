@@ -9,6 +9,7 @@ import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
     getRateDisplay,
+    getShortLimit,
     getSpotName,
     getWalkLabel,
     getZoneLabel,
@@ -290,10 +291,12 @@ const ParkingBottomSheet = forwardRef(({
             ? 'Selected'
             : pinned ? 'Closest to your pin' : fromDowntown ? 'Closest to downtown' : 'Closest to you',
         name: getSpotName(featuredSpot).title,
-        // Zone and walk fit one line; the maximum stay is on Details.
+        // Zone and walk; a maximum stay under 2 hours too, since it changes
+        // the choice. Longer ones are on Details.
         meta: [getZoneLabel(featuredSpot), getWalkLabel(featuredSpot)]
             .filter(Boolean)
             .join(' \u00B7 '),
+        limit: getShortLimit(featuredSpot),
         rate: getRateDisplay(featuredSpot),
     } : null;
 
@@ -371,13 +374,16 @@ const ParkingBottomSheet = forwardRef(({
                         <View
                             style={styles.featured}
                             accessible
-                            accessibilityLabel={`${featured.reason}. ${featured.name}. ${featured.meta}. ${featured.rate.amount ? `${featured.rate.amount} per hour` : featured.rate.note}.`}
+                            accessibilityLabel={`${[featured.reason, featured.name, featured.meta, featured.limit].filter(Boolean).join('. ')}. ${featured.rate.amount ? `${featured.rate.amount} per hour` : featured.rate.note}.`}
                         >
                             <View style={styles.featuredInfo}>
                                 <Text style={styles.featuredReason}>{featured.reason}</Text>
                                 <Text style={styles.featuredName} numberOfLines={1}>{featured.name}</Text>
                                 {featured.meta ? (
-                                    <Text style={styles.featuredMeta} numberOfLines={1}>{featured.meta}</Text>
+                                    <Text style={styles.featuredMeta} numberOfLines={2}>
+                                        {featured.meta}
+                                        {featured.limit ? <Text style={styles.featuredLimit}>{` · ${featured.limit}`}</Text> : null}
+                                    </Text>
                                 ) : null}
                             </View>
                             {featured.rate.amount ? (
@@ -608,6 +614,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
+    },
+    // A short maximum stay, in the warning colour: it changes the choice.
+    featuredLimit: {
+        fontWeight: '500',
+        color: TOKENS.warningInk,
     },
     featuredPrice: {
         fontSize: 20,

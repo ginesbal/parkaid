@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
-import { getRateDisplay, getSpotKind, getSpotName, getZoneLabel } from '../../../../utils/spotPresentation';
+import { getCrossStreets, getRateDisplay, getSpotKind, getSpotName, getZoneLabel } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
 // The choice for a place not in the list.
@@ -46,11 +46,13 @@ export default function SpotPicker({ places, choice, onChoose, zone, setZone }) 
         <View style={styles.places} accessibilityRole="radiogroup">
             {places.map((spot) => {
                 const id = String(spot.id);
+                // A street spot is told apart by its block and zone, as on
+                // the sign; the setup below gives its rate.
+                const cross = getCrossStreets(spot);
                 const rate = getRateDisplay(spot);
-                const detail = [
-                    getZoneLabel(spot) || getSpotKind(spot),
-                    rate.amount ? `${rate.amount} ${rate.unit}` : rate.short,
-                ].join(' · ');
+                const detail = cross
+                    ? [cross, getZoneLabel(spot)].filter(Boolean).join(' · ')
+                    : [getZoneLabel(spot) || getSpotKind(spot), rate.amount ? `${rate.amount} ${rate.unit}` : rate.short].join(' · ');
                 return (
                     <PlaceOption
                         key={id}
