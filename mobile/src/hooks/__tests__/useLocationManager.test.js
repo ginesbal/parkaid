@@ -47,6 +47,14 @@ describe('useLocationManager', () => {
         expect(result.current.permission).toBe('blocked');
     });
 
+    it('can look without asking, for screens that only need a hint', async () => {
+        Location.getForegroundPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+        const { result } = renderHook(() => useLocationManager({ ask: false }));
+        await waitFor(() => expect(result.current.source).toBe('default'));
+        expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+        expect(result.current.permission).toBe('denied');
+    });
+
     it('shows downtown when the phone is outside Calgary', async () => {
         Location.getCurrentPositionAsync.mockResolvedValue(fixAt({ latitude: 53.5461, longitude: -113.4938 }));
         const { result } = renderHook(() => useLocationManager());

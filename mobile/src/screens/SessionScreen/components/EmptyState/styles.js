@@ -119,6 +119,13 @@ export const styles = StyleSheet.create({
         color: TOKENS.textMuted,
         fontVariant: ['tabular-nums'],
     },
+    // How far the place is from the phone now.
+    placeAway: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
+    },
     zoneInput: {
         minHeight: 50,
         borderRadius: 12,

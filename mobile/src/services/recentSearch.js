@@ -4,9 +4,26 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RECENT_SEARCH_MAX_AGE, STORAGE_KEYS } from '../constants/session';
-import { sortByDistance } from '../utils/spotPresentation';
+import { distanceMeters } from '../utils/geo';
+import { getCoordinates, sortByDistance } from '../utils/spotPresentation';
 
-const KEEP = 3;
+// Kept: enough that the car is likely among them after a short drive.
+const KEEP = 8;
+// Offered on Park.
+const OFFER = 3;
+
+// The places to offer, each with `away`: metres from `from`, the phone's
+// position now. Nearest first; without a position, in the search's order and
+// with `away` null. The search may have been made before the drive, so its
+// own order says little about where the car is.
+export function orderPlaces(spots, from, count = OFFER) {
+    const places = (spots || []).map((spot) => {
+        const coords = from ? getCoordinates(spot) : null;
+        return { ...spot, away: coords ? Math.round(distanceMeters(from, coords)) : null };
+    });
+    if (from) places.sort((a, b) => (a.away ?? Infinity) - (b.away ?? Infinity));
+    return places.slice(0, count);
+}
 
 // A search with nothing to offer leaves the last one in place.
 export function rememberSearch(spots, now = Date.now()) {

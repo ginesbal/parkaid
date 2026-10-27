@@ -44,8 +44,11 @@ async function readSaved() {
  * savedAt:    when the fix in use was taken (ms), if known
  * permission: 'granted', 'denied' (can still ask) or 'blocked'
  * locating:   a fix is being asked for
+ *
+ * ask: false never asks for permission, for screens where the location is
+ * only a hint (Park's place order). Home asks.
  */
-export const useLocationManager = () => {
+export const useLocationManager = ({ ask: askOnLaunch = true } = {}) => {
     const [state, setState] = useState({ location: null, source: null, savedAt: null });
     const [permission, setPermission] = useState('granted');
     const [locating, setLocating] = useState(false);
@@ -123,12 +126,12 @@ export const useLocationManager = () => {
             if (saved && !current.current.location) {
                 use({ latitude: saved.latitude, longitude: saved.longitude }, 'saved', saved.savedAt ?? null);
             }
-            refreshLocation({ force: true, ask: true });
+            refreshLocation({ force: true, ask: askOnLaunch });
         })();
         return () => {
             cancelled = true;
         };
-    }, [use, refreshLocation]);
+    }, [use, refreshLocation, askOnLaunch]);
 
     // Back in the app (from Settings, or after a drive): look again.
     useEffect(() => {

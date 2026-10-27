@@ -19,9 +19,12 @@ import { styles } from './styles';
  * Details or, without one, asks where the car is: one of the closest places
  * from the last search, or somewhere else.
  *
- * spot:      the spot to set up (handed over, or picked); null for somewhere else
+ * spot:      the spot to set up (handed over, or picked); null for somewhere
+ *            else, or before a pick
  * handedOver: true when `spot` came from Details, so there is nothing to pick
- * places:    the last search's closest places; searchedAt, when it ran (ms)
+ * places:    the last search's places to offer; searchedAt, when it ran (ms)
+ * nearYou:   the places are ordered by the phone's position now
+ * choice:    a place's id, ELSEWHERE, or null before the driver picks
  * zone:      for somewhere else, the zone number from the sign ('' for none)
  */
 const EmptyState = ({
@@ -29,6 +32,7 @@ const EmptyState = ({
     handedOver = false,
     places = [],
     searchedAt = null,
+    nearYou = false,
     choice,
     onChoose,
     onPickAnother,
@@ -49,7 +53,9 @@ const EmptyState = ({
     if (handedOver) {
         subtitle = [name.detail || getSpotKind(spot), zoneLabel].filter(Boolean).join(' · ');
     } else if (places.length) {
-        subtitle = `Closest to your search at ${formatClock(searchedAt)}`;
+        subtitle = nearYou
+            ? `Nearest to you first, from your search at ${formatClock(searchedAt)}`
+            : `From your search at ${formatClock(searchedAt)}`;
     } else {
         subtitle = 'Use the zone on the nearest parking sign.';
     }
@@ -76,6 +82,7 @@ const EmptyState = ({
                 where={handedOver ? null : (
                     <SpotPicker places={places} choice={choice} onChoose={onChoose} zone={zone} setZone={setZone} />
                 )}
+                needsPlace={!handedOver && choice === null}
                 vehiclePlate={vehiclePlate}
                 setVehiclePlate={setVehiclePlate}
                 selectedDuration={selectedDuration}

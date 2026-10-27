@@ -1,6 +1,6 @@
 import { calculateSessionState, formatDuration, formatRemaining, getWarnAtMinutes } from '../sessionHelpers';
 import { getGreeting } from '../greeting';
-import { durationsFor, snapDuration } from '../../screens/SessionScreen/components/EmptyState/SetupCard';
+import { durationsFor, snapDuration, startBlocker } from '../../screens/SessionScreen/components/EmptyState/SetupCard';
 
 describe('formatRemaining', () => {
     it('says time left the way people do', () => {
@@ -69,6 +69,18 @@ describe('snapDuration', () => {
         expect(snapDuration(opts, 120)).toBe(90);
         expect(snapDuration(opts, 45)).toBe(30);
         expect(snapDuration(durationsFor(20), 60)).toBe(20);
+    });
+});
+
+describe('startBlocker', () => {
+    it('says what is missing before Start, place first', () => {
+        expect(startBlocker({ plate: '', needsPlace: true })).toBe('Pick where you parked and add your plate to start.');
+        expect(startBlocker({ plate: 'CVX 4821', needsPlace: true })).toBe('Pick where you parked to start.');
+        expect(startBlocker({ plate: '  ', needsPlace: false })).toBe('Add your plate to start.');
+    });
+
+    it('is nothing once both are there', () => {
+        expect(startBlocker({ plate: 'CVX 4821', needsPlace: false })).toBeNull();
     });
 });
 

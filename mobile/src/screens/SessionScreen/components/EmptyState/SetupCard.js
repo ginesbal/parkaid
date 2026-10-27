@@ -29,6 +29,16 @@ export function snapDuration(options, selected) {
     return under.length ? under[under.length - 1].value : options[0].value;
 }
 
+// What still stands between the driver and Start, said under it; null when
+// nothing does. `needsPlace`: there is a choice of place and none is made.
+export function startBlocker({ plate, needsPlace }) {
+    const noPlate = !plate.trim();
+    if (needsPlace && noPlate) return 'Pick where you parked and add your plate to start.';
+    if (needsPlace) return 'Pick where you parked to start.';
+    if (noPlate) return 'Add your plate to start.';
+    return null;
+}
+
 /**
  * SetupCard - where (when there is a choice), plate and duration, with a
  * summary of what Start will commit to: when it ends and what it costs. Just
@@ -39,9 +49,11 @@ export function snapDuration(options, selected) {
  *           are priced. null: every minute is
  * maxMinutes: the spot's posted maximum; durations stay within it
  * where:    the place picker, shown first
+ * needsPlace: the picker has no choice yet, so Start waits for one
  */
 const SetupCard = ({
     where = null,
+    needsPlace = false,
     vehiclePlate,
     setVehiclePlate,
     selectedDuration,
@@ -70,7 +82,8 @@ const SetupCard = ({
     // The shown duration is what Start uses. The driver's own pick is kept, so
     // trying a spot with a shorter maximum does not lose it.
     const endsAt = formatClock(now + duration * 60000);
-    const isValid = vehiclePlate.trim().length > 0;
+    const blocker = startBlocker({ plate: vehiclePlate, needsPlace });
+    const isValid = !blocker;
 
     // Only promise a reminder the phone will deliver. Checked again on the
     // way back from Settings.
@@ -202,7 +215,7 @@ const SetupCard = ({
                 disabled={!isValid}
                 accessibilityRole="button"
                 accessibilityLabel={`Start session: ${formatDuration(duration)}, ends at ${endsAt}`}
-                accessibilityHint={isValid ? undefined : 'Enter your license plate first'}
+                accessibilityHint={blocker ?? undefined}
                 accessibilityState={{ disabled: !isValid }}
             >
                 <MaterialCommunityIcons
@@ -214,7 +227,7 @@ const SetupCard = ({
                     Start session {'·'} {formatDuration(duration)}
                 </Text>
             </TouchableOpacity>
-            {!isValid ? <Text style={styles.disabledHint}>Add your plate to start.</Text> : null}
+            {blocker ? <Text style={styles.disabledHint}>{blocker}</Text> : null}
             {isValid && REMINDERS_SUPPORTED && !blocked ? (
                 <Text style={styles.disabledHint}>We’ll remind you when it’s time to head back.</Text>
             ) : null}

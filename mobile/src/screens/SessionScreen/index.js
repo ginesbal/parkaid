@@ -6,7 +6,8 @@ import BrandLoader from '../../components/BrandLoader';
 import LiveStage from '../../components/LiveStage';
 import { PENDING_SPOT_MAX_AGE, STORAGE_KEYS } from '../../constants/session';
 import { useSession } from '../../context/SessionContext';
-import { recallSearch } from '../../services/recentSearch';
+import { useLocationManager } from '../../hooks/useLocationManager';
+import { orderPlaces, recallSearch } from '../../services/recentSearch';
 import { logger } from '../../utils/loggers';
 import { getSpotName } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
@@ -20,7 +21,7 @@ import { styles } from './SessionScreen.styles';
  * the `spot` route param; it prefills the setup for that spot, and is kept
  * on the phone until its session starts, in case the app is closed first.
  * Without one, the driver picks where they parked from the last search's
- * closest places, or somewhere else.
+ * places nearest the phone, or somewhere else. Nothing is picked for them.
  * The session itself lives in SessionContext, shared with Home and Map.
  */
 
@@ -99,24 +100,33 @@ export default function SessionScreen({ route, navigation }) {
     });
   }, [isLoaded, routeSpot]);
 
+  // Where the phone is now, to put the places nearest it first. Only a fresh
+  // fix: an old one may be from before the drive. Park never asks for
+  // permission; Home does.
+  const { location, source, refreshLocation } = useLocationManager({ ask: false });
+  const here = source === 'gps' ? location : null;
+
   // Where the car might be: the last search's closest places, read again
   // each time Park opens, since Home or Map may have searched since.
   const [recent, setRecent] = React.useState(null);
   React.useEffect(() => {
     if (hasSession || !navigation) return undefined;
-    const recall = () => recallSearch().then(setRecent);
+    const recall = () => {
+      recallSearch().then(setRecent);
+      refreshLocation();
+    };
     recall();
     return navigation.addListener('focus', recall);
-  }, [hasSession, navigation]);
-  const places = recent?.spots ?? [];
+  }, [hasSession, navigation, refreshLocation]);
+  const places = React.useMemo(() => orderPlaces(recent?.spots ?? [], here), [recent, here]);
 
-  // The picked place's id, or ELSEWHERE. Until the driver picks, and if the
-  // pick is no longer offered, it is the closest place.
+  // The picked place's id, or ELSEWHERE. Nothing is picked for the driver:
+  // a wrong place means paying ParkPlus for the wrong zone. With no places
+  // to offer, "Somewhere else" is the only answer.
   const [choice, setChoice] = React.useState(null);
   const [zone, setZone] = React.useState('');
-  const picked = choice === ELSEWHERE
-    ? null
-    : places.find((spot) => String(spot.id) === choice) ?? places[0] ?? null;
+  const picked = places.find((spot) => String(spot.id) === choice) ?? null;
+  const elsewhere = choice === ELSEWHERE || places.length === 0;
   const spot = pendingSpot ?? picked;
 
   const pickAnother = React.useCallback(() => {
@@ -248,7 +258,8 @@ export default function SessionScreen({ route, navigation }) {
           handedOver={Boolean(pendingSpot)}
           places={places}
           searchedAt={recent?.savedAt ?? null}
-          choice={picked ? String(picked.id) : ELSEWHERE}
+          nearYou={Boolean(here)}
+          choice={picked ? String(picked.id) : elsewhere ? ELSEWHERE : null}
           onChoose={setChoice}
           onPickAnother={pickAnother}
           zone={zone}

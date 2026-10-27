@@ -1,20 +1,25 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
+import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { getRateDisplay, getSpotKind, getSpotName, getZoneLabel } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
 // The choice for a place not in the list.
 export const ELSEWHERE = 'elsewhere';
 
-function PlaceOption({ title, detail, selected, onPress }) {
+// How far a place is from the phone, to the nearest 10 m: "40 m", "1.2 km".
+const awayLabel = (meters) => getDistanceLabel(Math.max(10, Math.round(meters / 10) * 10));
+
+function PlaceOption({ title, detail, away = null, selected, onPress }) {
+    const label = [title, detail, away !== null ? `${awayLabel(away)} from you` : null].filter(Boolean).join(', ');
     return (
         <Pressable
             onPress={onPress}
             style={({ pressed }) => [styles.place, selected && styles.placeActive, pressed && styles.placePressed]}
             accessibilityRole="radio"
             aria-checked={selected}
-            accessibilityLabel={detail ? `${title}, ${detail}` : title}
+            accessibilityLabel={label}
         >
             <MaterialCommunityIcons
                 name={selected ? 'radiobox-marked' : 'radiobox-blank'}
@@ -25,14 +30,16 @@ function PlaceOption({ title, detail, selected, onPress }) {
                 <Text style={styles.placeTitle} numberOfLines={1}>{title}</Text>
                 {detail ? <Text style={styles.placeDetail} numberOfLines={1}>{detail}</Text> : null}
             </View>
+            {away !== null ? <Text style={styles.placeAway}>{awayLabel(away)}</Text> : null}
         </Pressable>
     );
 }
 
 /**
- * SpotPicker - where the car is: the closest places from the last search,
- * then "Somewhere else" with the zone from the sign, if it has one.
- * `choice` is a place's id as a string, or ELSEWHERE.
+ * SpotPicker - where the car is: the last search's places, nearest the phone
+ * first with how far each is, then "Somewhere else" with the zone from the
+ * sign, if it has one. `choice` is a place's id as a string, ELSEWHERE, or
+ * null: nothing is picked until the driver picks.
  */
 export default function SpotPicker({ places, choice, onChoose, zone, setZone }) {
     return (
@@ -49,6 +56,7 @@ export default function SpotPicker({ places, choice, onChoose, zone, setZone }) 
                         key={id}
                         title={getSpotName(spot).title}
                         detail={detail}
+                        away={spot.away ?? null}
                         selected={choice === id}
                         onPress={() => onChoose(id)}
                     />
