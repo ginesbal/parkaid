@@ -21,7 +21,7 @@ const LoadingState = ({ searchRadius, phase = 'spots' }) => (
                 <BrandLoader
                     size={PIN_SIZE}
                     live
-                    label="Looking for spots nearby"
+                    label="Looking for parking nearby"
                     sublabel={`Checking within ${getDistanceLabel(searchRadius)} of you`}
                 />
             )}

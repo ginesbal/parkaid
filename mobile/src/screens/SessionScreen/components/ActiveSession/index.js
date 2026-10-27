@@ -116,7 +116,7 @@ const ActiveSession = ({
                             accessibilityRole="button"
                             accessibilityHint="Ends the session and opens Home"
                         >
-                            <Text style={styles.endText}>Find a spot nearby</Text>
+                            <Text style={styles.endText}>Find parking nearby</Text>
                         </TouchableOpacity>
                     </>
                 ) : (

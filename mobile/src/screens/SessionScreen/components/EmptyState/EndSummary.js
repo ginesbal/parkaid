@@ -58,7 +58,7 @@ export default function EndSummary({ session, onParkAgain, onFindParking }) {
                     accessibilityRole="button"
                     accessibilityHint="Opens Home"
                 >
-                    <Text style={styles.secondaryButtonText}>Find a spot nearby</Text>
+                    <Text style={styles.secondaryButtonText}>Find parking nearby</Text>
                 </TouchableOpacity>
             </View>
         </ScrollView>

@@ -113,7 +113,7 @@ const Header = ({
                 <>
                     <View style={styles.sectionHead}>
                         <Text style={styles.sectionTitle} accessibilityRole="header">
-                            A good place to start
+                            A good spot to start
                         </Text>
                         {savedNote ? <Text style={styles.sectionNote}>{savedNote}</Text> : null}
                     </View>

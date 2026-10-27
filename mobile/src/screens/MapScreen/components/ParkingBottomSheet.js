@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import BrandLoader from '../../../components/BrandLoader';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
 import SpotRow from '../../../components/SpotRow';
@@ -22,6 +22,18 @@ const SHEET_EXPANDED_TOP_GAP = 18;
 // Inset row separator — aligns under the address text, not the walk-time anchor.
 // The walk block (44) + row padding (20) + gap (10) = 74. Letting the walk column
 // "run free" vertically makes it read as the anchor for each row.
+
+// What to try when an area has no parking. The web preview cannot be dragged;
+// there, search is the way to look somewhere else.
+const EMPTY_HINT = Platform.OS === 'web'
+    ? {
+        current: 'Search an address to look somewhere else.',
+        pinned: 'Search another address to look somewhere else.',
+    }
+    : {
+        current: 'Drag the map, then tap Search this area.',
+        pinned: 'Move your pin, or pick a wider distance in the filters.',
+    };
 
 // Momentum threshold — a quick flick should snap regardless of drag distance.
 // Emil: "Don't require dragging past a threshold. If velocity exceeds ~0.11, dismiss."
@@ -266,10 +278,10 @@ const ParkingBottomSheet = forwardRef(({
     const failure = error && !loading && spots.length === 0 ? getLoadError(error) : null;
     const saved = describeSaved({ savedAt, stale });
     let countLine;
-    if (loading && spots.length === 0) countLine = 'Finding spots\u2026';
+    if (loading && spots.length === 0) countLine = 'Finding parking\u2026';
     else if (loading) countLine = 'Updating for this area\u2026';
     else if (failure) countLine = failure.title;
-    else if (spots.length === 0) countLine = `No spots within ${within}`;
+    else if (spots.length === 0) countLine = `No parking within ${within}`;
     else if (saved) countLine = `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} \u00B7 ${saved}`;
     else countLine = `${spots.length} ${spots.length === 1 ? 'spot' : 'spots'} within ${within}`;
 
@@ -302,7 +314,7 @@ const ParkingBottomSheet = forwardRef(({
                     style={styles.grabber}
                     hitSlop={{ top: 12, bottom: 8 }}
                     accessibilityRole="button"
-                    accessibilityLabel="List of spots"
+                    accessibilityLabel="Parking list"
                     accessibilityHint={expanded ? 'Hides the list' : 'Shows the list'}
                     aria-expanded={expanded}
                     accessibilityActions={[
@@ -318,7 +330,7 @@ const ParkingBottomSheet = forwardRef(({
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
                         <Text style={styles.headerTitle} accessibilityRole="header">
-                            {pinned ? 'Spots around your pin' : fromDowntown ? 'Spots around downtown' : 'Spots around you'}
+                            {pinned ? 'Parking around your pin' : fromDowntown ? 'Parking around downtown' : 'Parking around you'}
                         </Text>
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {countLine}
@@ -389,7 +401,7 @@ const ParkingBottomSheet = forwardRef(({
                 ) : (
                     <View style={[styles.featuredWrap, styles.statusSlot, { minHeight: featuredHeight }]}>
                         {loading ? (
-                            <BrandLoader size={40} label="Finding spots around here" delay={150} />
+                            <BrandLoader size={40} label="Finding parking around here" delay={150} />
                         ) : failure ? (
                             <>
                                 <Text style={styles.emptyHint}>{failure.body}</Text>
@@ -405,12 +417,8 @@ const ParkingBottomSheet = forwardRef(({
                             </>
                         ) : (
                             <>
-                                <Text style={styles.emptyTitle}>No spots in this area</Text>
-                                <Text style={styles.emptyHint}>
-                                    {pinned
-                                        ? 'Move your pin or widen the radius'
-                                        : 'Pan or zoom the map to search elsewhere'}
-                                </Text>
+                                <Text style={styles.emptyTitle}>No parking in this area</Text>
+                                <Text style={styles.emptyHint}>{EMPTY_HINT[pinned ? 'pinned' : 'current']}</Text>
                             </>
                         )}
                     </View>
