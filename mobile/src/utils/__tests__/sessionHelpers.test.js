@@ -5,8 +5,8 @@ import { durationsFor, snapDuration } from '../../screens/SessionScreen/componen
 describe('formatRemaining', () => {
     it('says time left the way people do', () => {
         expect(formatRemaining(54 * 60000 + 30000)).toBe('54 min');
-        expect(formatRemaining(114 * 60000)).toBe('1 h 54 min');
-        expect(formatRemaining(120 * 60000)).toBe('2 h');
+        expect(formatRemaining(114 * 60000)).toBe('1 hour 54 min');
+        expect(formatRemaining(120 * 60000)).toBe('2 hours');
         expect(formatRemaining(30000)).toBe('Less than a minute');
         expect(formatRemaining(0)).toBe('Time’s up');
     });
@@ -15,7 +15,13 @@ describe('formatRemaining', () => {
 describe('formatDuration', () => {
     it('formats minutes', () => {
         expect(formatDuration(30)).toBe('30 min');
-        expect(formatDuration(90)).toBe('1 h 30 min');
+        expect(formatDuration(90)).toBe('1 hour 30 min');
+    });
+
+    it('spells out hours, singular and plural', () => {
+        expect(formatDuration(60)).toBe('1 hour');
+        expect(formatDuration(180)).toBe('3 hours');
+        expect(formatDuration(150)).toBe('2 hours 30 min');
     });
 });
 

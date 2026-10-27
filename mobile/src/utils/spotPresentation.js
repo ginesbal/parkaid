@@ -30,26 +30,46 @@ export function getSpotKind(spot) {
 }
 
 // Words kept in capitals when a shouted City name is put in title case.
-const KEEP_CAPS = new Set(['NW', 'NE', 'SW', 'SE', 'CPA']);
+const KEEP_CAPS = new Set(['NW', 'NE', 'SW', 'SE', 'CPA', 'MEC', 'YMCA']);
 
-// Numbered streets as the City's street blocks write them: "6 St", "7 Av".
+// The City writes street types as codes ("AV", "Tr", "Wy"), and sometimes in
+// full. People write "Ave", "Trail", "Way": each type gets one spelling.
+const STREET_TYPES = new Map([
+    ['Ave', 'av ave avenue'], ['St', 'st street'], ['Rd', 'rd road'], ['Dr', 'dr drive'],
+    ['Blvd', 'bv blvd boulevard'], ['Cres', 'cr cres crescent'], ['Pl', 'pl place'],
+    ['Sq', 'sq square'], ['Trail', 'tr trail'], ['Way', 'wy way'], ['Lane', 'ln lane'],
+    ['Close', 'cl close'], ['Court', 'co ct court'], ['Circle', 'ci circle'], ['Gate', 'ga gate'],
+    ['Bay', 'ba bay'], ['Hill', 'hl hill'], ['Green', 'gr green'], ['Rise', 'ri rise'],
+    ['Heights', 'ht hts heights'], ['Point', 'pt point'], ['Park', 'pa park'], ['Manor', 'mr manor'],
+    ['Gardens', 'gd gardens'], ['Link', 'li link'], ['Path', 'ph path'], ['Parade', 'pr parade'],
+    ['Common', 'cm common'], ['Heath', 'he heath'], ['Mews', 'me mews'], ['Landing', 'ld landing'],
+    ['View', 'vw view'], ['Walk', 'wk walk'], ['Terrace', 'tc terrace'],
+].flatMap(([word, codes]) => codes.split(' ').map((code) => [code, word])));
+
+// The street type is the word before the quadrant ("Eau Claire Av SW"), or
+// the last word when there is none ("Kensington Rd").
+const STREET_TYPE = /\b([A-Za-z]+)\.?(?=\s+(?:NW|NE|SW|SE|N|S|E|W)\b|\s*$)/g;
+// Numbered streets lose the ordinal, as on the City's street blocks: "6 St".
 const NUMBERED_STREET = /\b(\d+)(?:st|nd|rd|th)?\s+(Street|St|Avenue|Ave|Av)\b/gi;
-const STREET_WORD = { street: 'St', st: 'St', avenue: 'Av', ave: 'Av', av: 'Av' };
+const QUADRANT = /\b(nw|ne|sw|se)\b/gi;
+const SHOUTED = /^[A-Z][A-Z']+$/;
 
-// "6 AV SW" -> "6 Av SW", "COLLINGWOOD PL NW" -> "Collingwood Pl NW", and
-// "455 6th St SW" -> "455 6 St SW", so a lot's address and a street block
-// name the same street the same way. Shouted text is put in title case.
+// "6 AV SW" -> "6 Ave SW", "MacLeod Tr SE" -> "MacLeod Trail SE",
+// "WINDSOR Cr SW" -> "Windsor Cres SW", "455 6th St SW" -> "455 6 St SW", so
+// every list names a street the same way. Shouted words are put in title case.
 export function tidyName(text) {
-    let value = (text || '').replace(/\s+/g, ' ').trim();
-    if (!/[a-z]/.test(value)) {
-        value = value.split(' ').map((word) => (
-            KEEP_CAPS.has(word) ? word : word.charAt(0) + word.slice(1).toLowerCase()
-        )).join(' ');
-    }
-    return value.replace(NUMBERED_STREET, (_, number, kind) => `${number} ${STREET_WORD[kind.toLowerCase()]}`);
+    const value = (text || '').replace(/\s+/g, ' ').trim()
+        .split(' ')
+        .map((word) => (
+            SHOUTED.test(word) && !KEEP_CAPS.has(word) ? word.charAt(0) + word.slice(1).toLowerCase() : word
+        ))
+        .join(' ')
+        .replace(QUADRANT, (quadrant) => quadrant.toUpperCase())
+        .replace(NUMBERED_STREET, (_, number, kind) => `${number} ${STREET_TYPES.get(kind.toLowerCase())}`);
+    return value.replace(STREET_TYPE, (word, kind) => STREET_TYPES.get(kind.toLowerCase()) ?? word);
 }
 
-// { title, detail }: "Eau Claire Av SW" + "4 St SW to 5 St SW"
+// { title, detail }: "Eau Claire Ave SW" + "4 St SW to 5 St SW"
 export function getSpotName(spot) {
     const address = (spot?.address || '').trim();
     if (!address || address === 'Unknown Address') {
@@ -61,7 +81,7 @@ export function getSpotName(spot) {
         return { title: tidyName(block[1]), detail: `${tidyName(block[2])} to ${tidyName(block[3])}` };
     }
 
-    // Permit zones: "00 Block 6 AV SW" is the 0 to 99 block of 6 Av SW.
+    // Permit zones: "00 Block 6 AV SW" is the 0 to 99 block of 6 Ave SW.
     const hundred = address.match(/^(\d+)\s+Block\s+(.+)$/i);
     if (hundred) {
         const start = Number(hundred[1]);

@@ -71,8 +71,13 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
                     </View>
 
                     <Text style={styles.timeLabel}>Time left</Text>
+                    {/* "2 hours 59 min" is wide: on a narrow phone it shrinks to
+                        stay on one line. (Web cannot shrink text, so it wraps.) */}
                     <Text
                         style={[styles.time, expiring && styles.timeWarning]}
+                        numberOfLines={NATIVE ? 1 : 0}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}
                         accessibilityLabel={`${remaining} left, ends at ${endsAt}`}
                     >
                         {remaining}

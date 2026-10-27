@@ -11,7 +11,7 @@ import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
 // Quick picks that fit the spot's maximum stay, plus the maximum itself when
-// it is not already one of them (45 min, 90 min, 8 h…).
+// it is not already one of them (45 min, 90 min, 8 hours…).
 export function durationsFor(maxMinutes) {
     const quick = DURATION_OPTIONS.filter((opt) => opt.quickSelect);
     if (!maxMinutes) return quick;

@@ -38,8 +38,10 @@ export default function SessionStrip({ navigation, hidden }) {
     const expired = sessionState === 'expired';
     const left = expired ? 'Time’s up' : `${formatRemaining(timeRemainingMs)} left`;
     const ends = expired ? `Ended at ${formatClock(endTime)}` : `Ends at ${formatClock(endTime)}`;
-    // "Somewhere else" without a zone has no name.
+    // "Somewhere else" without a zone has no name. On screen the place stands
+    // alone, so it still fits beside "2 hours 29 min left".
     const parked = session.locationName ? `Parked at ${session.locationName}` : 'You’re parked';
+    const place = session.locationName || parked;
 
     return (
         <Pressable
@@ -51,7 +53,7 @@ export default function SessionStrip({ navigation, hidden }) {
         >
             <View style={[styles.dot, { backgroundColor: DOT[sessionState] || DOT.active }]} />
             <View style={styles.place}>
-                <Text style={styles.title} numberOfLines={1}>{parked}</Text>
+                <Text style={styles.title} numberOfLines={1}>{place}</Text>
                 <Text style={styles.ends} numberOfLines={1}>{ends}</Text>
             </View>
             <Text style={styles.left} numberOfLines={1}>{left}</Text>

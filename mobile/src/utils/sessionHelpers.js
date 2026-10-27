@@ -38,7 +38,7 @@ export const getWarnAtMinutes = (walkMinutes, durationMinutes, buffer = 10) => {
 };
 
 /**
- * time left, as people say it: "54 min", "1 h 54 min", "Less than a minute"
+ * time left, as people say it: "54 min", "1 hour 54 min", "Less than a minute"
  * @param {number} ms - milliseconds remaining
  */
 export const formatRemaining = (ms) => {
@@ -48,14 +48,15 @@ export const formatRemaining = (ms) => {
 };
 
 /**
- * a duration in minutes: "30 min", "2 h", "1 h 30 min"
+ * a duration in minutes: "30 min", "1 hour", "2 hours", "1 hour 30 min"
  */
 export const formatDuration = (minutes) => {
     const m = Math.max(0, Math.round(minutes || 0));
     if (m < 60) return `${m} min`;
     const h = Math.floor(m / 60);
     const rest = m % 60;
-    return rest ? `${h} h ${rest} min` : `${h} h`;
+    const hours = `${h} ${h === 1 ? 'hour' : 'hours'}`;
+    return rest ? `${hours} ${rest} min` : hours;
 };
 
 /**

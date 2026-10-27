@@ -8,6 +8,7 @@ import {
     isCovered,
     pickTopSpot,
     sortByValue,
+    tidyName,
 } from '../spotPresentation';
 
 // Shapes follow backend/routes/parking.js and City of Calgary open data.
@@ -26,25 +27,41 @@ const street = (over = {}) => ({
 describe('getSpotName', () => {
     it('reads a permit block as its street and block', () => {
         expect(getSpotName({ spot_type: 'residential', address: '00 Block 6 AV SW' }))
-            .toEqual({ title: '6 Av SW', detail: 'Block 0–99' });
+            .toEqual({ title: '6 Ave SW', detail: 'Block 0–99' });
         expect(getSpotName({ spot_type: 'residential', address: '1200 Block COLLINGWOOD PL NW' }))
             .toEqual({ title: 'Collingwood Pl NW', detail: 'Block 1200–1299' });
     });
 
-    it('puts shouted names in title case, keeping quadrants and CPA', () => {
+    it('puts shouted names in title case, keeping quadrants and acronyms', () => {
         expect(getSpotName({ address: 'CPA LOT 11: 640 7TH AV SW' }))
-            .toEqual({ title: 'CPA Lot 11', detail: '640 7 Av SW' });
+            .toEqual({ title: 'CPA Lot 11', detail: '640 7 Ave SW' });
+        expect(tidyName('WINDSOR Cr SW')).toBe('Windsor Cres SW');
+        expect(tidyName('2A ST SE')).toBe('2A St SE');
+        expect(tidyName('Seton YMCA')).toBe('Seton YMCA');
     });
 
-    it('writes numbered streets the way the City’s street blocks do', () => {
+    it('writes the City’s street-type codes the way people do', () => {
+        expect(tidyName('Eau Claire Av SW')).toBe('Eau Claire Ave SW');
+        expect(tidyName('MacLeod Tr. SE')).toBe('MacLeod Trail SE');
+        expect(tidyName('Olympic Wy SE')).toBe('Olympic Way SE');
+        expect(tidyName('MONTGOMERY BV NW')).toBe('Montgomery Blvd NW');
+        expect(tidyName('Barclay Pr SW')).toBe('Barclay Parade SW');
+        expect(tidyName('Kensington Rd')).toBe('Kensington Rd');
+        expect(tidyName('Centre St S')).toBe('Centre St S');
+        expect(tidyName('313 10 Av Se')).toBe('313 10 Ave SE');
+        // "St" for Saint is not a street type
+        expect(tidyName('ST MATTHEW SQ NE')).toBe('St Matthew Sq NE');
+    });
+
+    it('drops the ordinal from numbered streets', () => {
         expect(getSpotName({ address: 'CPA Lot 28: 455 6th St SW' }).detail).toBe('455 6 St SW');
-        expect(getSpotName({ address: 'City Centre: 300 7th Avenue SW' }).detail).toBe('300 7 Av SW');
+        expect(getSpotName({ address: 'City Centre: 300 7th Avenue SW' }).detail).toBe('300 7 Ave SW');
         expect(getSpotName({ address: 'Lot 9: 120 Riverfront Ave SE' }).detail).toBe('120 Riverfront Ave SE');
         expect(getSpotName({ address: 'Eau Claire Av SW ,  Fr 4 St SW To 5 St SW' }).detail).toBe('4 St SW to 5 St SW');
     });
 
     it('splits a block face into street and cross streets', () => {
-        expect(getSpotName(street())).toEqual({ title: 'Eau Claire Av SW', detail: '4 St SW to 5 St SW' });
+        expect(getSpotName(street())).toEqual({ title: 'Eau Claire Ave SW', detail: '4 St SW to 5 St SW' });
     });
 
     it('splits a lot name from its address', () => {
