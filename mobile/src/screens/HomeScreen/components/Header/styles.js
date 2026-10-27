@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, SELECTED, SPACING, TOKENS } from '../../../../constants/theme';
+import { RADIUS, SELECTED, SELECTED_BORDER, SPACING, TOKENS } from '../../../../constants/theme';
+
+// What the selected border adds over the hairline, taken out of the padding.
+const SELECTED_INSET = SELECTED_BORDER - StyleSheet.hairlineWidth;
 
 // Every tappable control here is at least 44pt tall.
 const CONTROL = 48;
@@ -89,10 +92,7 @@ export const styles = StyleSheet.create({
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairlineStrong,
     },
-    filterButtonOpen: {
-        backgroundColor: TOKENS.primarySoft,
-        borderColor: TOKENS.primaryBorder,
-    },
+    filterButtonOpen: SELECTED.surface,
     filterBadge: {
         position: 'absolute',
         top: -6,
@@ -154,7 +154,7 @@ export const styles = StyleSheet.create({
     },
     filterOptionSelected: {
         ...SELECTED.surface,
-        paddingLeft: SPACING.md,
+        paddingHorizontal: SPACING.lg - SELECTED_INSET,
     },
     filterOptionText: {
         fontSize: 14,
@@ -184,7 +184,7 @@ export const styles = StyleSheet.create({
     },
     chipSelected: {
         ...SELECTED.surface,
-        paddingLeft: SPACING.md,
+        paddingHorizontal: SPACING.lg - SELECTED_INSET,
     },
     chipText: {
         fontSize: 14,

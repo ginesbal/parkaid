@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
-import { SELECTED, TOKENS, alpha } from '../../../../constants/theme';
+import { SELECTED, SELECTED_BORDER, TOKENS, alpha } from '../../../../constants/theme';
+
+// What the selected border adds over the 1 pt one, taken out of the padding.
+const SELECTED_INSET = SELECTED_BORDER - 1;
 
 export const styles = StyleSheet.create({
     scrollContent: {
@@ -92,7 +95,11 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: TOKENS.hairlineStrong,
     },
-    placeActive: SELECTED.surface,
+    placeActive: {
+        ...SELECTED.surface,
+        paddingVertical: 10 - SELECTED_INSET,
+        paddingHorizontal: 12 - SELECTED_INSET,
+    },
     placePressed: {
         opacity: 0.8,
     },
@@ -150,7 +157,11 @@ export const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 10,
     },
-    durationOptionActive: SELECTED.surface,
+    durationOptionActive: {
+        ...SELECTED.surface,
+        paddingVertical: 10 - SELECTED_INSET,
+        paddingHorizontal: 10 - SELECTED_INSET,
+    },
     durationHead: {
         flexDirection: 'row',
         alignItems: 'center',

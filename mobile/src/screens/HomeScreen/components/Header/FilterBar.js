@@ -1,7 +1,5 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SELECTED } from '../../../../constants/theme';
 import { DISTANCE_OPTIONS, TYPE_OPTIONS, getTypeLabel } from '../../../../utils/filters';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
@@ -31,7 +29,6 @@ function OptionRow({ label, options, selected, onSelect, renderLabel }) {
                             accessibilityRole="radio"
                             aria-checked={isSelected}
                         >
-                            {isSelected ? <MaterialCommunityIcons name="check" size={16} color={SELECTED.icon} /> : null}
                             <Text style={[styles.filterOptionText, isSelected && styles.filterOptionTextSelected]}>
                                 {renderLabel(value)}
                             </Text>

@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, Linking, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SELECTED, TOKENS } from '../../../../constants/theme';
+import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS } from '../../../../constants/session';
 import { REMINDERS_SUPPORTED, remindersBlocked } from '../../../../services/reminders';
 import { chargedCost, chargedMinutes, describeFreeNow } from '../../../../utils/chargeHours';
@@ -134,7 +134,6 @@ const SetupCard = ({
                                         : `${formatDuration(option.value)}, ${formatCost(costFor(option.value))}`}
                                 >
                                     <View style={styles.durationHead}>
-                                        {selected ? <MaterialCommunityIcons name="check" size={16} color={SELECTED.icon} /> : null}
                                         <Text
                                             style={[styles.durationTime, selected && styles.durationTimeActive]}
                                             numberOfLines={1}

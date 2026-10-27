@@ -124,12 +124,16 @@ export const TOKENS = {
 };
 
 // One look for "this one is chosen", on every chip, option, tile and toggle:
-// a cerulean fill with ink-blue text or icon, plus a check or radio mark so
-// it never rests on colour alone. Spread onto the unselected style.
+// a cerulean fill, a thicker cerulean border and ink-blue text, so it never
+// rests on colour alone. Spread onto the unselected style, taking the extra
+// border width back out of the padding so the item keeps its size.
+export const SELECTED_BORDER = 2;
+
 export const SELECTED = {
     surface: {
         backgroundColor: TOKENS.primaryFill,
-        borderColor: TOKENS.primaryFill,
+        borderColor: TOKENS.primary,
+        borderWidth: SELECTED_BORDER,
     },
     text: {
         color: TOKENS.primaryInk,

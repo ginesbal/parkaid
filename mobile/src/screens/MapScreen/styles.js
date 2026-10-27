@@ -1,6 +1,9 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, SELECTED, TOKENS, alpha } from '../../constants/theme';
+import { RADIUS, SELECTED, SELECTED_BORDER, TOKENS, alpha } from '../../constants/theme';
 import { SHEET_MIN_HEIGHT } from './constants';
+
+// What the selected border adds over the hairline, taken out of the padding.
+const SELECTED_INSET = SELECTED_BORDER - StyleSheet.hairlineWidth;
 
 export const styles = StyleSheet.create({
     container: {
@@ -126,7 +129,7 @@ export const styles = StyleSheet.create({
 
     miniChipActive: {
         ...SELECTED.surface,
-        paddingLeft: 8,
+        paddingHorizontal: 12 - SELECTED_INSET,
     },
 
     miniChipText: {

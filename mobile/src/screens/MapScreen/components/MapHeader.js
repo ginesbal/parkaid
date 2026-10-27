@@ -139,7 +139,6 @@ function MapHeader({
                             accessibilityRole="button"
                             aria-selected={filterType === f.key}
                         >
-                            {filterType === f.key ? <MaterialCommunityIcons name="check" size={14} color={SELECTED.icon} /> : null}
                             <Text style={[
                                 styles.miniChipText,
                                 filterType === f.key && styles.miniChipTextActive,
@@ -166,7 +165,6 @@ function MapHeader({
                             accessibilityRole="button"
                             aria-selected={searchRadius === meters}
                         >
-                            {searchRadius === meters ? <MaterialCommunityIcons name="check" size={14} color={SELECTED.icon} /> : null}
                             <Text style={[
                                 styles.miniChipText,
                                 searchRadius === meters && styles.miniChipTextActive,

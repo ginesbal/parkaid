@@ -1,7 +1,5 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { SELECTED } from '../../../../constants/theme';
 import { styles } from './styles';
 
 // How the list is sorted; they only re-order the same results. What kind of
@@ -27,10 +25,6 @@ const ViewChips = ({ view, onChange }) => (
                     accessibilityRole="radio"
                     aria-checked={selected}
                 >
-                    {/* Check mark so selection never relies on colour alone */}
-                    {selected ? (
-                        <MaterialCommunityIcons name="check" size={16} color={SELECTED.icon} />
-                    ) : null}
                     <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                         {label}
                     </Text>
