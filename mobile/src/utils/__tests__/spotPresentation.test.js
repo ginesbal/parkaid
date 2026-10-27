@@ -33,8 +33,14 @@ describe('getSpotName', () => {
 
     it('puts shouted names in title case, keeping quadrants and CPA', () => {
         expect(getSpotName({ address: 'CPA LOT 11: 640 7TH AV SW' }))
-            .toEqual({ title: 'CPA Lot 11', detail: '640 7th Av SW' });
-        expect(getSpotName({ address: 'CPA Lot 28: 455 6th St SW' }).detail).toBe('455 6th St SW');
+            .toEqual({ title: 'CPA Lot 11', detail: '640 7 Av SW' });
+    });
+
+    it('writes numbered streets the way the City’s street blocks do', () => {
+        expect(getSpotName({ address: 'CPA Lot 28: 455 6th St SW' }).detail).toBe('455 6 St SW');
+        expect(getSpotName({ address: 'City Centre: 300 7th Avenue SW' }).detail).toBe('300 7 Av SW');
+        expect(getSpotName({ address: 'Lot 9: 120 Riverfront Ave SE' }).detail).toBe('120 Riverfront Ave SE');
+        expect(getSpotName({ address: 'Eau Claire Av SW ,  Fr 4 St SW To 5 St SW' }).detail).toBe('4 St SW to 5 St SW');
     });
 
     it('splits a block face into street and cross streets', () => {

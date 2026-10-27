@@ -32,14 +32,21 @@ export function getSpotKind(spot) {
 // Words kept in capitals when a shouted City name is put in title case.
 const KEEP_CAPS = new Set(['NW', 'NE', 'SW', 'SE', 'CPA']);
 
-// "6 AV SW" -> "6 Av SW", "COLLINGWOOD PL NW" -> "Collingwood Pl NW",
-// "6TH ST" -> "6th St". Text already in mixed case is left alone.
+// Numbered streets as the City's street blocks write them: "6 St", "7 Av".
+const NUMBERED_STREET = /\b(\d+)(?:st|nd|rd|th)?\s+(Street|St|Avenue|Ave|Av)\b/gi;
+const STREET_WORD = { street: 'St', st: 'St', avenue: 'Av', ave: 'Av', av: 'Av' };
+
+// "6 AV SW" -> "6 Av SW", "COLLINGWOOD PL NW" -> "Collingwood Pl NW", and
+// "455 6th St SW" -> "455 6 St SW", so a lot's address and a street block
+// name the same street the same way. Shouted text is put in title case.
 export function tidyName(text) {
-    const value = (text || '').replace(/\s+/g, ' ').trim();
-    if (/[a-z]/.test(value)) return value;
-    return value.split(' ').map((word) => (
-        KEEP_CAPS.has(word) ? word : word.charAt(0) + word.slice(1).toLowerCase()
-    )).join(' ');
+    let value = (text || '').replace(/\s+/g, ' ').trim();
+    if (!/[a-z]/.test(value)) {
+        value = value.split(' ').map((word) => (
+            KEEP_CAPS.has(word) ? word : word.charAt(0) + word.slice(1).toLowerCase()
+        )).join(' ');
+    }
+    return value.replace(NUMBERED_STREET, (_, number, kind) => `${number} ${STREET_WORD[kind.toLowerCase()]}`);
 }
 
 // { title, detail }: "Eau Claire Av SW" + "4 St SW to 5 St SW"
