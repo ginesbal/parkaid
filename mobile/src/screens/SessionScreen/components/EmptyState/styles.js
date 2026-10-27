@@ -63,9 +63,10 @@ export const styles = StyleSheet.create({
     plateInput: {
         minHeight: 50,
         borderRadius: 12,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        // White with an outline, not a grey box inside the white card.
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
         paddingHorizontal: 16,
         fontSize: 20,
         fontWeight: '600',
@@ -87,9 +88,9 @@ export const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 12,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
     },
     placeActive: SELECTED.surface,
     placePressed: {
@@ -123,6 +124,14 @@ export const styles = StyleSheet.create({
         fontVariant: ['tabular-nums'],
     },
 
+    // Until something is typed: a plain prompt, not a bold spaced "plate".
+    plateInputEmpty: {
+        fontSize: 16,
+        fontWeight: '400',
+        letterSpacing: 0,
+        textTransform: 'none',
+    },
+
     durationGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -133,9 +142,9 @@ export const styles = StyleSheet.create({
         width: '48%',
         minHeight: 60,
         borderRadius: 12,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 10,

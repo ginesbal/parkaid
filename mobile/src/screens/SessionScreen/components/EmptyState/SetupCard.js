@@ -102,12 +102,12 @@ const SetupCard = ({
                     <TextInput
                         value={vehiclePlate}
                         onChangeText={setVehiclePlate}
-                        placeholder="ABC 1234"
+                        placeholder="Enter your plate"
                         placeholderTextColor={TOKENS.textLight}
                         autoCapitalize="characters"
                         autoCorrect={false}
                         maxLength={10}
-                        style={styles.plateInput}
+                        style={[styles.plateInput, !vehiclePlate && styles.plateInputEmpty]}
                         selectionColor={TOKENS.primary}
                         accessibilityLabel="Vehicle license plate"
                         accessibilityHint="Enter your vehicle's license plate number"

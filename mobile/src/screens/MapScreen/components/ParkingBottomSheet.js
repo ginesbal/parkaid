@@ -574,13 +574,11 @@ const styles = StyleSheet.create({
         paddingTop: SPACING.md,
         gap: SPACING.md,
     },
+    // Sits straight on the sheet, not in a grey card inside it.
     featured: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: SPACING.md,
-        padding: SPACING.md,
-        borderRadius: RADIUS.lg,
-        backgroundColor: TOKENS.surfaceMuted,
     },
     featuredInfo: {
         flex: 1,
