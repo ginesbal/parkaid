@@ -145,14 +145,21 @@ describe('pickTopSpot', () => {
         expect(pickTopSpot([permit]).id).toBe('p');
         expect(pickTopSpot([])).toBeNull();
     });
+
+    it('skips a block with a maximum under an hour while there is another', () => {
+        const brief = street({ id: 'brief', max_duration_minutes: 10 });
+        const paid = street({ id: 'paid' });
+        expect(pickTopSpot([brief, paid]).id).toBe('paid');
+        expect(pickTopSpot([brief]).id).toBe('brief');
+    });
 });
 
 describe('time limits', () => {
-    it('reads the City enforcement format', () => {
-        expect(formatEnforceableTime('0910-1750 MON-SAT')).toBe('9:10 AM–5:50 PM, Mon–Sat');
+    it('reads the City enforcement format, keeping each time on one line', () => {
+        expect(formatEnforceableTime('0910-1750 MON-SAT')).toBe('9:10 AM–5:50 PM, Mon–Sat');
         expect(formatEnforceableTime('0001-2359 MON-FRI')).toBe('All day, Mon–Fri');
         expect(formatEnforceableTime('0710-1750 MON-FRI, 0910-1750 SAT'))
-            .toBe('7:10 AM–5:50 PM, Mon–Fri; 9:10 AM–5:50 PM, Sat');
+            .toBe('7:10 AM–5:50 PM, Mon–Fri; 9:10 AM–5:50 PM, Sat');
     });
 
     it('returns text it cannot read unchanged', () => {
@@ -187,5 +194,12 @@ describe('ranking', () => {
         const spots = [spot('p', 40, 0, 'residential'), spot('a', 140, 6)];
         expect(rankSpots(spots).map((s) => s.id)).toEqual(['a', 'p']);
         expect(permitLast(sortByWalk(spots), 'residential').map((s) => s.id)).toEqual(['p', 'a']);
+    });
+
+    it('lists blocks with a maximum under an hour after the rest, before permit-only ones', () => {
+        const brief = { ...spot('b', 60, 3), max_duration_minutes: 20 };
+        const hour = { ...spot('h', 70, 3), max_duration_minutes: 60 };
+        const spots = [brief, hour, spot('a', 140, 6), spot('p', 40, 0, 'residential')];
+        expect(rankSpots(spots).map((s) => s.id)).toEqual(['h', 'a', 'b', 'p']);
     });
 });

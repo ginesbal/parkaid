@@ -126,6 +126,12 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
+    // On the picked place, once the others fold away.
+    placeChange: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
     zoneInput: {
         minHeight: 50,
         borderRadius: 12,

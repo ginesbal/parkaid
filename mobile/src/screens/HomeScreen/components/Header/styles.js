@@ -193,10 +193,9 @@ export const styles = StyleSheet.create({
     },
     chipTextSelected: SELECTED.text,
 
+    // The heading, with how old the list is on its own line under it, so
+    // neither squeezes the other.
     sectionHead: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        justifyContent: 'space-between',
         paddingHorizontal: SPACING.xl,
         marginTop: SPACING['2xl'],
         marginBottom: SPACING.md,
@@ -209,11 +208,10 @@ export const styles = StyleSheet.create({
         color: TOKENS.text,
     },
     sectionNote: {
-        flexShrink: 1,
-        marginLeft: SPACING.md,
+        marginTop: 2,
         fontSize: 12,
+        lineHeight: 16,
         color: TOKENS.textMuted,
-        textAlign: 'right',
         fontVariant: ['tabular-nums'],
     },
     moreLabel: {

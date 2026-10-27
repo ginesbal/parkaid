@@ -21,7 +21,7 @@ import { describeLocation } from '../../utils/geo';
 import { getGreeting } from '../../utils/greeting';
 import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
-import { permitLast, pickTopSpot, rankSpots, sortByValue } from '../../utils/spotPresentation';
+import { briefLast, permitLast, pickTopSpot, rankSpots, sortByValue } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
@@ -97,10 +97,11 @@ export default function HomeScreen({ navigation }) {
   }, [loading]);
 
   // Nearest by walk (the cheaper first for the same walk), or cheapest first;
-  // permit-only blocks after everywhere a visitor can park.
+  // blocks with a maximum under an hour after the rest, and permit-only
+  // blocks after everywhere a visitor can park.
   const visibleSpots = useMemo(() => {
     const list = applyType(spots, activeFilter);
-    if (view === 'value') return permitLast(sortByValue(list), activeFilter);
+    if (view === 'value') return permitLast(briefLast(sortByValue(list)), activeFilter);
     return rankSpots(list, activeFilter);
   }, [spots, view, activeFilter]);
 

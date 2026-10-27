@@ -1,4 +1,4 @@
-import { calculateSessionState, formatDuration, formatRemaining, getWarnAtMinutes } from '../sessionHelpers';
+import { calculateSessionState, formatClock, formatDuration, formatRemaining, getWarnAtMinutes } from '../sessionHelpers';
 import { getGreeting } from '../greeting';
 import { durationsFor, snapDuration, startBlocker } from '../../screens/SessionScreen/components/EmptyState/SetupCard';
 
@@ -22,6 +22,13 @@ describe('formatDuration', () => {
         expect(formatDuration(60)).toBe('1 hour');
         expect(formatDuration(180)).toBe('3 hours');
         expect(formatDuration(150)).toBe('2 hours 30 min');
+    });
+});
+
+describe('formatClock', () => {
+    it('keeps the time and AM or PM on one line', () => {
+        expect(formatClock(new Date(2026, 9, 20, 13, 40))).toBe('1:40 PM');
+        expect(formatClock(new Date(2026, 9, 20, 9, 5))).toBe('9:05 AM');
     });
 });
 

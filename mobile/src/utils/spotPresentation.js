@@ -204,17 +204,32 @@ export function permitLast(spots, activeFilter = 'all') {
     ];
 }
 
-// The order every list and map uses for "near": by walk, permit-only last.
+// A maximum under an hour suits a quick stop, not most trips.
+const BRIEF_LIMIT = 60; // minutes
+const isBrief = (spot) => {
+    const minutes = getMaxStayMinutes(spot);
+    return minutes !== null && minutes < BRIEF_LIMIT;
+};
+
+// Blocks with a maximum under an hour after the rest, in the same order.
+export function briefLast(spots) {
+    return [...spots.filter((s) => !isBrief(s)), ...spots.filter(isBrief)];
+}
+
+// The order every list and map uses for "near": by walk, blocks with a
+// maximum under an hour after the rest, permit-only last.
 export function rankSpots(spots, activeFilter = 'all') {
-    return permitLast(sortByWalk(spots || []), activeFilter);
+    return permitLast(briefLast(sortByWalk(spots || [])), activeFilter);
 }
 
 // The first spot worth suggesting from an already-sorted list. Permit-only
-// blocks are a poor first suggestion unless the driver asked for them.
+// blocks are a poor first suggestion unless the driver asked for them, and
+// so is a maximum under an hour while anything else is open to them.
 export function pickTopSpot(spots, activeFilter = 'all') {
     if (!spots?.length) return null;
     if (activeFilter === 'residential') return spots[0];
-    return spots.find((s) => s.spot_type !== 'residential') || spots[0];
+    const open = spots.filter((s) => s.spot_type !== 'residential');
+    return open.find((s) => !isBrief(s)) || open[0] || spots[0];
 }
 
 // "2 hour maximum", "90 minute maximum": how a posted limit is said
@@ -243,7 +258,8 @@ function clock(hhmm) {
     const m = hhmm.slice(2);
     const suffix = h >= 12 ? 'PM' : 'AM';
     const h12 = h % 12 === 0 ? 12 : h % 12;
-    return m === '00' ? `${h12} ${suffix}` : `${h12}:${m} ${suffix}`;
+    // A no-break space, so "PM" never wraps onto a line of its own.
+    return m === '00' ? `${h12} ${suffix}` : `${h12}:${m} ${suffix}`;
 }
 
 // City format "0910-1750 MON-SAT, 0001-2359 SUN" -> "9:10 AM–5:50 PM, Mon–Sat; all day, Sun".

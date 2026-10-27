@@ -60,12 +60,15 @@ export const formatDuration = (minutes) => {
 };
 
 /**
- * clock time without a leading zero: "4:30 PM"
+ * clock time without a leading zero: "4:30 PM", with a no-break space so
+ * "PM" never wraps onto a line of its own
  */
 export const formatClock = (date) => {
     if (!date) return '';
     try {
-        return new Date(date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        return new Date(date)
+            .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            .replace(/\s(?=[AP]M)/i, ' ');
     } catch {
         return '';
     }
