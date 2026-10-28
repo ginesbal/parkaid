@@ -8,7 +8,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { RADIUS, SELECTED, SPACING, TOKENS } from '../../constants/theme';
+import { RADIUS, SPACING, TOKENS } from '../../constants/theme';
 import { getCaution, getRateDisplay, getRowMeta, getSpotName } from '../../utils/spotPresentation';
 
 // `now`: the time the caution is for (useMinute), so the row updates with it.
@@ -80,8 +80,10 @@ const styles = StyleSheet.create({
         paddingLeft: SPACING.lg,
         paddingRight: SPACING.md,
     },
+    // A lighter fill than SELECTED's, so the row's grey and amber text
+    // keeps 4.5:1 on it.
     selected: {
-        backgroundColor: SELECTED.surface.backgroundColor,
+        backgroundColor: TOKENS.primarySoft,
     },
     pressed: {
         backgroundColor: TOKENS.surfaceMuted,

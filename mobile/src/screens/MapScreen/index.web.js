@@ -128,9 +128,12 @@ export default function MapScreen({ route, navigation }) {
                 coordinate,
                 zIndex: selected ? 3 : 1,
                 node: (
+                    // A pointer's way to pick, out of the tab order like every
+                    // pin (see WebMap); the list has the same spots.
                     <Pressable
                         onPress={() => setSelectedSpot(spot)}
                         style={styles.marker}
+                        tabIndex={-1}
                         accessibilityRole="button"
                         accessibilityLabel={`Select ${[getSpotName(spot).title, getBlockSide(spot), getMarkerDescription(spot, now)].filter(Boolean).join(', ')}`}
                     >
@@ -157,6 +160,14 @@ export default function MapScreen({ route, navigation }) {
             style={styles.container}
             onLayout={(e) => setSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
         >
+            {/* First in the page, so the keyboard starts at search; it sits
+                over the map by its zIndex */}
+            <PlacesSearchBar
+                onPlaceSelected={handlePlaceSelected}
+                focusSignal={focusSignal}
+                containerStyle={[styles.search, wide && styles.searchPanel, { top: insets.top + SPACING.md }]}
+            />
+
             <WebMap
                 ref={mapRef}
                 style={StyleSheet.absoluteFill}
@@ -169,12 +180,6 @@ export default function MapScreen({ route, navigation }) {
                 onLoad={() => setMapReady(true)}
                 onPress={() => setSelectedSpot(null)}
                 onUserMove={setMapCenter}
-            />
-
-            <PlacesSearchBar
-                onPlaceSelected={handlePlaceSelected}
-                focusSignal={focusSignal}
-                containerStyle={[styles.search, wide && styles.searchPanel, { top: insets.top + SPACING.md }]}
             />
 
             {/* Search this area: once the map has moved off the search area */}

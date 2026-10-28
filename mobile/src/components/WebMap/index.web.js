@@ -3,6 +3,10 @@
 // react-native-maps. React content is drawn into MapLibre markers through
 // portals, so the web pins are the same components as the phones' pins.
 // MapLibre credits OpenStreetMap on the map itself; keep it in view.
+//
+// Pins are for the eye and the pointer only: screen readers and the keyboard
+// skip them, since every list beside a map has the same places. MapLibre
+// would call each one "Map marker" and make it a button.
 
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -165,6 +169,9 @@ const WebMap = forwardRef(function WebMap({
                 entry.marker = new maplibregl.Marker({ element: entry.element, anchor, offset })
                     .setLngLat(toLngLat(coordinate))
                     .addTo(map);
+                entry.element.removeAttribute('aria-label');
+                entry.element.removeAttribute('role');
+                entry.element.setAttribute('aria-hidden', 'true');
             } else {
                 entry.marker.setLngLat(toLngLat(coordinate));
             }

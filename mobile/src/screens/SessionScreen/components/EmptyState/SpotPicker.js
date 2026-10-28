@@ -94,17 +94,21 @@ export default function SpotPicker({ places, choice, onChoose, zone, setZone }) 
                 />
             ))}
             {choice === ELSEWHERE ? (
-                <TextInput
-                    value={zone}
-                    onChangeText={(text) => setZone(text.replace(/\D/g, '').slice(0, 5))}
-                    placeholder="Zone on the sign (optional)"
-                    placeholderTextColor={TOKENS.textLight}
-                    keyboardType="number-pad"
-                    style={styles.zoneInput}
-                    selectionColor={TOKENS.primary}
-                    accessibilityLabel="ParkPlus zone, optional"
-                    accessibilityHint="The zone number on the parking sign, if it has one"
-                />
+                // Labelled above, not by a placeholder that goes once typed in.
+                <View style={styles.zoneField}>
+                    <Text style={styles.zoneLabel}>
+                        Zone on the sign <Text style={styles.zoneOptional}>(optional)</Text>
+                    </Text>
+                    <TextInput
+                        value={zone}
+                        onChangeText={(text) => setZone(text.replace(/\D/g, '').slice(0, 5))}
+                        keyboardType="number-pad"
+                        style={styles.zoneInput}
+                        selectionColor={TOKENS.primary}
+                        accessibilityLabel="Zone on the sign, optional"
+                        accessibilityHint="The ParkPlus zone number on the parking sign, if it has one"
+                    />
+                </View>
             ) : null}
         </View>
     );

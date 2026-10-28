@@ -142,6 +142,17 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.primaryInk,
     },
+    zoneField: {
+        gap: 8,
+    },
+    zoneLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.textMuted,
+    },
+    zoneOptional: {
+        fontWeight: '400',
+    },
     zoneInput: {
         minHeight: 50,
         borderRadius: 12,
