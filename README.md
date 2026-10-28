@@ -17,18 +17,23 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
   closest or by best value. Filters, shared by the list and the map, narrow
   it to street, lot, parkade or permit parking within 150 m to 1 km.
 - Shows spots on a map as pins with their hourly rate, so you can compare
-  without tapping each one. Drop a pin, drag the map and search that area, or
-  search an address to look somewhere else. The web build has a real map
-  too, drawn from OpenStreetMap.
-- Opens a details page for each spot: the rate and when it is charged, the
-  ParkPlus zone to pay at, the maximum stay, the walk, and directions.
+  without tapping each one. Pins too close to tell apart share one, with a
+  count and the lowest rate, and a tap zooms in. Drop a pin, drag the map and
+  search that area, or search an address to look somewhere else. The web
+  build has a real map too, drawn from OpenStreetMap.
+- Opens a details page for each spot: the rate now and the City's rates
+  through the day, when it is charged, rush-hour times when nobody may park,
+  the side of the street, the ParkPlus zone to pay at, the maximum stay, the
+  walk, and directions.
 - Times your parking. Pick where you parked from your last search, or give
   the zone from the sign. You see the end time and the cost before you start,
   counting only the hours the City charges. Durations stay within the posted
-  maximum, added time can be undone, and it tells you when it is time to walk
-  back.
+  maximum and end before a rush-hour restriction starts, added time can be
+  undone, and it tells you when it is time to walk back.
 - Says plainly that it does not pay the City. Copy the zone and open
-  MyParking, the City's ParkPlus app, to pay.
+  MyParking, the City's ParkPlus app, to pay. When your time is up or you
+  end the session, it reminds you to end the MyParking session too, since
+  that one keeps charging until you do.
 - Keeps working when the network drops. Responses are cached on the phone, so
   the app shows the last data it had and says when it was saved. When there
   is nothing saved, it says plainly whether you are offline, the data is
@@ -39,14 +44,16 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
 | Welcome | Home | Map |
 | --- | --- | --- |
-| <img src="docs/screens/01-welcome.png" width="240" alt="Welcome screen with the ParkAid pin and an Explore parking button"> | <img src="docs/screens/02-home.png" width="240" alt="Home with a greeting, search, sort chips and a suggested spot"> | <img src="docs/screens/03-map.png" width="240" alt="Street map of downtown Calgary with priced, lot and permit pins and a selected spot in the bottom sheet"> |
+| <img src="docs/screens/01-welcome.png" width="240" alt="Welcome screen with the ParkAid pin and an Explore parking button"> | <img src="docs/screens/02-home.png" width="240" alt="Home suggesting a spot on 11 Ave SW with its block, zone and walk and a warning of no parking from 3:30 PM, then the rest of the list"> | <img src="docs/screens/03-map.png" width="240" alt="Map of the Beltline with pins grouped where they would overlap, each group showing its count and lowest rate, and a selected spot on 4 St SW in the bottom sheet"> |
 
 | Details | Park | Session |
 | --- | --- | --- |
-| <img src="docs/screens/04-details.png" width="240" alt="Details for a street block: a small map, the rate and when it is charged, the walk, the maximum stay and the zone"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate, duration, end time, cost and where to pay"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, where to pay in ParkPlus and an Add 30 min button that says it only changes the timer"> |
+| <img src="docs/screens/04-details.png" width="240" alt="Details for 4 St SW: the rate now, no parking from 3:30 PM, the hours the City charges, the walk, the 2 hour maximum, the rush-hour restriction and the hourly rates for the day"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate and durations up to 1 hour 50 min, since parking stops at 3:30 PM, with the end time, cost and where to pay"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, an Add 30 min button that says it only changes the timer and costs 1 dollar more in ParkPlus, End session, then where to pay"> |
 
-Captured from the web build with sample data. On web the map is MapLibre with
-OpenStreetMap tiles from OpenFreeMap; iOS and Android use Google Maps.
+Captured from the web build on a Tuesday at 1:40 PM, with the City's real
+records for the blocks around 11 Ave SW and 5 St SW: their zones, hours, rates
+and rush-hour restrictions. On web the map is MapLibre with OpenStreetMap tiles
+from OpenFreeMap; iOS and Android use Google Maps.
 
 ## Tech stack
 
