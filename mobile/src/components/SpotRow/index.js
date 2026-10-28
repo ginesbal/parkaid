@@ -1,6 +1,6 @@
 // SpotRow — one spot in a list, on Home and in the Map's sheet: its name, its
-// block (or kind) and walk, a time limit under 2 hours, and the rate on the
-// right. Rows sit in a grouped inset list: `first` and `last` round the
+// block (or kind) and walk, a caution in amber (no parking now or soon, or a
+// maximum under 2 hours), and the rate on the right. Rows sit in a grouped inset list: `first` and `last` round the
 // group's corners, hairlines run between.
 // `selected` (the Map's chosen pin) uses the one selection style; `chevron`
 // marks rows that open Details.
@@ -9,13 +9,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RADIUS, SELECTED, SPACING, TOKENS } from '../../constants/theme';
-import { getRateDisplay, getRowMeta, getShortLimit, getSpotName } from '../../utils/spotPresentation';
+import { getCaution, getRateDisplay, getRowMeta, getSpotName } from '../../utils/spotPresentation';
 
-function SpotRow({ spot, onPress, selected = false, first = false, last = false, chevron = false, inset = SPACING.xl }) {
+// `now`: the time the caution is for (useMinute), so the row updates with it.
+function SpotRow({ spot, onPress, selected = false, first = false, last = false, chevron = false, inset = SPACING.xl, now = Date.now() }) {
     const { title } = getSpotName(spot);
     const rate = getRateDisplay(spot);
     const meta = getRowMeta(spot);
-    const limit = getShortLimit(spot);
+    const limit = getCaution(spot, now);
     const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
     return (

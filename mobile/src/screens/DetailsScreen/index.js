@@ -8,18 +8,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SpotMap from '../../components/SpotMap';
 import ParkPlusActions from '../../components/ParkPlusActions';
 import { LAYOUT, TOKENS } from '../../constants/theme';
-import { describeFreeNow } from '../../utils/chargeHours';
 import { logger } from '../../utils/loggers';
+import { formatRestrictions } from '../../utils/restrictions';
 import {
     formatEnforceableTime,
-    getChargeHours,
     getDirectionsUrl,
     getMaxStayLabel,
+    getNowLine,
     getRateDisplay,
+    getRestrictions,
     getSpotKind,
     getSpotName,
     getWalkLabel,
     getZoneLabel,
+    isRestrictedNow,
 } from '../../utils/spotPresentation';
 import { styles } from './styles';
 
@@ -66,6 +68,16 @@ function buildLines(spot) {
         lines.push({ icon: 'timer-outline', title: maxStay, body: 'The signs at the curb have the final say.' });
     }
 
+    // Rush hour: nobody may park here then, paid or not.
+    const restrictions = getRestrictions(spot);
+    if (restrictions) {
+        lines.push({
+            icon: 'car-off',
+            title: `No parking ${formatRestrictions(restrictions)}`,
+            body: 'On weekdays. A car left here then may be ticketed or towed.',
+        });
+    }
+
     const zone = getZoneLabel(spot);
     if (zone) {
         // ParkAid takes no payment; hand off to the City's app to pay.
@@ -104,11 +116,13 @@ export default function DetailsScreen({ route, navigation }) {
     const rate = getRateDisplay(spot);
     const zone = getZoneLabel(spot);
     const chargedHours = formatEnforceableTime(spot?.zone_info?.enforceable_time);
-    // Outside charging hours the rate does not apply yet; say so first.
-    const freeNow = rate.amount ? describeFreeNow(getChargeHours(spot)) : null;
+    // Right now: no parking (rush hour), or free until the City charges,
+    // said before anything else about the rate.
+    const nowLine = getNowLine(spot);
     const lines = buildLines(spot);
     const directionsUrl = getDirectionsUrl(spot);
-    const canStart = spot.spot_type !== 'residential';
+    // Nothing to start on a permit-only block, or while nobody may park here.
+    const canStart = spot.spot_type !== 'residential' && !isRestrictedNow(spot);
     const thumbWidth = Math.min(width, LAYOUT.column) - 40;
 
     // When the City charges, said the same way as "Free now · charged from".
@@ -171,7 +185,11 @@ export default function DetailsScreen({ route, navigation }) {
                                 <Text style={styles.kindText}>{kind}</Text>
                             </View>
                         </View>
-                        {freeNow ? <Text style={styles.freeNow}>{freeNow}</Text> : null}
+                        {nowLine ? (
+                            <Text style={[styles.freeNow, nowLine.tone === 'warning' && styles.nowWarning]}>
+                                {nowLine.text}
+                            </Text>
+                        ) : null}
                         {rateBasis ? <Text style={styles.rateBasis}>{rateBasis}</Text> : null}
 
                         <View style={styles.lines}>

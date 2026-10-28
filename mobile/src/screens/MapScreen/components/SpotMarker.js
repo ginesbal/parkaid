@@ -17,7 +17,7 @@ const MarkerBody = Platform.OS === 'android' ? SpotBadge : SpotPill;
 // Fallback in case onLoad never fires (cached images on some Android builds).
 const READY_FALLBACK_MS = 600;
 
-function SpotMarker({ spot, selected, onPress }) {
+function SpotMarker({ spot, selected, onPress, now = Date.now() }) {
     const [ready, setReady] = useState(false);
     const coordinate = getCoordinates(spot);
 
@@ -37,13 +37,13 @@ function SpotMarker({ spot, selected, onPress }) {
             tracksViewChanges={!ready}
             anchor={{ x: 0.5, y: 0.5 }}
             zIndex={selected ? 10 : 1}
-            accessibilityLabel={`${title}, ${getMarkerDescription(spot)}`}
+            accessibilityLabel={`${title}, ${getMarkerDescription(spot, now)}`}
         >
             {/* iOS: a clear 44 pt box around the pill is the tap target. Android
                 cannot draw past 100 px, so there the map's own tap handler
                 picks a pin within reach (MapScreen handleMapPress). */}
             <View style={Platform.OS === 'ios' ? styles.target : null}>
-                <MarkerBody spot={spot} selected={selected} onImageLoad={() => setReady(true)} />
+                <MarkerBody spot={spot} selected={selected} now={now} onImageLoad={() => setReady(true)} />
             </View>
         </Marker>
     );

@@ -11,6 +11,7 @@ import EmptyState from './components/ParkingList/EmptyState';
 import LoadingState from './components/ParkingList/LoadingState';
 
 import { useLocationManager } from '../../hooks/useLocationManager';
+import { useMinute } from '../../hooks/useMinute';
 import { useEntrance } from '../../hooks/useEntrance';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
@@ -21,7 +22,7 @@ import { describeLocation } from '../../utils/geo';
 import { getGreeting } from '../../utils/greeting';
 import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
-import { briefLast, permitLast, pickTopSpot, rankSpots, sortByValue } from '../../utils/spotPresentation';
+import { pickTopSpot, rankByValue, rankSpots } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
@@ -97,17 +98,19 @@ export default function HomeScreen({ navigation }) {
   }, [loading]);
 
   // Nearest by walk (the cheaper first for the same walk), or cheapest first;
-  // blocks with a maximum under an hour after the rest, and permit-only
-  // blocks after everywhere a visitor can park.
+  // blocks where a stay can't last an hour after the rest, then blocks with
+  // no parking right now, and permit-only blocks after everywhere a visitor
+  // can park.
+  // Re-ranked each minute: a restriction may start while the list is open.
+  const now = useMinute();
   const visibleSpots = useMemo(() => {
     const list = applyType(spots, activeFilter);
-    if (view === 'value') return permitLast(briefLast(sortByValue(list)), activeFilter);
-    return rankSpots(list, activeFilter);
-  }, [spots, view, activeFilter]);
+    return view === 'value' ? rankByValue(list, activeFilter, now) : rankSpots(list, activeFilter, now);
+  }, [spots, view, activeFilter, now]);
 
   const topPick = useMemo(
-    () => (visibleSpots.length ? pickTopSpot(visibleSpots, activeFilter) : null),
-    [visibleSpots, activeFilter]
+    () => (visibleSpots.length ? pickTopSpot(visibleSpots, activeFilter, now) : null),
+    [visibleSpots, activeFilter, now]
   );
   const restSpots = useMemo(
     () => visibleSpots.filter((s) => s !== topPick),
@@ -272,6 +275,7 @@ export default function HomeScreen({ navigation }) {
       spot={item}
       onPress={handleSpotPress}
       chevron
+      now={now}
       first={index === 0 || listData[index - 1] === PERMIT_HEADING}
       last={index === listData.length - 1 || listData[index + 1] === PERMIT_HEADING}
     />
@@ -302,6 +306,7 @@ export default function HomeScreen({ navigation }) {
           <FlatList
             data={listData}
             renderItem={renderSpot}
+            extraData={now}
             keyExtractor={(item) => (item === PERMIT_HEADING ? 'permit-heading' : String(item.id))}
             ListHeaderComponent={
               <Header
@@ -323,6 +328,7 @@ export default function HomeScreen({ navigation }) {
                 onViewSpot={handleSpotPress}
                 moreCount={parkable.length}
                 savedNote={describeSaved({ savedAt, stale, updating: loading })}
+                now={now}
               />
             }
             ListEmptyComponent={topPick ? null : emptyComponent}

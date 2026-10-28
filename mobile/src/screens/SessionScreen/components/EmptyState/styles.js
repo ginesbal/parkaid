@@ -320,6 +320,22 @@ export const styles = StyleSheet.create({
         color: TOKENS.primaryInk,
         textDecorationLine: 'underline',
     },
+    // Nobody may park here now: in place of the durations.
+    noParking: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        padding: 12,
+        borderRadius: 12,
+        backgroundColor: TOKENS.warningSoft,
+    },
+    noParkingText: {
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
+        color: TOKENS.warningInk,
+    },
     setupHint: {
         marginTop: 8,
         fontSize: 14,

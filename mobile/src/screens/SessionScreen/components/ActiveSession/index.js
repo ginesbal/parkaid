@@ -16,8 +16,8 @@ const UNDO_FOR = 5000;
 /**
  * ActiveSession - the running session on the ink canvas. One clear way to add
  * time (with the new end time, what it adds in ParkPlus, and a short undo,
- * capped at the spot's maximum stay), and End kept apart. Once time is up:
- * Done, or find somewhere else to park.
+ * capped at the spot's maximum stay or the next rush-hour restriction), and
+ * End kept apart. Once time is up: Done, or find somewhere else to park.
  */
 const ActiveSession = ({
     session,
@@ -26,6 +26,7 @@ const ActiveSession = ({
     totalCost,
     endTime,
     maxExtendMinutes,
+    extendLimit = null,
     notice,
     onExtend,
     onUndo,
@@ -135,7 +136,9 @@ const ActiveSession = ({
                         ) : (
                             <View style={styles.capped} accessibilityRole="text">
                                 <Text style={styles.cappedTitle}>
-                                    {formatMaxStay(session.maxDuration)} reached
+                                    {extendLimit?.reason === 'restriction'
+                                        ? `No parking from ${formatClock(extendLimit.at)}`
+                                        : `${formatMaxStay(session.maxDuration)} reached`}
                                 </Text>
                                 <Text style={styles.cappedBody}>Move your car by {formatClock(endTime)}.</Text>
                             </View>

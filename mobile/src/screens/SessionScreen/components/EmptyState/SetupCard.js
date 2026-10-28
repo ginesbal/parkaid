@@ -10,10 +10,15 @@ import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
+const QUICK = DURATION_OPTIONS.filter((opt) => opt.quickSelect);
+const LONGEST_QUICK = Math.max(...QUICK.map((opt) => opt.value));
+// A restriction this close leaves no time worth starting a session for.
+const SHORTEST_STAY = 5; // minutes
+
 // Quick picks that fit the spot's maximum stay, plus the maximum itself when
 // it is not already one of them (45 min, 90 min, 8 hours…).
 export function durationsFor(maxMinutes) {
-    const quick = DURATION_OPTIONS.filter((opt) => opt.quickSelect);
+    const quick = QUICK;
     if (!maxMinutes) return quick;
     const fit = quick.filter((opt) => opt.value <= maxMinutes);
     return fit.some((opt) => opt.value === maxMinutes)
@@ -27,6 +32,26 @@ export function snapDuration(options, selected) {
     if (options.some((opt) => opt.value === selected)) return selected;
     const under = options.filter((opt) => opt.value <= selected);
     return under.length ? under[under.length - 1].value : options[0].value;
+}
+
+// What a spot's stay limit (getStayLimit) means for the setup: the longest
+// duration to offer, the note under the durations, and, when nobody may park
+// there now, when that ends.
+export function setupLimit(limit) {
+    const none = { maxMinutes: null, note: null, noParkingUntil: null };
+    if (!limit) return none;
+    if (limit.reason === 'restricted') return { ...none, noParkingUntil: limit.until };
+    if (limit.reason === 'restriction') {
+        if (limit.minutes < SHORTEST_STAY) return { ...none, noParkingUntil: limit.ends };
+        // A restriction after the longest quick pick changes nothing.
+        if (limit.minutes >= LONGEST_QUICK) return none;
+        return {
+            ...none,
+            maxMinutes: limit.minutes,
+            note: `No parking from ${formatClock(limit.until)}, so the longest here is ${formatDuration(limit.minutes)}.`,
+        };
+    }
+    return { ...none, maxMinutes: limit.minutes, note: `${formatMaxStay(limit.minutes)} here. Check posted signs.` };
 }
 
 // What still stands between the driver and Start, said under it; null when
@@ -47,7 +72,10 @@ export function startBlocker({ plate, needsPlace }) {
  * rate:     the spot's hourly rate, or null with a rateNote: no price is made up
  * chargeHours: when the City charges (utils/chargeHours); only those minutes
  *           are priced. null: every minute is
- * maxMinutes: the spot's posted maximum; durations stay within it
+ * maxMinutes: the longest stay here (the posted maximum, or until a
+ *           restriction starts); durations stay within it. limitNote says why.
+ * noParkingUntil: nobody may park here until then (rush hour), so there is
+ *           nothing to start
  * where:    the place picker, shown first
  * needsPlace: the picker has no choice yet, so Start waits for one
  */
@@ -63,6 +91,8 @@ const SetupCard = ({
     rateNote = null,
     chargeHours = null,
     maxMinutes = null,
+    limitNote = null,
+    noParkingUntil = null,
     zoneLabel = null,
     payLine,
     now = Date.now(),
@@ -82,7 +112,9 @@ const SetupCard = ({
     // The shown duration is what Start uses. The driver's own pick is kept, so
     // trying a spot with a shorter maximum does not lose it.
     const endsAt = formatClock(now + duration * 60000);
-    const blocker = startBlocker({ plate: vehiclePlate, needsPlace });
+    const blocker = noParkingUntil
+        ? `Pick another spot, or come back at ${formatClock(noParkingUntil)}.`
+        : startBlocker({ plate: vehiclePlate, needsPlace });
     const isValid = !blocker;
 
     // Only promise a reminder the phone will deliver. Checked again on the
@@ -131,82 +163,91 @@ const SetupCard = ({
             <View style={styles.setupSection}>
                 <View style={styles.setupContent}>
                     <Text style={styles.setupLabel}>How long</Text>
-                    <View style={styles.durationGrid} accessibilityRole="radiogroup">
-                        {durations.map((option) => {
-                            const selected = duration === option.value;
-                            return (
-                                <TouchableOpacity
-                                    key={option.value}
-                                    onPress={() => setSelectedDuration(option.value)}
-                                    activeOpacity={0.8}
-                                    style={[styles.durationOption, selected && styles.durationOptionActive]}
-                                    accessibilityRole="radio"
-                                    aria-checked={selected}
-                                    accessibilityLabel={rate === null
-                                        ? formatDuration(option.value)
-                                        : `${formatDuration(option.value)}, ${formatCost(costFor(option.value))}`}
-                                >
-                                    <View style={styles.durationHead}>
-                                        <Text
-                                            style={[styles.durationTime, selected && styles.durationTimeActive]}
-                                            numberOfLines={1}
-                                            adjustsFontSizeToFit
-                                            minimumFontScale={0.85}
-                                        >
-                                            {formatDuration(option.value)}
-                                        </Text>
-                                    </View>
-                                    {rate !== null ? (
-                                        <Text
-                                            style={[styles.durationCost, selected && styles.durationCostActive]}
-                                            numberOfLines={1}
-                                        >
-                                            {formatCost(costFor(option.value))}
-                                        </Text>
-                                    ) : null}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                    {maxMinutes ? (
-                        <Text style={styles.setupHint}>
-                            {formatMaxStay(maxMinutes)} here. Check posted signs.
-                        </Text>
-                    ) : null}
+                    {noParkingUntil ? (
+                        <View style={styles.noParking} accessibilityRole="alert">
+                            <MaterialCommunityIcons name="car-off" size={18} color={TOKENS.warningInk} />
+                            <Text style={styles.noParkingText}>
+                                No parking here until {formatClock(noParkingUntil)}. It’s a weekday rush-hour restriction.
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={styles.durationGrid} accessibilityRole="radiogroup">
+                            {durations.map((option) => {
+                                const selected = duration === option.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        onPress={() => setSelectedDuration(option.value)}
+                                        activeOpacity={0.8}
+                                        style={[styles.durationOption, selected && styles.durationOptionActive]}
+                                        accessibilityRole="radio"
+                                        aria-checked={selected}
+                                        accessibilityLabel={rate === null
+                                            ? formatDuration(option.value)
+                                            : `${formatDuration(option.value)}, ${formatCost(costFor(option.value))}`}
+                                    >
+                                        <View style={styles.durationHead}>
+                                            <Text
+                                                style={[styles.durationTime, selected && styles.durationTimeActive]}
+                                                numberOfLines={1}
+                                                adjustsFontSizeToFit
+                                                minimumFontScale={0.85}
+                                            >
+                                                {formatDuration(option.value)}
+                                            </Text>
+                                        </View>
+                                        {rate !== null ? (
+                                            <Text
+                                                style={[styles.durationCost, selected && styles.durationCostActive]}
+                                                numberOfLines={1}
+                                            >
+                                                {formatCost(costFor(option.value))}
+                                            </Text>
+                                        ) : null}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    )}
+                    {limitNote && !noParkingUntil ? <Text style={styles.setupHint}>{limitNote}</Text> : null}
                 </View>
             </View>
 
             {/* What Start commits to: when it ends, and what ParkPlus will charge */}
-            <View style={styles.summaryBox}>
-                <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Ends at</Text>
-                    <Text style={styles.summaryValue}>{endsAt}</Text>
-                </View>
-                <View style={styles.summaryDivider} />
-                <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Rate</Text>
-                    <Text style={styles.summaryValue}>
-                        {rate === null
-                            ? rateNote
-                            : `${formatMoney(rate)} / hour${zoneLabel ? ` · ${zoneLabel}` : ''}`}
-                    </Text>
-                </View>
-                {totalCost !== null ? (
-                    <>
+            {noParkingUntil ? null : (
+                <>
+                    <View style={styles.summaryBox}>
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Ends at</Text>
+                            <Text style={styles.summaryValue}>{endsAt}</Text>
+                        </View>
                         <View style={styles.summaryDivider} />
                         <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Cost for {formatDuration(duration)}</Text>
-                            <Text style={styles.summaryValueLarge}>{formatCost(totalCost)}</Text>
+                            <Text style={styles.summaryLabel}>Rate</Text>
+                            <Text style={styles.summaryValue}>
+                                {rate === null
+                                    ? rateNote
+                                    : `${formatMoney(rate)} / hour${zoneLabel ? ` · ${zoneLabel}` : ''}`}
+                            </Text>
                         </View>
-                        {costNote ? <Text style={styles.summaryNote}>{costNote}</Text> : null}
-                    </>
-                ) : null}
-            </View>
+                        {totalCost !== null ? (
+                            <>
+                                <View style={styles.summaryDivider} />
+                                <View style={styles.summaryRow}>
+                                    <Text style={styles.summaryLabel}>Cost for {formatDuration(duration)}</Text>
+                                    <Text style={styles.summaryValueLarge}>{formatCost(totalCost)}</Text>
+                                </View>
+                                {costNote ? <Text style={styles.summaryNote}>{costNote}</Text> : null}
+                            </>
+                        ) : null}
+                    </View>
 
-            <View style={styles.payLine}>
-                <MaterialCommunityIcons name="information-outline" size={18} color={TOKENS.primaryInk} />
-                <Text style={styles.payLineText}>{payLine}</Text>
-            </View>
+                    <View style={styles.payLine}>
+                        <MaterialCommunityIcons name="information-outline" size={18} color={TOKENS.primaryInk} />
+                        <Text style={styles.payLineText}>{payLine}</Text>
+                    </View>
+                </>
+            )}
 
             <TouchableOpacity
                 onPress={() => onStartSession(duration)}

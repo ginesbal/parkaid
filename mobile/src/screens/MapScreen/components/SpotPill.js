@@ -3,6 +3,7 @@
 //   street: the pin alone (no known rate: check the signs)
 //   lot:    a P and "Lot" (rates posted at the lot)
 //   permit: muted, a permit card and "Permit" (permit holders only)
+//   closed: muted, a crossed-out car (no parking now: rush hour)
 // Selected, it turns ink and a size up; the pin then sits on a white disc so
 // it stays visible. Shared by the iOS Marker and the web preview; Android
 // uses SpotBadge below.
@@ -12,10 +13,11 @@ import { memo } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { PIN } from '../../../components/BrandPin';
 import { RADIUS, TOKENS } from '../../../constants/theme';
-import { getHourlyRate, getRateDisplay } from '../../../utils/spotPresentation';
+import { getCaution, getHourlyRate, getRateDisplay, isRestrictedNow } from '../../../utils/spotPresentation';
 
-export function getMarkerKind(spot) {
+export function getMarkerKind(spot, now = Date.now()) {
     if (spot?.spot_type === 'residential') return 'permit';
+    if (isRestrictedNow(spot, now)) return 'closed';
     if (getHourlyRate(spot) !== null) return 'priced';
     if (spot?.spot_type === 'off_street') return 'lot';
     return 'street';
@@ -28,12 +30,15 @@ export function getPillLabel(spot) {
 }
 
 // What a screen reader says after the spot's name.
-export function getMarkerDescription(spot) {
+export function getMarkerDescription(spot, now = Date.now()) {
+    if (isRestrictedNow(spot, now)) return getCaution(spot, now).replace(/\u00A0/g, ' ');
     const rate = getRateDisplay(spot);
     return rate.amount ? `${rate.amount} per hour` : rate.note;
 }
 
-const ICONS = { lot: 'parking', permit: 'card-account-details-outline' };
+const ICONS = { lot: 'parking', permit: 'card-account-details-outline', closed: 'car-off' };
+// Quieter than anywhere a visitor can park now.
+const MUTED = new Set(['permit', 'closed']);
 const WORDS = { lot: 'Lot', permit: 'Permit' };
 
 function Pin({ selected, size, onImageLoad }) {
@@ -48,16 +53,16 @@ function Pin({ selected, size, onImageLoad }) {
     return selected ? <View style={styles.pinDisc}>{image}</View> : image;
 }
 
-function SpotPill({ spot, selected = false, onImageLoad }) {
-    const kind = getMarkerKind(spot);
+function SpotPill({ spot, selected = false, onImageLoad, now = Date.now() }) {
+    const kind = getMarkerKind(spot, now);
     const text = kind === 'priced' ? getPillLabel(spot) : WORDS[kind];
-    const permit = kind === 'permit';
+    const muted = MUTED.has(kind);
     return (
         <View
             style={[
                 styles.pill,
+                muted && styles.pillPermit,
                 !text && styles.pillIconOnly,
-                permit && styles.pillPermit,
                 selected && styles.pillSelected,
                 selected && !text && styles.pillIconOnlySelected,
             ]}
@@ -66,13 +71,13 @@ function SpotPill({ spot, selected = false, onImageLoad }) {
                 <MaterialCommunityIcons
                     name={ICONS[kind]}
                     size={selected ? 20 : 18}
-                    color={selected ? TOKENS.surface : permit ? TOKENS.textMuted : TOKENS.primaryInk}
+                    color={selected ? TOKENS.surface : muted ? TOKENS.textMuted : TOKENS.primaryInk}
                 />
             ) : (
                 <Pin selected={selected} size={selected ? 20 : 22} onImageLoad={onImageLoad} />
             )}
             {text ? (
-                <Text style={[styles.label, permit && styles.labelPermit, selected && styles.labelSelected]}>
+                <Text style={[styles.label, muted && styles.labelPermit, selected && styles.labelSelected]}>
                     {text}
                 </Text>
             ) : null}
@@ -189,11 +194,11 @@ const styles = StyleSheet.create({
 // fits that at up to 3.5x density; a price pill would be cropped. Whole-dollar
 // rates fit as text ("$5"); other rates show the pin, and the rate is in the
 // sheet's featured card once selected. Lots and permit zones show their icon.
-export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onImageLoad }) {
-    const kind = getMarkerKind(spot);
+export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onImageLoad, now = Date.now() }) {
+    const kind = getMarkerKind(spot, now);
     const rate = getHourlyRate(spot);
     const text = kind === 'priced' && rate % 1 === 0 && rate < 10 ? `$${rate}` : null;
-    const permit = kind === 'permit';
+    const muted = MUTED.has(kind);
     let body;
     if (text) {
         body = <Text style={[styles.badgeText, selected && styles.badgeTextSelected]}>{text}</Text>;
@@ -202,7 +207,7 @@ export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onIma
             <MaterialCommunityIcons
                 name={ICONS[kind]}
                 size={16}
-                color={selected ? TOKENS.surface : permit ? TOKENS.textMuted : TOKENS.primaryInk}
+                color={selected ? TOKENS.surface : muted ? TOKENS.textMuted : TOKENS.primaryInk}
             />
         );
     } else {
@@ -210,7 +215,7 @@ export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onIma
         body = selected ? <View style={styles.badgePinDisc}>{pin}</View> : pin;
     }
     return (
-        <View style={[styles.badge, permit && styles.badgePermit, selected && styles.badgeSelected]}>
+        <View style={[styles.badge, muted && styles.badgePermit, selected && styles.badgeSelected]}>
             {body}
         </View>
     );

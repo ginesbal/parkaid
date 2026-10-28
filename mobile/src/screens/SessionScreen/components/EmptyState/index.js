@@ -4,13 +4,13 @@ import { formatClock } from '../../../../utils/sessionHelpers';
 import {
     getChargeHours,
     getHourlyRate,
-    getMaxStayMinutes,
     getRateDisplay,
     getSpotKind,
     getSpotName,
+    getStayLimit,
     getZoneLabel,
 } from '../../../../utils/spotPresentation';
-import SetupCard from './SetupCard';
+import SetupCard, { setupLimit } from './SetupCard';
 import SpotPicker from './SpotPicker';
 import { styles } from './styles';
 
@@ -48,6 +48,9 @@ const EmptyState = ({
     const name = spot ? getSpotName(spot) : null;
     const zoneLabel = spot ? getZoneLabel(spot) : (zone ? `Zone ${zone}` : null);
     const rate = spot ? getHourlyRate(spot) : null;
+    // The longest stay here, and why: the posted maximum, a rush-hour
+    // restriction starting first, or no parking at all right now.
+    const limit = setupLimit(spot ? getStayLimit(spot, now) : null);
 
     let subtitle;
     if (handedOver) {
@@ -91,7 +94,9 @@ const EmptyState = ({
                 rate={rate}
                 rateNote={rate === null ? getRateDisplay(spot).note : null}
                 chargeHours={spot ? getChargeHours(spot) : null}
-                maxMinutes={spot ? getMaxStayMinutes(spot) : null}
+                maxMinutes={limit.maxMinutes}
+                limitNote={limit.note}
+                noParkingUntil={limit.noParkingUntil}
                 zoneLabel={zoneLabel}
                 payLine={getPayLine({ zone: zoneLabel, lot: spot?.spot_type === 'off_street' })}
                 now={now}

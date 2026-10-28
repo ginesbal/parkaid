@@ -4,6 +4,7 @@ import { Circle, Marker } from 'react-native-maps';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
 import SpotMarker from './SpotMarker';
+import { getMarkerKind } from './SpotPill';
 
 function MapOverlays({
     searchCenter,
@@ -14,6 +15,8 @@ function MapOverlays({
     spots,
     selectedSpot,
     onSelectSpot,
+    // The time the pins are drawn for (useMinute).
+    now = Date.now(),
 }) {
     return (
         <>
@@ -57,13 +60,15 @@ function MapOverlays({
 
             {spots.map((spot) => {
                 const isSelected = selectedSpot?.id === spot.id;
-                // Key on selection so the marker remounts and re-snapshots its new look.
+                // Key on selection and kind, so the marker remounts and
+                // re-snapshots its new look (a restriction starting, say).
                 return (
                     <SpotMarker
-                        key={`${spot.id}:${isSelected ? 'on' : 'off'}`}
+                        key={`${spot.id}:${isSelected ? 'on' : 'off'}:${getMarkerKind(spot, now)}`}
                         spot={spot}
                         selected={isSelected}
                         onPress={onSelectSpot}
+                        now={now}
                     />
                 );
             })}

@@ -6,8 +6,9 @@
 //   off-street:  "CPA Lot 24: 825 Macleod Trail SE"
 //   residential: "00 Block COLLINGWOOD PL NW"
 
-import { parseChargeHours } from './chargeHours';
-import { formatDuration } from './sessionHelpers';
+import { formatChargeStart, isChargedAt, nextChargedAt, parseChargeHours } from './chargeHours';
+import { nextRestriction, parseRestrictions, restrictionAt } from './restrictions';
+import { formatClock, formatDuration } from './sessionHelpers';
 
 const KIND_LABELS = {
     on_street: 'Street',
@@ -128,13 +129,78 @@ export function getCrossStreets(spot) {
 // A posted maximum under this is called out wherever the spot is listed.
 const SHORT_LIMIT = 120; // minutes
 
+// Kept on one line wherever it wraps.
+const oneLine = (text) => text.replace(/ /g, '\u00A0');
+
 // "20 min max" when the spot's maximum stay is under 2 hours, else null. With
 // no-break spaces, so it never splits across lines.
 export function getShortLimit(spot) {
     const minutes = getMaxStayMinutes(spot);
     return minutes !== null && minutes < SHORT_LIMIT
-        ? `${formatDuration(minutes)} max`.replace(/ /g, ' ')
+        ? oneLine(`${formatDuration(minutes)} max`)
         : null;
+}
+
+// When nobody may park on a street block (rush hour, weekdays), as windows
+// (see utils/restrictions); null when never.
+export function getRestrictions(spot) {
+    return spot?.spot_type === 'on_street' ? parseRestrictions(spot?.zone_info?.parking_restrict_time) : null;
+}
+
+export function isRestrictedNow(spot, now = Date.now()) {
+    return restrictionAt(getRestrictions(spot), now) !== null;
+}
+
+// How long a driver arriving `now` may stay, and why: { minutes, reason, until }.
+//   restricted:  no parking now; `until` is when that ends (minutes is 0)
+//   restriction: the next restriction starts before the posted maximum runs
+//                out; `until` is when it starts, `ends` when it lifts
+//   max:         the posted maximum
+// null when nothing limits the stay.
+export function getStayLimit(spot, now = Date.now()) {
+    const windows = getRestrictions(spot);
+    const current = restrictionAt(windows, now);
+    if (current) return { minutes: 0, reason: 'restricted', until: current.end };
+    const max = getMaxStayMinutes(spot);
+    const next = nextRestriction(windows, now);
+    // Rounded up, like time left: a stay is cut off at the restriction itself.
+    const toNext = next ? Math.ceil((next.start.getTime() - new Date(now).getTime()) / 60000) : null;
+    if (toNext !== null && (max === null || toNext < max)) {
+        return { minutes: toNext, reason: 'restriction', until: next.start, ends: next.end };
+    }
+    return max !== null ? { minutes: max, reason: 'max' } : null;
+}
+
+// What a list says in amber, if anything, most pressing first: no parking
+// now, no parking soon, or a posted maximum under 2 hours.
+export function getCaution(spot, now = Date.now()) {
+    const limit = getStayLimit(spot, now);
+    if (limit?.reason === 'restricted') return oneLine(`No parking until ${formatClock(limit.until)}`);
+    if (limit?.reason === 'restriction' && limit.minutes < SHORT_LIMIT) {
+        return oneLine(`No parking from ${formatClock(limit.until)}`);
+    }
+    return getShortLimit(spot);
+}
+
+// The line under a street spot's rate on Details: { text, tone } or null.
+//   warning: no parking now, or soon, or before the next charged time
+//   free:    not charged now, and nothing stops parking until it is
+// null while charged with no restriction coming, or when nothing is known.
+export function getNowLine(spot, now = Date.now()) {
+    const restrictions = getRestrictions(spot);
+    const current = restrictionAt(restrictions, now);
+    if (current) return { tone: 'warning', text: `No parking now · until ${formatClock(current.end)}` };
+    const next = nextRestriction(restrictions, now);
+    const charge = getChargeHours(spot);
+    if (!charge || isChargedAt(charge, now)) {
+        const soon = next && next.start.getTime() - new Date(now).getTime() < SHORT_LIMIT * 60000;
+        return soon ? { tone: 'warning', text: `No parking from ${formatClock(next.start)}` } : null;
+    }
+    const charged = nextChargedAt(charge, now);
+    if (next && (!charged || next.start < charged)) {
+        return { tone: 'warning', text: `Free now · no parking from ${formatChargeStart(next.start, now)}` };
+    }
+    return { tone: 'free', text: charged ? `Free now · charged from ${formatChargeStart(charged, now)}` : 'Free now' };
 }
 
 // A list row's second line: the block and the walk for street parking
@@ -207,32 +273,44 @@ export function permitLast(spots, activeFilter = 'all') {
     ];
 }
 
-// A maximum under an hour suits a quick stop, not most trips.
+// Under an hour suits a quick stop, not most trips: a short posted maximum,
+// or a restriction starting soon.
 const BRIEF_LIMIT = 60; // minutes
-const isBrief = (spot) => {
-    const minutes = getMaxStayMinutes(spot);
-    return minutes !== null && minutes < BRIEF_LIMIT;
+const isBrief = (spot, now) => {
+    const limit = getStayLimit(spot, now);
+    return limit !== null && limit.reason !== 'restricted' && limit.minutes < BRIEF_LIMIT;
 };
 
-// Blocks with a maximum under an hour after the rest, in the same order.
-export function briefLast(spots) {
-    return [...spots.filter((s) => !isBrief(s)), ...spots.filter(isBrief)];
+// Blocks where a stay can't last an hour after the rest, in the same order.
+export function briefLast(spots, now = Date.now()) {
+    return [...spots.filter((s) => !isBrief(s, now)), ...spots.filter((s) => isBrief(s, now))];
 }
 
-// The order every list and map uses for "near": by walk, blocks with a
-// maximum under an hour after the rest, permit-only last.
-export function rankSpots(spots, activeFilter = 'all') {
-    return permitLast(briefLast(sortByWalk(spots || [])), activeFilter);
+// Blocks nobody may park on right now after the rest, in the same order.
+export function restrictedLast(spots, now = Date.now()) {
+    return [...spots.filter((s) => !isRestrictedNow(s, now)), ...spots.filter((s) => isRestrictedNow(s, now))];
+}
+
+// The order every list and map uses for "near": by walk, then blocks where a
+// stay can't last an hour, then no parking right now, permit-only last.
+export function rankSpots(spots, activeFilter = 'all', now = Date.now()) {
+    return permitLast(restrictedLast(briefLast(sortByWalk(spots || []), now), now), activeFilter);
+}
+
+// The same, cheapest known rate first.
+export function rankByValue(spots, activeFilter = 'all', now = Date.now()) {
+    return permitLast(restrictedLast(briefLast(sortByValue(spots || []), now), now), activeFilter);
 }
 
 // The first spot worth suggesting from an already-sorted list. Permit-only
 // blocks are a poor first suggestion unless the driver asked for them, and
-// so is a maximum under an hour while anything else is open to them.
-export function pickTopSpot(spots, activeFilter = 'all') {
+// so is a stay under an hour while anything else is open to them. A block
+// nobody may park on right now is never suggested.
+export function pickTopSpot(spots, activeFilter = 'all', now = Date.now()) {
     if (!spots?.length) return null;
     if (activeFilter === 'residential') return spots[0];
-    const open = spots.filter((s) => s.spot_type !== 'residential');
-    return open.find((s) => !isBrief(s)) || open[0] || spots[0];
+    const open = spots.filter((s) => s.spot_type !== 'residential' && !isRestrictedNow(s, now));
+    return open.find((s) => !isBrief(s, now)) || open[0] || spots.find((s) => !isRestrictedNow(s, now)) || null;
 }
 
 // "2 hour maximum", "90 minute maximum": how a posted limit is said

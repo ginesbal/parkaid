@@ -46,6 +46,7 @@ export default function SessionScreen({ route, navigation }) {
     isLoaded,
     sessionState,
     maxExtendMinutes,
+    extendLimit,
     timeRemaining,
     timeRemainingMs,
     elapsedTime,
@@ -286,6 +287,7 @@ export default function SessionScreen({ route, navigation }) {
         totalCost={totalCost}
         endTime={endTime}
         maxExtendMinutes={maxExtendMinutes}
+        extendLimit={extendLimit}
         notice={notice}
         onExtend={handleExtend}
         onUndo={undoExtend}

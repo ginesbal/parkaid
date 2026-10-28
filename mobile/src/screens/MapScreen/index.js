@@ -30,6 +30,7 @@ import { logger } from '../../utils/loggers';
 import { pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 
 // files specific to this screen
+import { useMinute } from '../../hooks/useMinute';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import MapHeader from './components/MapHeader';
@@ -218,12 +219,14 @@ function MapScreen({ route, navigation }) {
 
     // The sheet's order, as on Home: by walk, the cheaper first for the same
     // walk, permit-only last.
-    const rankedSpots = useMemo(() => rankSpots(spots, filterType), [spots, filterType]);
+    // Re-ranked each minute: a restriction may start while the map is open.
+    const now = useMinute();
+    const rankedSpots = useMemo(() => rankSpots(spots, filterType, now), [spots, filterType, now]);
 
     // Selected spot, else the closest worthwhile suggestion.
     const featuredSpot = useMemo(
-        () => selectedSpot || pickTopSpot(rankedSpots, filterType),
-        [selectedSpot, rankedSpots, filterType]
+        () => selectedSpot || pickTopSpot(rankedSpots, filterType, now),
+        [selectedSpot, rankedSpots, filterType, now]
     );
 
     const searchCenter = useMemo(() => (
@@ -379,6 +382,7 @@ function MapScreen({ route, navigation }) {
                     spots={spots}
                     selectedSpot={selectedSpot}
                     onSelectSpot={selectSpot}
+                    now={now}
                 />
             </MapView>
 
@@ -471,6 +475,7 @@ function MapScreen({ route, navigation }) {
                 onRetry={refetch}
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
+                now={now}
                 searchMode={searchMode}
                 fromDowntown={fromDowntown}
                 typeNote={getTypeNote(filterType)}

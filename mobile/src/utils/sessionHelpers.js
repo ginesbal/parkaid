@@ -2,6 +2,29 @@
  * Helper functions for session calculations and state management
  */
 
+import { nextRestriction, parseRestrictions, restrictionAt } from './restrictions';
+
+/**
+ * How much longer a running session may be made, and why: { minutes, reason, at }.
+ * The posted maximum ('max'), or the next rush-hour restriction
+ * ('restriction', starting `at`), whichever comes first; minutes is null
+ * when neither limits it.
+ */
+export const getExtendLimit = (session) => {
+    if (!session) return { minutes: null, reason: null, at: null };
+    const byMax = session.maxDuration ? Math.max(0, session.maxDuration - session.duration) : null;
+    const windows = parseRestrictions(session.noParking);
+    const end = new Date(session.scheduledEnd);
+    const blocking = restrictionAt(windows, end) ?? nextRestriction(windows, end);
+    const byRestriction = blocking
+        ? Math.max(0, Math.floor((blocking.start.getTime() - end.getTime()) / 60000))
+        : null;
+    if (byRestriction !== null && (byMax === null || byRestriction < byMax)) {
+        return { minutes: byRestriction, reason: 'restriction', at: blocking.start };
+    }
+    return { minutes: byMax, reason: byMax === null ? null : 'max', at: null };
+};
+
 /**
  * calculate session state based on remaining time
  * @param {number|null} remainingMinutes - mins remaining, null if unknown

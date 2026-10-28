@@ -8,8 +8,8 @@ import { LAYOUT, MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constan
 import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
+    getCaution,
     getRateDisplay,
-    getShortLimit,
     getSpotName,
     getWalkLabel,
     getZoneLabel,
@@ -57,6 +57,8 @@ const ParkingBottomSheet = forwardRef(({
     onRetry,
     selectedSpot,
     featuredSpot,
+    // The time cautions are for (useMinute).
+    now = Date.now(),
     searchMode,
     // The search is around downtown, not the driver (see MapScreen).
     fromDowntown = false,
@@ -268,8 +270,9 @@ const ParkingBottomSheet = forwardRef(({
             first={index === 0}
             last={index === spots.length - 1}
             inset={16}
+            now={now}
         />
-    ), [onItemPress, selectedSpot?.id, spots.length]);
+    ), [onItemPress, selectedSpot?.id, spots.length, now]);
 
     const pinned = searchMode === 'pinned';
     // The count says how far its places really are: the radius, or the
@@ -298,7 +301,7 @@ const ParkingBottomSheet = forwardRef(({
         meta: [getZoneLabel(featuredSpot), getWalkLabel(featuredSpot)]
             .filter(Boolean)
             .join(' \u00B7 '),
-        limit: getShortLimit(featuredSpot),
+        limit: getCaution(featuredSpot, now),
         rate: getRateDisplay(featuredSpot),
     } : null;
 

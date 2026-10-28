@@ -103,6 +103,10 @@ export const styles = StyleSheet.create({
         color: TOKENS.success,
         fontVariant: ['tabular-nums'],
     },
+    // No parking now, or soon: the warning colour, as on the lists.
+    nowWarning: {
+        color: TOKENS.warningInk,
+    },
     rateBasis: {
         marginTop: SPACING.xs,
         fontSize: 14,

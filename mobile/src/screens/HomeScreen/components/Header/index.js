@@ -34,6 +34,7 @@ const Header = ({
     onViewSpot,
     moreCount,
     savedNote,
+    now,
 }) => {
     const filterLabel = filterCount > 0 ? `Filters, ${filterCount} active` : 'Filters';
     const typeNote = getTypeNote(activeFilter);
@@ -134,7 +135,7 @@ const Header = ({
                         </Text>
                         {savedNote ? <Text style={styles.sectionNote}>{savedNote}</Text> : null}
                     </View>
-                    <TopPick spot={topPick} view={view} onView={onViewSpot} fromDowntown={fromDowntown} />
+                    <TopPick spot={topPick} view={view} onView={onViewSpot} fromDowntown={fromDowntown} now={now} />
                     {moreCount > 0 ? (
                         <Text style={styles.moreLabel}>
                             {moreCount === 1 ? '1 more nearby' : `${moreCount} more nearby`}

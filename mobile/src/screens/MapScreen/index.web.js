@@ -14,6 +14,7 @@ import { DEFAULT_LOCATION } from '../../constants/config';
 import { LAYOUT, SPACING, TOKENS } from '../../constants/theme';
 import { useFilters } from '../../context/FilterContext';
 import { useLocationManager } from '../../hooks/useLocationManager';
+import { useMinute } from '../../hooks/useMinute';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { apiTypeFor, applyType, getTypeNote } from '../../utils/filters';
@@ -62,11 +63,13 @@ export default function MapScreen({ route, navigation }) {
     const { spots: found, loading, error, savedAt, stale, refetch } = useParkingSpots(center, radius, apiTypeFor(type));
     const spots = useMemo(() => applyType(found, type), [found, type]);
 
-    // The sheet's order, as on Home: by walk, permit-only last.
-    const rankedSpots = useMemo(() => rankSpots(spots, type), [spots, type]);
+    // The sheet's order, as on Home: by walk, permit-only last. Re-ranked
+    // each minute: a restriction may start while the map is open.
+    const now = useMinute();
+    const rankedSpots = useMemo(() => rankSpots(spots, type, now), [spots, type, now]);
     const featuredSpot = useMemo(
-        () => selectedSpot || pickTopSpot(rankedSpots),
-        [selectedSpot, rankedSpots]
+        () => selectedSpot || pickTopSpot(rankedSpots, type, now),
+        [selectedSpot, rankedSpots, type, now]
     );
 
     const topInset = insets.top + SEARCH_BAR_SPACE;
@@ -129,9 +132,9 @@ export default function MapScreen({ route, navigation }) {
                         onPress={() => setSelectedSpot(spot)}
                         style={styles.marker}
                         accessibilityRole="button"
-                        accessibilityLabel={`Select ${getSpotName(spot).title}, ${getMarkerDescription(spot)}`}
+                        accessibilityLabel={`Select ${getSpotName(spot).title}, ${getMarkerDescription(spot, now)}`}
                     >
-                        <SpotPill spot={spot} selected={selected} />
+                        <SpotPill spot={spot} selected={selected} now={now} />
                     </Pressable>
                 ),
             });
@@ -145,7 +148,7 @@ export default function MapScreen({ route, navigation }) {
             list.push({ id: 'place', coordinate: place, zIndex: 2, node: <View style={styles.place} accessibilityLabel={place.name || 'Searched area'} /> });
         }
         return list;
-    }, [spots, selectedSpot, here, place]);
+    }, [spots, selectedSpot, here, place, now]);
 
     const start = center ?? DEFAULT_LOCATION;
 
@@ -215,6 +218,7 @@ export default function MapScreen({ route, navigation }) {
                 onRetry={refetch}
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
+                now={now}
                 searchMode={place ? 'pinned' : 'current'}
                 fromDowntown={source === 'default' || source === 'outside'}
                 typeNote={getTypeNote(type)}

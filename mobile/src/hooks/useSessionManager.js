@@ -10,14 +10,17 @@ import {
     calculateSessionState,
     formatClock,
     formatDuration,
+    getExtendLimit,
     getWarnAtMinutes,
 } from '../utils/sessionHelpers';
 import {
     getHourlyRate,
     getMaxStayMinutes,
     getRateDisplay,
+    getRestrictions,
     getSpotKind,
     getSpotName,
+    getStayLimit,
     getZoneLabel,
 } from '../utils/spotPresentation';
 
@@ -162,11 +165,10 @@ export const useSessionManager = () => {
         [timeRemainingMs, warnAtMinutes]
     );
 
-    // How much more the spot's maximum stay allows; null when it has none.
-    const maxExtendMinutes = useMemo(() => {
-        if (!session?.maxDuration) return null;
-        return Math.max(0, session.maxDuration - session.duration);
-    }, [session]);
+    // How much longer the session may run: up to the posted maximum or the
+    // next rush-hour restriction (see getExtendLimit).
+    const extendLimit = useMemo(() => getExtendLimit(session), [session]);
+    const maxExtendMinutes = extendLimit.minutes;
 
 
     // action handlers
@@ -186,9 +188,17 @@ export const useSessionManager = () => {
         const plate = vehiclePlate.trim().toUpperCase();
         const hourlyRate = spot ? getHourlyRate(spot) : null;
         const maxDuration = spot ? getMaxStayMinutes(spot) : null;
-        const duration = maxDuration ? Math.min(minutes, maxDuration) : minutes;
         const startTime = new Date();
-        const endTime = new Date(startTime.getTime() + duration * 60000);
+        // Within the posted maximum, and over by the time a rush-hour
+        // restriction starts; none while one is on (Park offers no Start then).
+        const limit = spot ? getStayLimit(spot, startTime) : null;
+        if (limit && limit.minutes < 1) return false;
+        let duration = limit ? Math.min(minutes, limit.minutes) : minutes;
+        let endTime = new Date(startTime.getTime() + duration * 60000);
+        if (limit?.reason === 'restriction' && endTime > limit.until) {
+            endTime = new Date(limit.until);
+            duration = Math.round((endTime - startTime) / 60000);
+        }
         const name = spot ? getSpotName(spot) : null;
         const zoneLabel = zone ? `Zone ${zone}` : null;
 
@@ -209,6 +219,8 @@ export const useSessionManager = () => {
             rateNote: hourlyRate === null ? getRateDisplay(spot).note : null,
             // When the City charges here ("0910-1750 MON-SAT"); null for lots.
             chargeHours: spot?.zone_info?.enforceable_time ?? null,
+            // When nobody may park here, weekdays ("15:30 - 18:00"); null when never.
+            noParking: getRestrictions(spot) ? spot.zone_info.parking_restrict_time : null,
         };
         newSession.totalCost = sessionCost(newSession);
 
@@ -296,6 +308,7 @@ export const useSessionManager = () => {
         sessionState,
         warnAtMinutes,
         maxExtendMinutes,
+        extendLimit,        // { minutes, reason, at }: see above
         timeRemaining,      // minutes
         timeRemainingMs,    // ms
         elapsedTime,        // minutes
