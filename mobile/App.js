@@ -5,7 +5,7 @@ import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +26,7 @@ import { FilterProvider } from './src/context/FilterContext';
 import { SessionProvider, useSessionStatus } from './src/context/SessionContext';
 import { getDeviceId } from './src/utils/device';
 import './src/utils/focusRing';
-import { TOKENS } from './src/constants/theme';
+import { LAYOUT, TOKENS } from './src/constants/theme';
 import { useReduceMotion } from './src/hooks/useReduceMotion';
 import { hasSeenWelcome } from './src/utils/onboarding';
 
@@ -92,6 +92,10 @@ function Tabs() {
     const sessionStatus = useSessionStatus();
     const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
     const tabBarHeight = 66 + tabBarBottomPadding;
+    // On a wide window the tabs sit under the content's column, not spread
+    // across the window.
+    const { width } = useWindowDimensions();
+    const tabBarSide = Math.max(14, (width - LAYOUT.column) / 2);
 
     // A moment, while the stored session is read: a driver who is parked
     // opens straight on Park.
@@ -148,7 +152,7 @@ function Tabs() {
                     height: tabBarHeight,
                     paddingTop: 10,
                     paddingBottom: tabBarBottomPadding,
-                    paddingHorizontal: 14,
+                    paddingHorizontal: tabBarSide,
                     elevation: 0,
                     shadowOpacity: 0,
                 },

@@ -6,7 +6,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlacesSearchBar from '../../components/PlacesAutocomplete/PlacesSearchBar';
 import WebMap, { boundsAround } from '../../components/WebMap';
@@ -75,6 +75,8 @@ export default function MapScreen({ route, navigation }) {
 
     const topInset = insets.top + SEARCH_BAR_SPACE;
     const wide = size.width >= LAYOUT.wide;
+    // Known from the first render, before the map is made (see creditCollapsed).
+    const narrowWindow = useWindowDimensions().width < LAYOUT.wide;
 
     // Show the search circle, or the farthest spot if one lies beyond it, so
     // every place in the sheet's count has its pin on screen.
@@ -89,15 +91,21 @@ export default function MapScreen({ route, navigation }) {
     const movedAway = Boolean(center && mapCenter)
         && distanceMeters(mapCenter, center) > Math.max(150, radius * 0.6);
 
+    // What covers the map: the search and the sheet's peek on a phone; on a
+    // wide window, the search and list panel down the left side.
+    const cover = useMemo(() => (wide
+        ? { top: SPACING.lg, bottom: SPACING.lg, left: LAYOUT.panel + SPACING.lg * 2, right: SPACING.lg }
+        : { top: topInset, bottom: peek, left: 0, right: 0 }), [wide, topInset, peek]);
+
     const fitSearch = useCallback(() => {
         if (!center) return;
         setMapCenter(null);
         mapRef.current?.fitBounds(
             boundsAround(center, reach),
-            { top: topInset + 16, bottom: peek + 16, left: 24, right: 24 },
+            { top: cover.top + 16, bottom: cover.bottom + 16, left: cover.left + 24, right: cover.right + 24 },
             !reduceMotion
         );
-    }, [center, reach, topInset, peek, reduceMotion]);
+    }, [center, reach, cover, reduceMotion]);
 
     // Show the whole search area each time it changes: a new place, area,
     // distance or set of spots.
@@ -137,11 +145,11 @@ export default function MapScreen({ route, navigation }) {
         const { north, south, east, west } = groupBounds(group);
         mapRef.current?.fitBounds(
             [[west, south], [east, north]],
-            { top: topInset + 48, bottom: peek + 48, left: 64, right: 64 },
+            { top: cover.top + 48, bottom: cover.bottom + 48, left: cover.left + 64, right: cover.right + 64 },
             !reduceMotion,
             19
         );
-    }, [topInset, peek, reduceMotion]);
+    }, [cover, reduceMotion]);
 
     const markers = useMemo(() => {
         const list = [];
@@ -222,6 +230,9 @@ export default function MapScreen({ route, navigation }) {
                 area={center ? { center, radius } : null}
                 credit="top-right"
                 creditInset={topInset - 4}
+                // On a phone it would wrap under the search bar, where the
+                // open list reaches: it starts as its "i", a tap away.
+                creditCollapsed={narrowWindow}
                 onLoad={() => setMapReady(true)}
                 onPress={() => setSelectedSpot(null)}
                 onUserMove={setMapCenter}

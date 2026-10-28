@@ -8,16 +8,17 @@ import { sessionCost } from '../../../../utils/rates';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
-import TimerCard from './TimerCard';
+import TimerCard, { SessionDetails } from './TimerCard';
 
 // How long Undo stays after Extend.
 const UNDO_FOR = 5000;
 
 /**
- * ActiveSession - the running session on the ink canvas. One clear way to add
- * time (with the new end time, what it adds in ParkPlus, and a short undo,
- * capped at the spot's maximum stay or the next rush-hour restriction), and
- * End kept apart. Once time is up: Done, or find somewhere else to park.
+ * ActiveSession - the running session on the ink canvas: time left, then one
+ * clear way to add time (with the new end time, what it adds in ParkPlus, and
+ * a short undo, capped at the spot's maximum stay or the next rush-hour
+ * restriction) and End kept apart, then where and how to pay. Once time is
+ * up: Done, or find somewhere else to park.
  */
 const ActiveSession = ({
     session,
@@ -35,8 +36,8 @@ const ActiveSession = ({
     onFindParking,
 }) => {
     const insets = useSafeAreaInsets();
-    // Card, then actions: a quiet "you're parked" moment when a session starts.
-    const [cardIn, actionsIn] = useEntrance(2);
+    // Time, actions, details: a quiet "you're parked" moment when a session starts.
+    const [cardIn, actionsIn, detailsIn] = useEntrance(3);
     const expired = sessionState === 'expired';
     const zone = getSessionZone(session);
 
@@ -92,7 +93,6 @@ const ActiveSession = ({
                     sessionState={sessionState}
                     timeRemainingMs={timeRemainingMs}
                     endTime={endTime}
-                    totalCost={totalCost}
                 />
             </Animated.View>
 
@@ -176,6 +176,10 @@ const ActiveSession = ({
                         </TouchableOpacity>
                     </>
                 )}
+            </Animated.View>
+
+            <Animated.View style={[styles.details, detailsIn]}>
+                <SessionDetails session={session} sessionState={sessionState} totalCost={totalCost} />
             </Animated.View>
         </ScrollView>
     );

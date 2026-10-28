@@ -101,12 +101,12 @@ export const styles = StyleSheet.create({
         color: TOKENS.warningInk,
     },
 
+    // The second card opens with the place.
     place: {
-        marginTop: SPACING.xl,
-        paddingTop: SPACING.lg,
         marginBottom: SPACING.sm,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: TOKENS.hairline,
+    },
+    details: {
+        marginTop: SPACING['2xl'],
     },
     placeName: {
         fontSize: 16,

@@ -22,12 +22,13 @@ function Row({ label, value }) {
 }
 
 /**
- * TimerCard - the white card on the ink canvas: time left as people say it,
- * when it ends, where, and a plain-text warning when it is time to head back.
- * It says the timer pays for nothing, and hands off to ParkPlus to pay.
- * Once time is up it says so once, calmly, with the one thing to do.
+ * TimerCard - the first white card on the ink canvas: time left as people say
+ * it, when it ends, and a plain-text warning when it is time to head back.
+ * Once time is up it says so once, calmly, with the one thing to do. Add and
+ * End come right under it, so they are in reach on the smallest phones;
+ * SessionDetails below says where, and how to pay.
  */
-export default function TimerCard({ session, sessionState, timeRemainingMs, endTime, totalCost }) {
+export default function TimerCard({ session, sessionState, timeRemainingMs, endTime }) {
     const total = Math.max(1, (session?.duration || 1) * 60000);
     const left = Math.max(0, Math.min(1, timeRemainingMs / total));
 
@@ -45,16 +46,9 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
     const expired = sessionState === 'expired';
     const expiring = sessionState === 'expiring';
     const walk = session?.walkMinutes;
-    // The rate right now: it can change during the session, and goes on
-    // after it in MyParking. The cost below covers the session's own time.
-    const rate = sessionRateAt(session, Date.now());
     const remaining = formatRemaining(timeRemainingMs);
     const endsAt = formatClock(endTime);
     const zone = getSessionZone(session);
-    // "Somewhere else" with a zone is named after it; say it once.
-    const placeDetail = [session.locationAddress, session.spotId]
-        .filter((part) => part && part !== session.locationName)
-        .join(' · ');
 
     const warning = walk
         // A no-break space keeps the number with its unit when the line wraps.
@@ -67,6 +61,8 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
                 <>
                     <Text style={styles.expiredTitle}>Time’s up</Text>
                     <Text style={styles.endsAt}>Ended at {endsAt}</Text>
+                    <Text style={styles.pay}>{getExpiredLine(session)}</Text>
+                    {zone ? <ParkPlusActions zone={zone} style={styles.payActions} /> : null}
                 </>
             ) : (
                 <>
@@ -107,12 +103,37 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
                     ) : null}
                 </>
             )}
+        </View>
+    );
+}
 
+/**
+ * SessionDetails - the second card: where, that the timer pays for nothing
+ * (with the hand-off to ParkPlus), and the session's plate, start, rate now
+ * and cost. Once time is up, TimerCard says what to do instead.
+ */
+export function SessionDetails({ session, sessionState, totalCost }) {
+    const expired = sessionState === 'expired';
+    // The rate right now: it can change during the session, and goes on
+    // after it in MyParking. The cost below covers the session's own time.
+    const rate = sessionRateAt(session, Date.now());
+    const zone = getSessionZone(session);
+    // "Somewhere else" with a zone is named after it; say it once.
+    const placeDetail = [session.locationAddress, session.spotId]
+        .filter((part) => part && part !== session.locationName)
+        .join(' · ');
+
+    return (
+        <View style={styles.card}>
             <View style={styles.place}>
                 {session.locationName ? <Text style={styles.placeName}>{session.locationName}</Text> : null}
                 {placeDetail ? <Text style={styles.placeDetail}>{placeDetail}</Text> : null}
-                <Text style={styles.pay}>{expired ? getExpiredLine(session) : getSessionPayLine(session)}</Text>
-                {zone ? <ParkPlusActions zone={zone} style={styles.payActions} /> : null}
+                {expired ? null : (
+                    <>
+                        <Text style={styles.pay}>{getSessionPayLine(session)}</Text>
+                        {zone ? <ParkPlusActions zone={zone} style={styles.payActions} /> : null}
+                    </>
+                )}
             </View>
 
             <Row label="Vehicle" value={session.vehiclePlate} />

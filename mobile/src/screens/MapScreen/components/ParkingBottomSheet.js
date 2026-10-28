@@ -18,7 +18,9 @@ import { SCREEN_HEIGHT } from '../constants';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const SHEET_BOTTOM_OFFSET = 10;
-const SHEET_EXPANDED_TOP_GAP = 18;
+// Open, the sheet stops this far below the search bar: on the web, clear of
+// the map's credit ("i") tucked under it.
+const SHEET_EXPANDED_TOP_GAP = 34;
 
 // Inset row separator — aligns under the address text, not the walk-time anchor.
 // The walk block (44) + row padding (20) + gap (10) = 74. Letting the walk column
@@ -193,9 +195,12 @@ const ParkingBottomSheet = forwardRef(({
         const lastPeekY = previousPeekY.current;
 
         if (lastPeekY == null) {
-            translateY.setValue(PEEK_Y);
-            dragStartY.current = PEEK_Y;
+            // A wide window has room for the list beside the map: it starts open.
+            const start = wide ? EXPANDED_Y : PEEK_Y;
+            translateY.setValue(start);
+            dragStartY.current = start;
             previousPeekY.current = PEEK_Y;
+            if (wide) setExpanded(true);
             return;
         }
 
@@ -211,7 +216,7 @@ const ParkingBottomSheet = forwardRef(({
 
             previousPeekY.current = PEEK_Y;
         });
-    }, [PEEK_Y, translateY]);
+    }, [PEEK_Y, translateY, wide]);
 
     const panResponder = useRef(
         PanResponder.create({

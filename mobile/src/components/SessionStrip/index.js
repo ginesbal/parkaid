@@ -5,7 +5,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SPACING, TOKENS } from '../../constants/theme';
+import { LAYOUT, SPACING, TOKENS } from '../../constants/theme';
 import { useSession } from '../../context/SessionContext';
 import { formatClock, formatRemaining } from '../../utils/sessionHelpers';
 
@@ -51,13 +51,16 @@ export default function SessionStrip({ navigation, hidden }) {
             accessibilityLabel={`${parked}. ${left}. ${ends}.`}
             accessibilityHint="Opens your parking session"
         >
-            <View style={[styles.dot, { backgroundColor: DOT[sessionState] || DOT.active }]} />
-            <View style={styles.place}>
-                <Text style={styles.title} numberOfLines={1}>{place}</Text>
-                <Text style={styles.ends} numberOfLines={1}>{ends}</Text>
+            {/* In the content's column on a wide window, like the tabs below */}
+            <View style={styles.row}>
+                <View style={[styles.dot, { backgroundColor: DOT[sessionState] || DOT.active }]} />
+                <View style={styles.place}>
+                    <Text style={styles.title} numberOfLines={1}>{place}</Text>
+                    <Text style={styles.ends} numberOfLines={1}>{ends}</Text>
+                </View>
+                <Text style={styles.left} numberOfLines={1}>{left}</Text>
+                <MaterialCommunityIcons name="chevron-right" size={20} color={TOKENS.inkMuted} />
             </View>
-            <Text style={styles.left} numberOfLines={1}>{left}</Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color={TOKENS.inkMuted} />
         </Pressable>
     );
 }
@@ -65,13 +68,19 @@ export default function SessionStrip({ navigation, hidden }) {
 const styles = StyleSheet.create({
     strip: {
         minHeight: 52,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.md,
+        justifyContent: 'center',
         paddingVertical: SPACING.sm,
         paddingLeft: SPACING.xl,
         paddingRight: SPACING.md,
         backgroundColor: TOKENS.inkSurface,
+    },
+    row: {
+        width: '100%',
+        maxWidth: LAYOUT.column,
+        alignSelf: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
     },
     pressed: {
         opacity: 0.85,
