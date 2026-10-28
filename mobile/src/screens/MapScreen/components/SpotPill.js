@@ -6,7 +6,8 @@
 //   closed: muted, a crossed-out car (no parking now: rush hour)
 // Selected, it turns ink and a size up; the pin then sits on a white disc so
 // it stays visible. Shared by the iOS Marker and the web preview; Android
-// uses SpotBadge below.
+// uses SpotBadge below. Spots too close to tell apart at the map's scale
+// share one GroupPill (utils/mapGroups).
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
@@ -23,12 +24,34 @@ export function getMarkerKind(spot, now = Date.now()) {
     return 'street';
 }
 
+// "$2", "$2.25", or "Free".
+const rateLabel = (rate) => (rate === 0 ? 'Free' : `$${rate % 1 === 0 ? rate : rate.toFixed(2)}`);
+
 // "$2", "$2.25", or "Free" while the City isn't charging.
 export function getPillLabel(spot, now = Date.now()) {
     const rate = getHourlyRate(spot, now);
-    if (rate === null) return null;
-    if (rate === 0) return 'Free';
-    return `$${rate % 1 === 0 ? rate : rate.toFixed(2)}`;
+    return rate === null ? null : rateLabel(rate);
+}
+
+// The lowest rate now among a group's spots where anyone may park now, or
+// null when none has one.
+function lowestRate(spots, now) {
+    const rates = spots.filter((s) => getMarkerKind(s, now) === 'priced').map((s) => getHourlyRate(s, now));
+    return rates.length ? Math.min(...rates) : null;
+}
+
+// A group's label: its lowest rate ("$1.75", "Free"), else what its lead is
+// ("Lot", "Permit"), else nothing.
+export function getGroupLabel(spots, now = Date.now()) {
+    const low = lowestRate(spots, now);
+    return low !== null ? rateLabel(low) : (WORDS[getMarkerKind(spots[0], now)] ?? null);
+}
+
+// What a screen reader says for a group, on the phones.
+export function getGroupDescription(spots, now = Date.now()) {
+    const low = lowestRate(spots, now);
+    const from = low === null ? '' : low === 0 ? ', one free now' : `, from $${low.toFixed(2)} per hour`;
+    return `${spots.length} spots close together${from}`;
 }
 
 // What a screen reader says after the spot's name.
@@ -151,6 +174,31 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: TOKENS.surface,
     },
+    // A group's count, where a pin has its icon.
+    count: {
+        minWidth: 22,
+        height: 22,
+        paddingHorizontal: 5,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: TOKENS.inkSurface,
+    },
+    countMuted: {
+        backgroundColor: TOKENS.textMuted,
+    },
+    countText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: TOKENS.surface,
+        fontVariant: ['tabular-nums'],
+    },
+    groupMuted: {
+        paddingLeft: 4,
+    },
+    groupCountOnly: {
+        paddingRight: 4,
+    },
 
     badge: {
         width: 28,
@@ -170,6 +218,10 @@ const styles = StyleSheet.create({
         backgroundColor: TOKENS.inkSurface,
         borderColor: TOKENS.surface,
         borderWidth: 2,
+    },
+    badgeGroup: {
+        backgroundColor: TOKENS.inkSurface,
+        borderColor: TOKENS.surface,
     },
     badgePinDisc: {
         width: 20,
@@ -218,6 +270,31 @@ export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onIma
     return (
         <View style={[styles.badge, muted && styles.badgePermit, selected && styles.badgeSelected]}>
             {body}
+        </View>
+    );
+});
+
+// Several spots in one pin: how many, in an ink disc where a pin has its
+// icon, then the group's label. Muted when no one may park at any of them now.
+export const GroupPill = memo(function GroupPill({ spots, now = Date.now() }) {
+    const text = getGroupLabel(spots, now);
+    const muted = spots.every((s) => MUTED.has(getMarkerKind(s, now)));
+    return (
+        <View style={[styles.pill, muted && styles.pillPermit, muted && styles.groupMuted, !text && styles.groupCountOnly]}>
+            <View style={[styles.count, muted && styles.countMuted]}>
+                <Text style={styles.countText}>{spots.length}</Text>
+            </View>
+            {text ? <Text style={[styles.label, muted && styles.labelPermit]}>{text}</Text> : null}
+        </View>
+    );
+});
+
+// Android's group: the count alone, in the ink disc, within its 100 px bitmap.
+export const GroupBadge = memo(function GroupBadge({ spots, now = Date.now() }) {
+    const muted = spots.every((s) => MUTED.has(getMarkerKind(s, now)));
+    return (
+        <View style={[styles.badge, styles.badgeGroup, muted && styles.countMuted]}>
+            <Text style={[styles.badgeText, styles.badgeTextSelected]}>{spots.length}</Text>
         </View>
     );
 });

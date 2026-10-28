@@ -275,11 +275,29 @@ export function getNowLine(spot, now = Date.now()) {
 }
 
 // A list row's second line: the block and the walk for street parking
-// ("4–5 St, north side · 3 min walk"), else the kind and the walk. When it
-// wraps, the walk moves down whole.
-export function getRowMeta(spot) {
+// ("4–5 St, north side · 3 min walk"), else the kind and the walk. With
+// `withZone`, the zone too ("· Zone 3367 ·"), for a row that would otherwise
+// read like another (see getZoneShown). When it wraps, the walk moves down
+// whole.
+export function getRowMeta(spot, { withZone = false } = {}) {
     const walk = getWalkLabel(spot);
-    return [getBlockLabel(spot) || getSpotKind(spot), walk && oneLine(walk)].filter(Boolean).join(' · ');
+    const zone = withZone ? getZoneLabel(spot) : null;
+    return [getBlockLabel(spot) || getSpotKind(spot), zone && oneLine(zone), walk && oneLine(walk)]
+        .filter(Boolean)
+        .join(' · ');
+}
+
+// The street spots in a list that share their street and side of the block
+// with another: often several zones in a row, or a loading zone. Their rows
+// add the zone, the number on each sign, so no two read the same. A Set of ids.
+export function getZoneShown(spots) {
+    const sides = new Map();
+    for (const spot of spots || []) {
+        if (!getZoneLabel(spot)) continue;
+        const key = `${getSpotName(spot).title}|${getBlockLabel(spot)}`;
+        sides.set(key, [...(sides.get(key) || []), spot.id]);
+    }
+    return new Set([...sides.values()].filter((ids) => ids.length > 1).flat());
 }
 
 // The City's rates by time of day (utils/rates), or null when unknown.

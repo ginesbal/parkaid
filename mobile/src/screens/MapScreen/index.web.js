@@ -19,9 +19,10 @@ import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { apiTypeFor, applyType, getTypeNote } from '../../utils/filters';
 import { distanceMeters } from '../../utils/geo';
+import { canPart, groupBounds, groupPins } from '../../utils/mapGroups';
 import { getBlockSide, getCoordinates, getSpotName, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
-import SpotPill, { getMarkerDescription } from './components/SpotPill';
+import SpotPill, { GroupPill, getGroupDescription, getMarkerDescription } from './components/SpotPill';
 import { styles as mapStyles } from './styles';
 
 // Room for the search bar above the map's content.
@@ -117,19 +118,62 @@ export default function MapScreen({ route, navigation }) {
         if (spot) navigation?.navigate('Details', { spot });
     }, [navigation]);
 
+    // Pins too close to tell apart at the map's zoom share one, led by the
+    // best (utils/mapGroups). The world's width in pixels stands for the zoom.
+    const [worldSize, setWorldSize] = useState(512 * 2 ** 15);
+    const groups = useMemo(
+        () => groupPins(rankedSpots, worldSize, selectedSpot),
+        [rankedSpots, worldSize, selectedSpot]
+    );
+
+    // A group zooms in until its spots part, closer than a search ever does,
+    // since the two sides of a street can be a few metres apart; one whose
+    // spots can't part picks its lead.
+    const openGroup = useCallback((group) => {
+        if (!canPart(group)) {
+            setSelectedSpot(group.lead);
+            return;
+        }
+        const { north, south, east, west } = groupBounds(group);
+        mapRef.current?.fitBounds(
+            [[west, south], [east, north]],
+            { top: topInset + 48, bottom: peek + 48, left: 64, right: 64 },
+            !reduceMotion,
+            19
+        );
+    }, [topInset, peek, reduceMotion]);
+
     const markers = useMemo(() => {
         const list = [];
-        spots.forEach((spot) => {
-            const coordinate = getCoordinates(spot);
-            if (!coordinate) return;
+        groups.forEach((group) => {
+            const { key, lead: spot, spots: members, coordinate } = group;
+            // Pins are a pointer's way to pick, out of the tab order (see
+            // WebMap); the list has the same spots.
+            if (members.length > 1) {
+                list.push({
+                    id: key,
+                    coordinate,
+                    zIndex: 1,
+                    node: (
+                        <Pressable
+                            onPress={() => openGroup(group)}
+                            style={styles.marker}
+                            tabIndex={-1}
+                            accessibilityRole="button"
+                            accessibilityLabel={getGroupDescription(members, now)}
+                        >
+                            <GroupPill spots={members} now={now} />
+                        </Pressable>
+                    ),
+                });
+                return;
+            }
             const selected = selectedSpot?.id === spot.id;
             list.push({
                 id: `spot-${spot.id}`,
                 coordinate,
                 zIndex: selected ? 3 : 1,
                 node: (
-                    // A pointer's way to pick, out of the tab order like every
-                    // pin (see WebMap); the list has the same spots.
                     <Pressable
                         onPress={() => setSelectedSpot(spot)}
                         style={styles.marker}
@@ -142,16 +186,17 @@ export default function MapScreen({ route, navigation }) {
                 ),
             });
         });
-        // You are here, when the phone said where
+        // You are here, when the phone said where, and the searched place or
+        // area: under the pins, as on the phones' maps, and passive, so a tap
+        // on a pin over them reaches the pin.
         if (here) {
-            list.push({ id: 'me', coordinate: here, zIndex: 2, node: <View style={styles.me} accessibilityLabel="Your location" /> });
+            list.push({ id: 'me', coordinate: here, zIndex: 0, passive: true, node: <View style={styles.me} accessibilityLabel="Your location" /> });
         }
-        // The searched place or area
         if (place) {
-            list.push({ id: 'place', coordinate: place, zIndex: 2, node: <View style={styles.place} accessibilityLabel={place.name || 'Searched area'} /> });
+            list.push({ id: 'place', coordinate: place, zIndex: 0, passive: true, node: <View style={styles.place} accessibilityLabel={place.name || 'Searched area'} /> });
         }
         return list;
-    }, [spots, selectedSpot, here, place, now]);
+    }, [groups, openGroup, selectedSpot, here, place, now]);
 
     const start = center ?? DEFAULT_LOCATION;
 
@@ -180,6 +225,7 @@ export default function MapScreen({ route, navigation }) {
                 onLoad={() => setMapReady(true)}
                 onPress={() => setSelectedSpot(null)}
                 onUserMove={setMapCenter}
+                onZoom={setWorldSize}
             />
 
             {/* Search this area: once the map has moved off the search area */}

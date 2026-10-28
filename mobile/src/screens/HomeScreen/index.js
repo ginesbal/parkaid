@@ -22,7 +22,7 @@ import { describeLocation } from '../../utils/geo';
 import { getGreeting } from '../../utils/greeting';
 import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
-import { pickTopSpot, rankByValue, rankSpots } from '../../utils/spotPresentation';
+import { getZoneShown, pickTopSpot, rankByValue, rankSpots } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
@@ -123,6 +123,10 @@ export default function HomeScreen({ navigation }) {
     const permits = restSpots.filter((s) => s.spot_type === 'residential');
     return { parkable: open, listData: permits.length ? [...open, PERMIT_HEADING, ...permits] : open };
   }, [restSpots, activeFilter]);
+
+  // Rows that share a block side with another, the top pick included, say
+  // their zone.
+  const zoneShown = useMemo(() => getZoneShown(visibleSpots), [visibleSpots]);
 
   // Re-read on each render; a screen left open past noon should say so.
   const greeting = getGreeting();
@@ -276,6 +280,7 @@ export default function HomeScreen({ navigation }) {
       onPress={handleSpotPress}
       chevron
       now={now}
+      showZone={zoneShown.has(item.id)}
       first={index === 0 || listData[index - 1] === PERMIT_HEADING}
       last={index === listData.length - 1 || listData[index + 1] === PERMIT_HEADING}
     />

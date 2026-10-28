@@ -240,7 +240,7 @@ at `/api/test-db` instead.
 | ------ | -------- | ------------ |
 | GET | `/health` | Says the server is up. Used by Render. Always returns 200 when running. |
 | GET | `/api/test-db` | Checks the database connection and returns how many spots are stored. |
-| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. Street spots include the City's rates by time of day (`rates`) and rush-hour restrictions. Taxi, valet and other zones the public can't use are left out. |
+| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. Street spots include the City's rates by time of day (`rates`) and rush-hour restrictions. Taxi, valet and other zones the public can't use are left out. The City splits a zone's stretch of a block into segments; each stretch comes once, at its nearest segment. |
 | GET | `/api/places/autocomplete?input=` | Address search suggestions (calls Google from the server). |
 | GET | `/api/places/details?place_id=` | Details for one address (calls Google from the server). |
 
@@ -273,6 +273,10 @@ The main things I did:
 - Added the City's street rates by time of day and its rush-hour
   restrictions, so the app never shows a guessed price or calls a restricted
   hour free.
+- Made a busy downtown readable: each block's pin sits halfway along it
+  instead of at a corner, a zone's segments on one block come back as one
+  spot (about a quarter of the street rows were repeats), and pins that would
+  overlap share one pin with a count on both maps. A tap on it zooms in.
 - Cleaned up the old code: removed files nothing imported, dropped a dependency
   we didn't need, and stopped committing `node_modules` (about 1,900 files).
 - Kept the Google API key on the server by having the app call the backend
@@ -285,7 +289,8 @@ The main things I did:
 - The app reads its backend URL from one place (`constants/config.js`), so the
   local, network, and production setups don't drift apart.
 - The database does the location filtering and sorting, not the Node code. The
-  API just formats the result. This keeps the server simple.
+  API only merges a block's repeated segments and formats the result. This
+  keeps the server simple.
 - Responses are cached on the phone, so the app still shows something useful
   when the connection is bad.
 - The server fails loudly at startup if a required setting is missing, but

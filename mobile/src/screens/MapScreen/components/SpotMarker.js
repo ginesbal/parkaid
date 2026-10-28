@@ -1,4 +1,5 @@
-// SpotMarker — a spot on the native map, drawn as a SpotPill.
+// SpotMarker — a spot on the native map, drawn as a SpotPill; GroupMarker,
+// several spots too close to tell apart (utils/mapGroups), as a GroupPill.
 //
 // react-native-maps snapshots custom marker views. The view is tracked until
 // the pin image has loaded (else the snapshot can miss it), then frozen for
@@ -9,10 +10,11 @@ import { memo, useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { getBlockSide, getCoordinates, getSpotName } from '../../../utils/spotPresentation';
-import SpotPill, { SpotBadge, getMarkerDescription } from './SpotPill';
+import SpotPill, { GroupBadge, GroupPill, SpotBadge, getGroupDescription, getMarkerDescription } from './SpotPill';
 
 // See SpotBadge: Android crops custom markers to 100x100 px.
 const MarkerBody = Platform.OS === 'android' ? SpotBadge : SpotPill;
+const GroupBody = Platform.OS === 'android' ? GroupBadge : GroupPill;
 
 // Fallback in case onLoad never fires (cached images on some Android builds).
 const READY_FALLBACK_MS = 600;
@@ -48,6 +50,32 @@ function SpotMarker({ spot, selected, onPress, now = Date.now() }) {
         </Marker>
     );
 }
+
+// A tap zooms in on the group (MapScreen openGroup). Text only, so it is
+// tracked for a moment and then frozen.
+export const GroupMarker = memo(function GroupMarker({ group, onPress, now = Date.now() }) {
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        const t = setTimeout(() => setReady(true), READY_FALLBACK_MS);
+        return () => clearTimeout(t);
+    }, []);
+
+    return (
+        <Marker
+            coordinate={group.coordinate}
+            onPress={() => onPress(group)}
+            tracksViewChanges={!ready}
+            anchor={{ x: 0.5, y: 0.5 }}
+            zIndex={2}
+            accessibilityLabel={getGroupDescription(group.spots, now)}
+            accessibilityHint="Zooms in to show them apart"
+        >
+            <View style={Platform.OS === 'ios' ? styles.target : null}>
+                <GroupBody spots={group.spots} now={now} />
+            </View>
+        </Marker>
+    );
+});
 
 const styles = StyleSheet.create({
     target: {

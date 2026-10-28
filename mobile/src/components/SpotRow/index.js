@@ -12,10 +12,12 @@ import { RADIUS, SPACING, TOKENS } from '../../constants/theme';
 import { getCaution, getRateDisplay, getRowMeta, getSpotName } from '../../utils/spotPresentation';
 
 // `now`: the time the caution is for (useMinute), so the row updates with it.
-function SpotRow({ spot, onPress, selected = false, first = false, last = false, chevron = false, inset = SPACING.xl, now = Date.now() }) {
+// `showZone`: say the zone too, when another row shares the block side
+// (getZoneShown).
+function SpotRow({ spot, onPress, selected = false, first = false, last = false, chevron = false, inset = SPACING.xl, now = Date.now(), showZone = false }) {
     const { title } = getSpotName(spot);
     const rate = getRateDisplay(spot, now);
-    const meta = getRowMeta(spot);
+    const meta = getRowMeta(spot, { withZone: showZone });
     const limit = getCaution(spot, now);
 
     return (

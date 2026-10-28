@@ -10,6 +10,7 @@ import {
     getSpotKind,
     getSpotName,
     getZoneLabel,
+    getZoneShown,
     isCovered,
     isParkedAt,
     nameApart,
@@ -139,6 +140,18 @@ describe('row lines', () => {
         expect(getBlockSide(street({ metadata: { block_side: 'w' } }))).toBe('west side');
         expect(words(getRowMeta(north))).toBe('4–5 St, north side · 3 min walk');
         expect(getSpotName(north)).toEqual({ title: 'Eau Claire Ave SW', detail: '4 St SW to 5 St SW, north side' });
+    });
+
+    // 11 Av SW from 5 to 6 St: zones 3364, 3366 and 3367 on the south side.
+    it('adds the zone where rows would otherwise read the same', () => {
+        const south = (id, zone, over = {}) => street({
+            id, walkingTime: 1, address: '11 Av SW ,  Fr 5 St SW To 6 St SW',
+            zone_info: { parking_zone: zone }, metadata: { block_side: 'S' }, ...over,
+        });
+        const spots = [south(1, '3367'), south(2, '3366'), south(3, '3360', { metadata: { block_side: 'N' } }), lot];
+        expect([...getZoneShown(spots)]).toEqual([1, 2]);
+        expect(words(getRowMeta(spots[0], { withZone: true }))).toBe('5–6 St, south side · Zone 3367 · 1 min walk');
+        expect(words(getRowMeta(lot, { withZone: true }))).toBe('Parkade · 4 min walk');
     });
 
     it('names no side it does not know', () => {

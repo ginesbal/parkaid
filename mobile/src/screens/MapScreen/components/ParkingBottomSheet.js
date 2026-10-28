@@ -14,6 +14,7 @@ import {
     getSpotName,
     getWalkLabel,
     getZoneLabel,
+    getZoneShown,
 } from '../../../utils/spotPresentation';
 import { SCREEN_HEIGHT } from '../constants';
 
@@ -272,6 +273,8 @@ const ParkingBottomSheet = forwardRef(({
         })
     ).current;
 
+    // Rows that share a block side with another say their zone.
+    const zoneShown = useMemo(() => getZoneShown(spots), [spots]);
     const renderItem = useCallback(({ item, index }) => (
         <SpotRow
             spot={item}
@@ -281,8 +284,9 @@ const ParkingBottomSheet = forwardRef(({
             last={index === spots.length - 1}
             inset={16}
             now={now}
+            showZone={zoneShown.has(item.id)}
         />
-    ), [onItemPress, selectedSpot?.id, spots.length, now]);
+    ), [onItemPress, selectedSpot?.id, spots.length, now, zoneShown]);
 
     const pinned = searchMode === 'pinned';
     // The count says how far its places really are: the radius, or the

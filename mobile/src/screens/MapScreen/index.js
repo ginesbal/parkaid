@@ -27,7 +27,8 @@ import { apiTypeFor, applyType, getTypeNote } from '../../utils/filters';
 import { LOCATION_STORAGE_KEY } from '../../constants/parking';
 import { distanceMeters, isInCalgary, nearestSpot } from '../../utils/geo';
 import { logger } from '../../utils/loggers';
-import { pickTopSpot, rankSpots } from '../../utils/spotPresentation';
+import { canPart, groupPins, worldSizeFor } from '../../utils/mapGroups';
+import { getCoordinates, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 
 // files specific to this screen
 import { useMinute } from '../../hooks/useMinute';
@@ -223,6 +224,29 @@ function MapScreen({ route, navigation }) {
     const now = useMinute();
     const rankedSpots = useMemo(() => rankSpots(spots, filterType, now), [spots, filterType, now]);
 
+    // Pins too close to tell apart at the map's zoom share one, led by the
+    // best (utils/mapGroups); the selected spot stands alone.
+    const groups = useMemo(
+        () => groupPins(rankedSpots, worldSizeFor(region.longitudeDelta, windowWidth), selectedSpot),
+        [rankedSpots, region.longitudeDelta, windowWidth, selectedSpot]
+    );
+
+    // A group zooms in until its spots part; one whose spots can't part
+    // picks its lead.
+    const openGroup = useCallback((group) => {
+        if (!canPart(group)) {
+            selectSpot(group.lead);
+            return;
+        }
+        logger.log('map_group_opened', { size: group.spots.length }, 'UI_EVENT');
+        // Android reads edgePadding in pixels.
+        const margin = Platform.OS === 'android' ? 64 * PixelRatio.get() : 64;
+        mapRef.current?.fitToCoordinates(group.spots.map(getCoordinates).filter(Boolean), {
+            edgePadding: { top: margin, bottom: margin, left: margin, right: margin },
+            animated: !reduceMotion,
+        });
+    }, [selectSpot, reduceMotion]);
+
     // Selected spot, else the closest worthwhile suggestion.
     const featuredSpot = useMemo(
         () => selectedSpot || pickTopSpot(rankedSpots, filterType, now),
@@ -267,16 +291,19 @@ function MapScreen({ route, navigation }) {
             return;
         }
         // Pins are smaller than a fingertip (and Android cannot draw them any
-        // bigger), so a tap within half a 44 pt target of one still picks it.
+        // bigger), so a tap within half a 44 pt target of one still picks it,
+        // or opens it if it is a group.
         const point = event?.nativeEvent?.coordinate;
         const metersPerPoint = (region.longitudeDelta * 111320
             * Math.cos((region.latitude * Math.PI) / 180)) / windowWidth;
-        const near = point && Number.isFinite(metersPerPoint)
-            ? nearestSpot(spots, point, TAP_SLOP * metersPerPoint)
+        const lead = point && Number.isFinite(metersPerPoint)
+            ? nearestSpot(groups.map((g) => g.lead), point, TAP_SLOP * metersPerPoint)
             : null;
-        if (near) selectSpot(near);
+        const group = lead ? groups.find((g) => g.lead === lead) : null;
+        if (group && group.spots.length > 1) openGroup(group);
+        else if (lead) selectSpot(lead);
         else setSelectedSpot(null);
-    }, [isSearchFocused, region, windowWidth, spots, selectSpot]);
+    }, [isSearchFocused, region, windowWidth, groups, openGroup, selectSpot]);
 
     // Stable setSearchMode wrapper for MapHeader — keeps memo(MapHeader) intact.
     const handleSearchModeChange = useCallback((mode) => {
@@ -379,9 +406,10 @@ function MapScreen({ route, navigation }) {
                     searchMode={searchMode}
                     pinnedLocation={pinnedLocation}
                     pinDropAnim={pinDropAnim}
-                    spots={spots}
+                    groups={groups}
                     selectedSpot={selectedSpot}
                     onSelectSpot={selectSpot}
+                    onOpenGroup={openGroup}
                     now={now}
                 />
             </MapView>

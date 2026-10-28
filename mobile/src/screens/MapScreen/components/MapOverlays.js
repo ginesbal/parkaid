@@ -3,8 +3,8 @@ import { Animated, View } from 'react-native';
 import { Circle, Marker } from 'react-native-maps';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
-import SpotMarker from './SpotMarker';
-import { getMarkerKind } from './SpotPill';
+import SpotMarker, { GroupMarker } from './SpotMarker';
+import { getGroupLabel, getMarkerKind } from './SpotPill';
 
 function MapOverlays({
     searchCenter,
@@ -12,9 +12,11 @@ function MapOverlays({
     searchMode,
     pinnedLocation,
     pinDropAnim,
-    spots,
+    // The pins, with spots too close to tell apart grouped (utils/mapGroups).
+    groups,
     selectedSpot,
     onSelectSpot,
+    onOpenGroup,
     // The time the pins are drawn for (useMinute).
     now = Date.now(),
 }) {
@@ -58,10 +60,21 @@ function MapOverlays({
                 </Marker>
             )}
 
-            {spots.map((spot) => {
-                const isSelected = selectedSpot?.id === spot.id;
-                // Key on selection and kind, so the marker remounts and
+            {groups.map((group) => {
+                // Keys carry what the pin shows, so the marker remounts and
                 // re-snapshots its new look (a restriction starting, say).
+                if (group.spots.length > 1) {
+                    return (
+                        <GroupMarker
+                            key={`${group.key}:${getGroupLabel(group.spots, now)}`}
+                            group={group}
+                            onPress={onOpenGroup}
+                            now={now}
+                        />
+                    );
+                }
+                const spot = group.lead;
+                const isSelected = selectedSpot?.id === spot.id;
                 return (
                     <SpotMarker
                         key={`${spot.id}:${isSelected ? 'on' : 'off'}:${getMarkerKind(spot, now)}`}

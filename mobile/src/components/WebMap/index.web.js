@@ -18,6 +18,8 @@ import { TOKENS } from '../../constants/theme';
 // Light and quiet, so the pins carry the colour.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 const METERS_PER_DEG = 111320;
+// MapLibre draws the whole world 512 pixels wide at zoom 0.
+const WORLD_TILE = 512;
 
 const toLngLat = ({ latitude, longitude }) => [longitude, latitude];
 
@@ -45,8 +47,9 @@ const EMPTY = { type: 'FeatureCollection', features: [] };
  * center:      { latitude, longitude } it opens on
  * zoom:        the zoom it opens at
  * interactive: false for a still map (Details, Home's suggestion)
- * markers:     [{ id, coordinate, node, anchor, offset, zIndex }]; `node` is
- *              React content, drawn at `coordinate`
+ * markers:     [{ id, coordinate, node, anchor, offset, zIndex, passive }];
+ *              `node` is React content, drawn at `coordinate`; a passive one
+ *              lets taps through to what lies under it
  * area:        { center, radius }: the search circle, or null
  * credit:      where MapLibre's OpenStreetMap credit sits ('top-right', …),
  *              and creditInset, pixels to move it in from that edge.
@@ -55,7 +58,9 @@ const EMPTY = { type: 'FeatureCollection', features: [] };
  * onLoad:      the map is drawn and can be moved
  * onPress:     a tap on the map itself, not on a marker
  * onUserMove:  the driver moved the map, with its new centre
- * ref:         fitBounds(bounds, padding, animate), easeTo(coordinate, animate)
+ * onZoom:      the map settled at a new zoom, given as the whole world's
+ *              width in pixels (for utils/mapGroups)
+ * ref:         fitBounds(bounds, padding, animate, maxZoom), easeTo(coordinate, animate)
  */
 const WebMap = forwardRef(function WebMap({
     center,
@@ -69,13 +74,14 @@ const WebMap = forwardRef(function WebMap({
     onLoad,
     onPress,
     onUserMove,
+    onZoom,
     style,
 }, ref) {
     const container = useRef(null);
     const [map, setMap] = useState(null);
     const [loaded, setLoaded] = useState(false);
-    const handlers = useRef({ onLoad, onPress, onUserMove });
-    handlers.current = { onLoad, onPress, onUserMove };
+    const handlers = useRef({ onLoad, onPress, onUserMove, onZoom });
+    handlers.current = { onLoad, onPress, onUserMove, onZoom };
 
     useEffect(() => {
         const instance = new maplibregl.Map({
@@ -110,7 +116,9 @@ const WebMap = forwardRef(function WebMap({
             instance.addLayer({ id: 'area-line', type: 'line', source: 'area', paint: { 'line-color': TOKENS.primary, 'line-opacity': 0.3, 'line-width': 1.5 } });
             setLoaded(true);
             handlers.current.onLoad?.();
+            handlers.current.onZoom?.(WORLD_TILE * 2 ** instance.getZoom());
         });
+        instance.on('zoomend', () => handlers.current.onZoom?.(WORLD_TILE * 2 ** instance.getZoom()));
         instance.on('click', (event) => {
             // A marker's own press handles taps on it.
             if (event.originalEvent?.target?.closest?.('.maplibregl-marker')) return;
@@ -160,11 +168,12 @@ const WebMap = forwardRef(function WebMap({
     useEffect(() => {
         if (!map) return;
         const wanted = new Set();
-        markers.forEach(({ id, coordinate, anchor = 'center', offset = [0, 0], zIndex = 1 }) => {
+        markers.forEach(({ id, coordinate, anchor = 'center', offset = [0, 0], zIndex = 1, passive = false }) => {
             wanted.add(id);
             const entry = placed.current.get(id);
             if (!entry) return;
             entry.element.style.zIndex = String(zIndex);
+            entry.element.style.pointerEvents = passive ? 'none' : '';
             if (!entry.marker) {
                 entry.marker = new maplibregl.Marker({ element: entry.element, anchor, offset })
                     .setLngLat(toLngLat(coordinate))
@@ -184,8 +193,8 @@ const WebMap = forwardRef(function WebMap({
     });
 
     useImperativeHandle(ref, () => ({
-        fitBounds(bounds, padding, animate = true) {
-            map?.fitBounds(bounds, { padding, maxZoom: 17, duration: animate ? 600 : 0 });
+        fitBounds(bounds, padding, animate = true, maxZoom = 17) {
+            map?.fitBounds(bounds, { padding, maxZoom, duration: animate ? 600 : 0 });
         },
         easeTo(coordinate, animate = true) {
             map?.easeTo({ center: toLngLat(coordinate), duration: animate ? 450 : 0 });
