@@ -1,5 +1,9 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import ParkPlusActions from '../../../../components/ParkPlusActions';
+import { TOKENS } from '../../../../constants/theme';
 import { formatCost } from '../../../../utils/formatters';
+import { getEndNote, getSessionZone } from '../../../../utils/parkPlus';
 import { sessionCost } from '../../../../utils/rates';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
@@ -18,7 +22,8 @@ function Row({ label, value, first = false }) {
 
 /**
  * EndSummary - shown on Park once a session ends: where, the time it covered
- * and what that time costs. Then park again, or find somewhere nearby.
+ * and what that time costs, and, for a street zone, the MyParking session to
+ * end too. Then park again, or find somewhere nearby.
  * `session` is the ended session, with endedAt.
  */
 export default function EndSummary({ session, onParkAgain, onFindParking }) {
@@ -28,6 +33,8 @@ export default function EndSummary({ session, onParkAgain, onFindParking }) {
     const minutes = Math.max(0, Math.round((end - start) / 60000));
     const cost = sessionCost(session, start, minutes);
     const place = [session.locationName, session.locationAddress].filter(Boolean).join(' · ');
+    const zone = getSessionZone(session);
+    const endNote = getEndNote(session);
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -39,9 +46,21 @@ export default function EndSummary({ session, onParkAgain, onFindParking }) {
             <View style={styles.setupCard}>
                 <View style={styles.summaryRows}>
                     <Row first label="Time" value={`${formatClock(start)} to ${formatClock(end)}`} />
-                    <Row label="Length" value={formatDuration(minutes)} />
-                    {cost !== null ? <Row label={`Cost for ${formatDuration(minutes)}`} value={formatCost(cost)} /> : null}
+                    <Row label="Length" value={minutes > 0 ? formatDuration(minutes) : 'Under 1 min'} />
+                    {cost !== null && minutes > 0 ? (
+                        <Row label={`Cost for ${formatDuration(minutes)}`} value={formatCost(cost)} />
+                    ) : null}
                 </View>
+
+                {endNote ? (
+                    <View style={styles.endNote}>
+                        <View style={styles.payLine}>
+                            <MaterialCommunityIcons name="information-outline" size={18} color={TOKENS.primaryInk} />
+                            <Text style={styles.payLineText}>{endNote}</Text>
+                        </View>
+                        <ParkPlusActions zone={zone} />
+                    </View>
+                ) : null}
 
                 <TouchableOpacity
                     onPress={onParkAgain}

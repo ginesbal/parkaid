@@ -8,7 +8,7 @@
 
 import { formatChargeStart, isChargedAt, nextChargedAt, parseChargeHours } from './chargeHours';
 import { nextRateChange, periodAt } from './rates';
-import { nextRestriction, parseRestrictions, restrictionAt } from './restrictions';
+import { formatTimeRange, nextRestriction, parseRestrictions, restrictionAt } from './restrictions';
 import { formatClock, formatDuration } from './sessionHelpers';
 
 const KIND_LABELS = {
@@ -259,11 +259,11 @@ export function getHourlyRate(spot, now = Date.now()) {
 
 // The rate as of `now`, to show: { amount: "$2.25", unit: "/ hour" },
 // { amount: "Free", unit: "now" }, or { note: "Rates posted at lot", short:
-// "At lot" }; `short` fits a narrow price column, `spoken` is for screen
-// readers.
+// "Rates at lot" }; `short` fits a narrow price column, `spoken` is for
+// screen readers.
 export function getRateDisplay(spot, now = Date.now()) {
     if (spot?.spot_type === 'residential') return { note: 'Permit holders only', short: 'Permit', spoken: 'Permit holders only' };
-    if (spot?.spot_type === 'off_street') return { note: 'Rates posted at lot', short: 'At lot', spoken: 'Rates posted at lot' };
+    if (spot?.spot_type === 'off_street') return { note: 'Rates posted at lot', short: 'Rates at lot', spoken: 'Rates posted at lot' };
     if (isRestrictedNow(spot, now)) return { note: 'No parking now', short: 'No parking', spoken: 'No parking now' };
     const rate = getHourlyRate(spot, now);
     if (rate === 0) return { amount: 'Free', unit: 'now', spoken: 'Free now' };
@@ -272,6 +272,56 @@ export function getRateDisplay(spot, now = Date.now()) {
         return { amount, unit: '/ hour', spoken: `${amount} per hour` };
     }
     return { note: 'Check posted signs', short: 'See signs', spoken: 'Check posted signs' };
+}
+
+// A day's paid stretches: the City's rate periods, cut to the hours it
+// charges (when known), earliest first.
+function paidStretches(periods, charge, weekday) {
+    const stretches = [];
+    for (const p of periods) {
+        if (!p.days.includes(weekday) || !(p.rate > 0)) continue;
+        const windows = charge ? charge.filter((w) => w.days.includes(weekday)) : [p];
+        for (const w of windows) {
+            const from = Math.max(p.from, w.from);
+            const to = Math.min(p.to, w.to);
+            if (to > from) stretches.push({ from, to, rate: p.rate, dayMax: p.dayMax });
+        }
+    }
+    return stretches.sort((a, b) => a.from - b.from);
+}
+
+// What the City charges an hour here on the next day it charges, from
+// today once today's charging is over: { day: "today" | "tomorrow" |
+// "Monday", rows: [{ time: "9:10–11 AM", rate: "$3.75" }], dayMax: "$6.00"
+// or null }. Neighbouring stretches at one rate are joined. null without
+// rates, or when they are all free.
+export function getDayRates(spot, now = Date.now()) {
+    const periods = getRatePeriods(spot);
+    if (!periods) return null;
+    const charge = getChargeHours(spot);
+    const start = new Date(now);
+    const minute = start.getHours() * 60 + start.getMinutes();
+    for (let i = 0; i < 7; i++) {
+        const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        const paid = paidStretches(periods, charge, day.getDay());
+        if (!paid.length || (i === 0 && paid[paid.length - 1].to <= minute)) continue;
+        const rows = [];
+        for (const p of paid) {
+            const last = rows[rows.length - 1];
+            if (last && last.to === p.from && last.rate === p.rate) last.to = p.to;
+            else rows.push({ from: p.from, to: p.to, rate: p.rate });
+        }
+        const caps = paid.map((p) => p.dayMax).filter(Boolean);
+        return {
+            day: i === 0 ? 'today' : i === 1 ? 'tomorrow' : day.toLocaleDateString([], { weekday: 'long' }),
+            rows: rows.map((r) => ({
+                time: r.from === 0 && r.to === 24 * 60 ? 'All day' : formatTimeRange(r.from, r.to),
+                rate: `$${r.rate.toFixed(2)}`,
+            })),
+            dayMax: caps.length ? `$${Math.max(...caps).toFixed(2)}` : null,
+        };
+    }
+    return null;
 }
 
 // A known rate before an unknown one, the cheaper first; 0 when they tie.

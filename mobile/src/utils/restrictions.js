@@ -71,17 +71,20 @@ function clockParts(minutes) {
     return { time: m ? `${h12}:${String(m).padStart(2, '0')}` : `${h12}`, half: h < 12 ? 'AM' : 'PM' };
 }
 
+// "7–8:30 AM", "11 AM–1:30 PM": a stretch of the day, in minutes.
+export function formatTimeRange(from, to) {
+    const a = clockParts(from);
+    const b = clockParts(to);
+    return a.half === b.half
+        ? `${a.time}${DASH}${b.time}${NBSP}${b.half}`
+        : `${a.time}${NBSP}${a.half}${DASH}${b.time}${NBSP}${b.half}`;
+}
+
 export function formatRestrictions(windows) {
     if (!windows) return null;
     const seen = new Set();
     return windows
         .filter(({ from, to }) => !seen.has(`${from}-${to}`) && seen.add(`${from}-${to}`))
-        .map(({ from, to }) => {
-            const a = clockParts(from);
-            const b = clockParts(to);
-            return a.half === b.half
-                ? `${a.time}${DASH}${b.time}${NBSP}${b.half}`
-                : `${a.time}${NBSP}${a.half}${DASH}${b.time}${NBSP}${b.half}`;
-        })
+        .map(({ from, to }) => formatTimeRange(from, to))
         .join(' and ');
 }

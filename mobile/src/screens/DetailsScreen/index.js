@@ -12,6 +12,7 @@ import { logger } from '../../utils/loggers';
 import { formatRestrictions } from '../../utils/restrictions';
 import {
     formatEnforceableTime,
+    getDayRates,
     getDirectionsUrl,
     getMaxStayLabel,
     getNowLine,
@@ -27,7 +28,7 @@ import {
 } from '../../utils/spotPresentation';
 import { styles } from './styles';
 
-function InfoLine({ icon, title, body, zone }) {
+function InfoLine({ icon, title, rows, body, zone }) {
     return (
         <View style={styles.line}>
             <View style={styles.lineIcon}>
@@ -35,6 +36,16 @@ function InfoLine({ icon, title, body, zone }) {
             </View>
             <View style={styles.lineText}>
                 <Text style={styles.lineTitle}>{title}</Text>
+                {rows ? (
+                    <View style={styles.rateRows}>
+                        {rows.map((r) => (
+                            <View key={r.time} style={styles.rateRow}>
+                                <Text style={styles.rateTime}>{r.time}</Text>
+                                <Text style={styles.rateValue}>{r.rate}</Text>
+                            </View>
+                        ))}
+                    </View>
+                ) : null}
                 {body ? <Text style={styles.lineBody}>{body}</Text> : null}
                 {zone ? <ParkPlusActions zone={zone} style={styles.lineActions} /> : null}
             </View>
@@ -85,6 +96,17 @@ function buildLines(spot) {
             icon: 'car-off',
             title: `No parking ${formatRestrictions(restrictions)}`,
             body: 'On weekdays. A car left here then may be ticketed or towed.',
+        });
+    }
+
+    // The City's rates through the day, so a longer stay holds no surprise.
+    const dayRates = getDayRates(spot);
+    if (dayRates) {
+        lines.push({
+            icon: 'cash-clock',
+            title: `Hourly rates ${dayRates.day}`,
+            rows: dayRates.rows,
+            body: dayRates.dayMax ? `Up to ${dayRates.dayMax} a day.` : null,
         });
     }
 

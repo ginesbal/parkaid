@@ -252,6 +252,10 @@ export const styles = StyleSheet.create({
     },
 
     // Directly above Start: the timer pays for nothing.
+    // After a street session: end MyParking too, with the way to do it.
+    endNote: {
+        marginBottom: 16,
+    },
     payLine: {
         flexDirection: 'row',
         alignItems: 'flex-start',

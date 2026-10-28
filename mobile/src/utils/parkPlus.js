@@ -1,9 +1,15 @@
 // ParkAid keeps time; the City takes payment, in ParkPlus. Drivers pay
 // street parking in the City's MyParking app (or at a pay station) with the
 // zone number on the sign. These say so the same way everywhere.
+//
+// A MyParking session runs, and charges, until the driver ends it there (or
+// their balance runs out), and the City doesn't refund one they forget to
+// end. A pay station sells a set time. So ParkAid's Add changes nothing in
+// MyParking, and ending ParkAid's timer doesn't end the MyParking session.
 
 import { Platform } from 'react-native';
 import { formatMoney } from './formatters';
+import { formatDuration } from './sessionHelpers';
 
 // MyParking, the City's ParkPlus app. Its store page opens the app when it is
 // installed; web goes to the City's page about it.
@@ -34,21 +40,33 @@ export function getPayLine({ zone = null, lot = false } = {}) {
 }
 
 // Under Add on a running session. Add changes ParkAid's timer only, so it
-// says what to pay, and where. `cost`: what the added time costs; 0 when the
-// City does not charge then, null when the rate is unknown.
+// says what the extra time costs, and where. `cost`: 0 when the City does not
+// charge then, null when the rate is unknown.
 export function getExtendNote({ cost, zone }) {
-    const where = zone ? 'in ParkPlus' : 'where you paid';
     if (cost === 0) return 'Timer only. Free at that time.';
-    if (cost === null || cost === undefined) return `Timer only. Add the same time ${where}.`;
-    return `Timer only. Pay ${formatMoney(cost)} more ${where}.`;
+    if (cost === null || cost === undefined) return 'Timer only. What you paid for doesn’t change.';
+    return `Timer only. ${formatMoney(cost)} more ${zone ? 'in ParkPlus' : 'where you paid'}.`;
 }
 
-// Once time is up: the one thing to do.
+// Once time is added: only time bought for a set length needs more bought.
+export function getAddedNote(minutes) {
+    return `Paid for a set time? Buy ${formatDuration(minutes)} more where you paid.`;
+}
+
+// Once time is up: the one thing to do, and the MyParking session that is
+// still running.
 export function getExpiredLine(session) {
-    const zone = getSessionZone(session);
-    return zone
-        ? `Move your car, or add time in ParkPlus with ${zone.toLowerCase()}.`
-        : 'Move your car, or add time where you paid.';
+    return getSessionZone(session)
+        ? 'Move your car. Paid in MyParking? End your session there too.'
+        : 'Move your car, or pay for more time where you paid.';
+}
+
+// When ParkAid's session ends, for a street zone: the MyParking session to
+// end too. null when there is none to end.
+export function getEndNote(session) {
+    return getSessionZone(session)
+        ? 'Paid in MyParking? End your session there too, so you only pay for the time you parked.'
+        : null;
 }
 
 // The same for a stored session, whose spotId is its zone or its lot kind.

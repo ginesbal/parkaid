@@ -202,7 +202,7 @@ export default function MapScreen({ route, navigation }) {
                     }}
                     style={({ pressed }) => [mapStyles.fab, mapStyles.fabPrimary, pressed && mapStyles.fabPressed]}
                     accessibilityRole="button"
-                    accessibilityLabel={place ? 'Back to your pin' : 'Back to your location'}
+                    accessibilityLabel={place ? 'Back to the search area' : 'Back to your location'}
                 >
                     <MaterialCommunityIcons name={place ? 'map-marker' : 'crosshairs-gps'} size={22} color={TOKENS.surface} />
                 </Pressable>
@@ -220,6 +220,7 @@ export default function MapScreen({ route, navigation }) {
                 featuredSpot={featuredSpot}
                 now={now}
                 searchMode={place ? 'pinned' : 'current'}
+                pinName={place?.name || null}
                 fromDowntown={source === 'default' || source === 'outside'}
                 typeNote={getTypeNote(type)}
                 onClearPin={() => setPlace(null)}

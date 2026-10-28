@@ -1,6 +1,7 @@
 import {
     formatEnforceableTime,
     getCrossStreets,
+    getDayRates,
     getMaxStayLabel,
     getRateDisplay,
     getRowMeta,
@@ -18,6 +19,7 @@ import {
 const rates = (rate) => ({ periods: [{ days: [0, 1, 2, 3, 4, 5, 6], from: 0, to: 1440, rate, dayMax: null }] });
 // Local times; 2026-10-20 is a Tuesday.
 const NOW = new Date('2026-10-20T13:40:00');
+const words = (text) => text.replace(/[  ]/g, ' ').replace(/⁠/g, '');
 
 // Shapes follow backend/utils/spotRows.js and City of Calgary open data.
 const street = (over = {}) => ({
@@ -120,8 +122,60 @@ describe('rates', () => {
         expect(getRateDisplay(street({ rates: null }), NOW).note).toBe('Check posted signs');
         // A price from the old API is a guess from the zone code; it is ignored.
         expect(getRateDisplay(street({ rates: null, price_per_hour: 6 }), NOW).note).toBe('Check posted signs');
-        expect(getRateDisplay({ spot_type: 'off_street' }).note).toBe('Rates posted at lot');
+        expect(getRateDisplay({ spot_type: 'off_street' })).toMatchObject({ note: 'Rates posted at lot', short: 'Rates at lot' });
         expect(getRateDisplay({ spot_type: 'residential' }).note).toBe('Permit holders only');
+    });
+
+    // Zone 1008, Eau Claire Av SW from 4 to 5 St, as the City has it.
+    const WEEKDAYS = [1, 2, 3, 4, 5];
+    const eauClaire = street({
+        rates: {
+            periods: [
+                { days: WEEKDAYS, from: 540, to: 660, rate: 3.75, dayMax: null },
+                { days: WEEKDAYS, from: 660, to: 810, rate: 4.25, dayMax: null },
+                { days: WEEKDAYS, from: 810, to: 930, rate: 3.25, dayMax: null },
+                { days: WEEKDAYS, from: 930, to: 1080, rate: 2.25, dayMax: null },
+                { days: [6], from: 540, to: 1080, rate: 1, dayMax: null },
+                { days: [0], from: 0, to: 1440, rate: 0, dayMax: null },
+            ],
+        },
+    });
+    const table = (day) => day && { ...day, rows: day.rows.map((r) => [words(r.time), r.rate]) };
+
+    it('lists the day\'s rates, only while the City charges', () => {
+        expect(table(getDayRates(eauClaire, NOW))).toEqual({
+            day: 'today',
+            rows: [['9:10–11 AM', '$3.75'], ['11 AM–1:30 PM', '$4.25'], ['1:30–3:30 PM', '$3.25'], ['3:30–5:50 PM', '$2.25']],
+            dayMax: null,
+        });
+    });
+
+    it('moves on to the next day that charges once today\'s charging is over', () => {
+        expect(getDayRates(eauClaire, new Date('2026-10-20T19:00:00')).day).toBe('tomorrow');
+        expect(table(getDayRates(eauClaire, new Date('2026-10-23T19:00:00')))).toMatchObject({
+            day: 'tomorrow',
+            rows: [['9:10 AM–5:50 PM', '$1.00']],
+        });
+        // Sunday is free, so after Saturday's charging comes Monday's.
+        expect(getDayRates(eauClaire, new Date('2026-10-24T19:00:00')).day).toBe('Monday');
+    });
+
+    it('joins one rate across periods, and gives a day\'s cap', () => {
+        const capped = street({
+            rates: {
+                periods: [
+                    { days: WEEKDAYS, from: 540, to: 720, rate: 1.5, dayMax: 6 },
+                    { days: WEEKDAYS, from: 720, to: 1080, rate: 1.5, dayMax: 6 },
+                ],
+            },
+        });
+        expect(table(getDayRates(capped, NOW))).toEqual({ day: 'today', rows: [['9:10 AM–5:50 PM', '$1.50']], dayMax: '$6.00' });
+    });
+
+    it('lists nothing without rates, or when they are all free', () => {
+        expect(getDayRates(street({ rates: null }), NOW)).toBeNull();
+        expect(getDayRates(street({ rates: rates(0) }), NOW)).toBeNull();
+        expect(getDayRates({ spot_type: 'off_street' }, NOW)).toBeNull();
     });
 
     it('sorts by the rate now, unknown last, ties by distance', () => {

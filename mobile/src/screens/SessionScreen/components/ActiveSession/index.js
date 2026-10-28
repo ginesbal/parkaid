@@ -3,7 +3,7 @@ import { AccessibilityInfo, Animated, Platform, ScrollView, Text, TouchableOpaci
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EXTEND_STEP } from '../../../../constants/session';
 import { useEntrance } from '../../../../hooks/useEntrance';
-import { getExtendNote, getSessionZone } from '../../../../utils/parkPlus';
+import { getAddedNote, getExtendNote, getSessionZone } from '../../../../utils/parkPlus';
 import { sessionCost } from '../../../../utils/rates';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { formatMaxStay } from '../../../../utils/spotPresentation';
@@ -150,9 +150,7 @@ const ActiveSession = ({
                                     <Text style={styles.undoTitle}>
                                         Added {formatDuration(added.minutes)}. Ends at {formatClock(added.until)}.
                                     </Text>
-                                    <Text style={styles.undoBody}>
-                                        {zone ? 'Add the same time in ParkPlus.' : 'Add the same time where you paid.'}
-                                    </Text>
+                                    <Text style={styles.undoBody}>{getAddedNote(added.minutes)}</Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={undo}

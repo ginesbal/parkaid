@@ -1,4 +1,13 @@
-import { getExtendNote, getPayLine, getSessionPayLine, getSessionZone, getZoneNumber } from '../parkPlus';
+import {
+    getAddedNote,
+    getEndNote,
+    getExpiredLine,
+    getExtendNote,
+    getPayLine,
+    getSessionPayLine,
+    getSessionZone,
+    getZoneNumber,
+} from '../parkPlus';
 
 describe('parkPlus', () => {
     it('reads the zone from a session, and only a zone', () => {
@@ -19,12 +28,24 @@ describe('parkPlus', () => {
         expect(getPayLine()).toBe('ParkAid only keeps time. Pay at the meter or in ParkPlus.');
     });
 
-    it('says Add only changes the timer, and what to pay where', () => {
-        expect(getExtendNote({ cost: 2.5, zone: 'Zone 1684' })).toBe('Timer only. Pay $2.50 more in ParkPlus.');
-        expect(getExtendNote({ cost: 2.5, zone: null })).toBe('Timer only. Pay $2.50 more where you paid.');
+    it('says Add only changes the timer, and what the time costs where', () => {
+        expect(getExtendNote({ cost: 2.5, zone: 'Zone 1684' })).toBe('Timer only. $2.50 more in ParkPlus.');
+        expect(getExtendNote({ cost: 2.5, zone: null })).toBe('Timer only. $2.50 more where you paid.');
         expect(getExtendNote({ cost: 0, zone: 'Zone 1684' })).toBe('Timer only. Free at that time.');
-        expect(getExtendNote({ cost: null, zone: 'Zone 1684' })).toBe('Timer only. Add the same time in ParkPlus.');
-        expect(getExtendNote({ cost: null, zone: null })).toBe('Timer only. Add the same time where you paid.');
+        expect(getExtendNote({ cost: null, zone: 'Zone 1684' })).toBe('Timer only. What you paid for doesn’t change.');
+    });
+
+    // A MyParking session runs until it is ended there; a pay station sells
+    // a set time.
+    it('asks for more time only where a set time was bought', () => {
+        expect(getAddedNote(15)).toBe('Paid for a set time? Buy 15 min more where you paid.');
+    });
+
+    it('says to end the MyParking session too, for a street zone', () => {
+        expect(getEndNote({ spotId: 'Zone 1684' })).toMatch(/^Paid in MyParking\? End your session there too/);
+        expect(getEndNote({ spotId: 'Parkade' })).toBeNull();
+        expect(getExpiredLine({ spotId: 'Zone 1684' })).toBe('Move your car. Paid in MyParking? End your session there too.');
+        expect(getExpiredLine({ spotId: 'Parkade' })).toBe('Move your car, or pay for more time where you paid.');
     });
 
     it('says the same for a stored session', () => {

@@ -45,7 +45,8 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
     const expired = sessionState === 'expired';
     const expiring = sessionState === 'expiring';
     const walk = session?.walkMinutes;
-    // The rate right now: it can change during the session.
+    // The rate right now: it can change during the session, and goes on
+    // after it in MyParking. The cost below covers the session's own time.
     const rate = sessionRateAt(session, Date.now());
     const remaining = formatRemaining(timeRemainingMs);
     const endsAt = formatClock(endTime);
@@ -117,10 +118,10 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
             <Row label="Vehicle" value={session.vehiclePlate} />
             <Row label="Started" value={formatClock(session.startedAt)} />
             <Row
-                label="Rate"
+                label="Rate now"
                 value={rate === null
                     ? (session.rateNote || 'Posted at the spot')
-                    : rate === 0 ? 'Free now' : `${formatMoney(rate)} / hour`}
+                    : rate === 0 ? 'Free' : `${formatMoney(rate)} / hour`}
             />
             {totalCost !== null ? (
                 <Row label={`Cost for ${formatDuration(session.duration)}`} value={formatCost(totalCost)} />

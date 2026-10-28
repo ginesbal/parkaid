@@ -60,6 +60,9 @@ const ParkingBottomSheet = forwardRef(({
     // The time cautions are for (useMinute).
     now = Date.now(),
     searchMode,
+    // What a pinned search is around: "your pin" on a phone; on the web map,
+    // which has no pin, the searched place, or null for an area of the map.
+    pinName = 'your pin',
     // The search is around downtown, not the driver (see MapScreen).
     fromDowntown = false,
     // "Parkades only" when the list is narrowed to one type (utils/filters).
@@ -294,7 +297,8 @@ const ParkingBottomSheet = forwardRef(({
     const featured = featuredSpot ? {
         reason: selectedSpot?.id === featuredSpot.id
             ? 'Selected'
-            : pinned ? 'Closest to your pin' : fromDowntown ? 'Closest to downtown' : 'Closest to you',
+            : pinned ? (pinName ? `Closest to ${pinName}` : 'Closest to the middle')
+                : fromDowntown ? 'Closest to downtown' : 'Closest to you',
         name: getSpotName(featuredSpot).title,
         // Zone and walk; a maximum stay under 2 hours too, since it changes
         // the choice. Longer ones are on Details.
@@ -339,7 +343,8 @@ const ParkingBottomSheet = forwardRef(({
                 <View style={styles.headerContent}>
                     <View style={styles.headerInfo}>
                         <Text style={styles.headerTitle} accessibilityRole="header">
-                            {pinned ? 'Parking around your pin' : fromDowntown ? 'Parking around downtown' : 'Parking around you'}
+                            {pinned ? (pinName ? `Parking around ${pinName}` : 'Parking in this area')
+                                : fromDowntown ? 'Parking around downtown' : 'Parking around you'}
                         </Text>
                         <Text style={styles.headerSubtitle} numberOfLines={1}>
                             {countLine}
@@ -424,10 +429,8 @@ const ParkingBottomSheet = forwardRef(({
                                 ) : null}
                             </>
                         ) : (
-                            <>
-                                <Text style={styles.emptyTitle}>No parking in this area</Text>
-                                <Text style={styles.emptyHint}>{EMPTY_HINT[pinned ? 'pinned' : 'current']}</Text>
-                            </>
+                            // The count line above already says there's none.
+                            <Text style={styles.emptyHint}>{EMPTY_HINT[pinned ? 'pinned' : 'current']}</Text>
                         )}
                     </View>
                 )}
@@ -668,12 +671,6 @@ const styles = StyleSheet.create({
     },
     statusLoading: {
         alignItems: 'center',
-    },
-    emptyTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: TOKENS.text,
-        marginBottom: 6,
     },
     emptyHint: {
         fontSize: 14,

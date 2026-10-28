@@ -150,6 +150,27 @@ export const styles = StyleSheet.create({
     lineActions: {
         marginTop: SPACING.md,
     },
+    rateRows: {
+        marginTop: SPACING.xs,
+        gap: 2,
+    },
+    rateRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: SPACING.md,
+    },
+    rateTime: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: TOKENS.textMuted,
+    },
+    rateValue: {
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '600',
+        color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
+    },
 
     actions: {
         marginTop: SPACING['3xl'],

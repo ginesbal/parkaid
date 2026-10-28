@@ -4,6 +4,7 @@ import { AccessibilityInfo, Alert, AppState } from 'react-native';
 import { DEFAULT_VALUES, DEFAULT_WALK_MINUTES, HEAD_BACK_BUFFER, STORAGE_KEYS } from '../constants/session.js';
 import { cancelSessionReminders, scheduleSessionReminders } from '../services/reminders';
 import { confirm } from '../utils/confirm';
+import { getSessionZone } from '../utils/parkPlus';
 import { sessionCost as costOf } from '../utils/rates';
 import {
     calculateProgress,
@@ -290,9 +291,11 @@ export const useSessionManager = () => {
             finishSession();
             return;
         }
+        // Ending ParkAid's timer doesn't end the MyParking session.
+        const note = getSessionZone(session) ? ' This stops ParkAid’s timer. If you paid in MyParking, end your session there too.' : '';
         confirm({
             title: 'End this session?',
-            message: `You still have ${formatDuration(timeRemaining)} left.`,
+            message: `You still have ${formatDuration(timeRemaining)} left.${note}`,
             confirmText: 'End session',
             destructive: true,
             onConfirm: finishSession,
