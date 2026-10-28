@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Alert, AppState } from 'react-native';
 import { DEFAULT_VALUES, DEFAULT_WALK_MINUTES, HEAD_BACK_BUFFER, STORAGE_KEYS } from '../constants/session.js';
 import { cancelSessionReminders, scheduleSessionReminders } from '../services/reminders';
-import { chargedCost, parseChargeHours } from '../utils/chargeHours';
 import { confirm } from '../utils/confirm';
+import { sessionCost as costOf } from '../utils/rates';
 import {
     calculateProgress,
     calculateSessionState,
@@ -17,6 +17,7 @@ import {
     getHourlyRate,
     getMaxStayMinutes,
     getRateDisplay,
+    getRatePeriods,
     getRestrictions,
     getSpotKind,
     getSpotName,
@@ -32,15 +33,9 @@ const warnMinutesFor = (session) => getWarnAtMinutes(
     HEAD_BACK_BUFFER
 );
 
-// What the session's time costs in ParkPlus: charged minutes only, null when
-// the rate is unknown. Sessions saved before charging hours were kept count
-// every minute.
-const sessionCost = (session) => chargedCost(
-    session.hourlyRate ?? null,
-    parseChargeHours(session.chargeHours),
-    session.startedAt,
-    session.duration
-);
+// What the session's time costs in ParkPlus: charged minutes only, at the
+// City's rate for each (utils/rates); null when the rate is unknown.
+const sessionCost = (session) => costOf(session, session.startedAt, session.duration);
 
 export const useSessionManager = () => {
     // core state
@@ -186,9 +181,9 @@ export const useSessionManager = () => {
         }
 
         const plate = vehiclePlate.trim().toUpperCase();
-        const hourlyRate = spot ? getHourlyRate(spot) : null;
-        const maxDuration = spot ? getMaxStayMinutes(spot) : null;
         const startTime = new Date();
+        const hourlyRate = spot ? getHourlyRate(spot, startTime) : null;
+        const maxDuration = spot ? getMaxStayMinutes(spot) : null;
         // Within the posted maximum, and over by the time a rush-hour
         // restriction starts; none while one is on (Park offers no Start then).
         const limit = spot ? getStayLimit(spot, startTime) : null;
@@ -209,14 +204,17 @@ export const useSessionManager = () => {
             // The ParkPlus zone ("Zone 1684"), or a lot's kind (see utils/parkPlus).
             spotId: spot ? (getZoneLabel(spot) || getSpotKind(spot)) : zoneLabel,
             parkingSpotId: spot?.id ?? null,
+            // The rate at the start (0 while the City isn't charging), and the
+            // City's rates by time of day, which price the session.
             hourlyRate,
+            ratePeriods: spot ? getRatePeriods(spot) : null,
             duration, // minutes
             maxDuration, // minutes, from the spot's posted maximum
             walkMinutes: Number.isFinite(Number(spot?.walkingTime)) ? Number(spot.walkingTime) : null,
             startedAt: startTime.toISOString(),
             scheduledEnd: endTime.toISOString(),
             vehiclePlate: plate,
-            rateNote: hourlyRate === null ? getRateDisplay(spot).note : null,
+            rateNote: hourlyRate === null ? getRateDisplay(spot, startTime).note : null,
             // When the City charges here ("0910-1750 MON-SAT"); null for lots.
             chargeHours: spot?.zone_info?.enforceable_time ?? null,
             // When nobody may park here, weekdays ("15:30 - 18:00"); null when never.

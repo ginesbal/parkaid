@@ -18,22 +18,23 @@ import { getCaution, getHourlyRate, getRateDisplay, isRestrictedNow } from '../.
 export function getMarkerKind(spot, now = Date.now()) {
     if (spot?.spot_type === 'residential') return 'permit';
     if (isRestrictedNow(spot, now)) return 'closed';
-    if (getHourlyRate(spot) !== null) return 'priced';
+    if (getHourlyRate(spot, now) !== null) return 'priced';
     if (spot?.spot_type === 'off_street') return 'lot';
     return 'street';
 }
 
-export function getPillLabel(spot) {
-    const rate = getHourlyRate(spot);
+// "$2", "$2.25", or "Free" while the City isn't charging.
+export function getPillLabel(spot, now = Date.now()) {
+    const rate = getHourlyRate(spot, now);
     if (rate === null) return null;
+    if (rate === 0) return 'Free';
     return `$${rate % 1 === 0 ? rate : rate.toFixed(2)}`;
 }
 
 // What a screen reader says after the spot's name.
 export function getMarkerDescription(spot, now = Date.now()) {
     if (isRestrictedNow(spot, now)) return getCaution(spot, now).replace(/\u00A0/g, ' ');
-    const rate = getRateDisplay(spot);
-    return rate.amount ? `${rate.amount} per hour` : rate.note;
+    return getRateDisplay(spot, now).spoken;
 }
 
 const ICONS = { lot: 'parking', permit: 'card-account-details-outline', closed: 'car-off' };
@@ -55,7 +56,7 @@ function Pin({ selected, size, onImageLoad }) {
 
 function SpotPill({ spot, selected = false, onImageLoad, now = Date.now() }) {
     const kind = getMarkerKind(spot, now);
-    const text = kind === 'priced' ? getPillLabel(spot) : WORDS[kind];
+    const text = kind === 'priced' ? getPillLabel(spot, now) : WORDS[kind];
     const muted = MUTED.has(kind);
     return (
         <View
@@ -196,8 +197,8 @@ const styles = StyleSheet.create({
 // sheet's featured card once selected. Lots and permit zones show their icon.
 export const SpotBadge = memo(function SpotBadge({ spot, selected = false, onImageLoad, now = Date.now() }) {
     const kind = getMarkerKind(spot, now);
-    const rate = getHourlyRate(spot);
-    const text = kind === 'priced' && rate % 1 === 0 && rate < 10 ? `$${rate}` : null;
+    const rate = getHourlyRate(spot, now);
+    const text = kind === 'priced' && rate > 0 && rate % 1 === 0 && rate < 10 ? `$${rate}` : null;
     const muted = MUTED.has(kind);
     let body;
     if (text) {

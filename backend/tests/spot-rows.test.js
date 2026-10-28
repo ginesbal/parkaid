@@ -1,5 +1,5 @@
 // The /nearby spot shape, from a database row. No database needed.
-const { toSpot } = require('../utils/spotRows');
+const { NOT_PUBLIC_ZONES, toSpot } = require('../utils/spotRows');
 
 // A street block as stored from the City's on-street data.
 const row = (over = {}) => ({
@@ -41,5 +41,13 @@ describe('toSpot', () => {
         expect(spot.zone_info.parking_restrict_type).toBeNull();
         expect(spot.zone_info.parking_restrict_time).toBeNull();
         expect(toSpot(row({ parking_restrict_time: undefined })).zone_info.parking_restrict_time).toBeNull();
+    });
+});
+
+describe('NOT_PUBLIC_ZONES', () => {
+    test('names the City zone types the public cannot park in', () => {
+        expect(NOT_PUBLIC_ZONES).toEqual(expect.arrayContaining(['Taxi Zone', 'Access Calgary Loading Zone']));
+        expect(NOT_PUBLIC_ZONES).not.toContain('Loading Zone');
+        expect(NOT_PUBLIC_ZONES).not.toContain('Parking Zone');
     });
 });

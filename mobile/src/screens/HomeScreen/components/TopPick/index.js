@@ -21,12 +21,11 @@ const REASONS = {
 const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() }) => {
     const reason = view === 'near' && fromDowntown ? 'Closest to downtown' : REASONS[view];
     const { title, detail } = getSpotName(spot);
-    const rate = getRateDisplay(spot);
+    const rate = getRateDisplay(spot, now);
     const meta = [getZoneLabel(spot) || getSpotKind(spot), getWalkLabel(spot)]
         .filter(Boolean)
         .join(' · ');
     const limit = getCaution(spot, now);
-    const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
     // The whole card is one target; "View spot" shows what a tap does.
     return (
@@ -34,7 +33,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() })
             onPress={() => onView(spot)}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
             accessibilityRole="button"
-            accessibilityLabel={`View spot: ${[title, reason, meta, limit, rateSpoken].filter(Boolean).join('. ')}.`}
+            accessibilityLabel={`View spot: ${[title, reason, meta, limit, rate.spoken].filter(Boolean).join('. ')}.`}
         >
             {({ pressed }) => (
                 <>

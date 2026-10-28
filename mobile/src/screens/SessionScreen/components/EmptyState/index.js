@@ -5,6 +5,7 @@ import {
     getChargeHours,
     getHourlyRate,
     getRateDisplay,
+    getRatePeriods,
     getSpotKind,
     getSpotName,
     getStayLimit,
@@ -47,7 +48,7 @@ const EmptyState = ({
 }) => {
     const name = spot ? getSpotName(spot) : null;
     const zoneLabel = spot ? getZoneLabel(spot) : (zone ? `Zone ${zone}` : null);
-    const rate = spot ? getHourlyRate(spot) : null;
+    const rate = spot ? getHourlyRate(spot, now) : null;
     // The longest stay here, and why: the posted maximum, a rush-hour
     // restriction starting first, or no parking at all right now.
     const limit = setupLimit(spot ? getStayLimit(spot, now) : null);
@@ -92,7 +93,8 @@ const EmptyState = ({
                 setSelectedDuration={setSelectedDuration}
                 onStartSession={onStartSession}
                 rate={rate}
-                rateNote={rate === null ? getRateDisplay(spot).note : null}
+                rateNote={rate === null ? getRateDisplay(spot, now).note : null}
+                ratePeriods={spot ? getRatePeriods(spot) : null}
                 chargeHours={spot ? getChargeHours(spot) : null}
                 maxMinutes={limit.maxMinutes}
                 limitNote={limit.note}

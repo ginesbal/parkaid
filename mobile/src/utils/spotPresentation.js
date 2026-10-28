@@ -7,6 +7,7 @@
 //   residential: "00 Block COLLINGWOOD PL NW"
 
 import { formatChargeStart, isChargedAt, nextChargedAt, parseChargeHours } from './chargeHours';
+import { nextRateChange, periodAt } from './rates';
 import { nextRestriction, parseRestrictions, restrictionAt } from './restrictions';
 import { formatClock, formatDuration } from './sessionHelpers';
 
@@ -22,11 +23,22 @@ export function isCovered(spot) {
         && /parkade/i.test(spot?.metadata?.parking_type || '');
 }
 
-// "Street", "Parkade", "Surface lot", "Permit zone"
+// Street zones that aren't ordinary paid parking, by the City's zone type.
+const ZONE_KINDS = { 'Loading Zone': 'Loading zone', 'Handicapped Zone': 'Accessible parking' };
+
+// Only for cars with a disability parking placard.
+export const isPlacardOnly = (spot) => spot?.zone_info?.zone_type === 'Handicapped Zone';
+// For loading and unloading: free, and for a short stop.
+export const isLoadingZone = (spot) => spot?.zone_info?.zone_type === 'Loading Zone';
+
+// "Street", "Loading zone", "Parkade", "Surface lot", "Permit zone"
 export function getSpotKind(spot) {
     if (spot?.spot_type === 'off_street') {
         if (isCovered(spot)) return 'Parkade';
         if (/surface/i.test(spot?.metadata?.parking_type || '')) return 'Surface lot';
+    }
+    if (spot?.spot_type === 'on_street' && ZONE_KINDS[spot?.zone_info?.zone_type]) {
+        return ZONE_KINDS[spot.zone_info.zone_type];
     }
     return KIND_LABELS[spot?.spot_type] || 'Parking';
 }
@@ -172,35 +184,52 @@ export function getStayLimit(spot, now = Date.now()) {
 }
 
 // What a list says in amber, if anything, most pressing first: no parking
-// now, no parking soon, or a posted maximum under 2 hours.
+// now, no parking soon, placard holders only, a loading zone, or a posted
+// maximum under 2 hours.
 export function getCaution(spot, now = Date.now()) {
     const limit = getStayLimit(spot, now);
     if (limit?.reason === 'restricted') return oneLine(`No parking until ${formatClock(limit.until)}`);
     if (limit?.reason === 'restriction' && limit.minutes < SHORT_LIMIT) {
         return oneLine(`No parking from ${formatClock(limit.until)}`);
     }
+    if (isPlacardOnly(spot)) return oneLine('Placard holders only');
+    if (isLoadingZone(spot)) return oneLine('Loading zone');
     return getShortLimit(spot);
 }
 
 // The line under a street spot's rate on Details: { text, tone } or null.
-//   warning: no parking now, or soon, or before the next charged time
-//   free:    not charged now, and nothing stops parking until it is
-// null while charged with no restriction coming, or when nothing is known.
+// The rate above it says "Free now" or "No parking now"; this says what
+// comes next.
+//   warning: until when there's no parking, or when it stops, soon or
+//            before the City next charges
+//   plain:   when the City starts charging, and at what rate, or when the
+//            rate changes in the next 2 hours
 export function getNowLine(spot, now = Date.now()) {
     const restrictions = getRestrictions(spot);
     const current = restrictionAt(restrictions, now);
-    if (current) return { tone: 'warning', text: `No parking now · until ${formatClock(current.end)}` };
+    if (current) return { tone: 'warning', text: `Until ${formatClock(current.end)}` };
     const next = nextRestriction(restrictions, now);
     const charge = getChargeHours(spot);
-    if (!charge || isChargedAt(charge, now)) {
-        const soon = next && next.start.getTime() - new Date(now).getTime() < SHORT_LIMIT * 60000;
-        return soon ? { tone: 'warning', text: `No parking from ${formatClock(next.start)}` } : null;
+    const periods = getRatePeriods(spot);
+    if (charge && !isChargedAt(charge, now)) {
+        const charged = nextChargedAt(charge, now);
+        if (next && (!charged || next.start < charged)) {
+            return { tone: 'warning', text: `No parking from ${formatChargeStart(next.start, now)}` };
+        }
+        if (!charged) return null;
+        const rate = periodAt(periods, charged)?.rate;
+        return {
+            tone: 'plain',
+            text: `Charged from ${formatChargeStart(charged, now)}${rate ? `, ${formatHourly(rate)}` : ''}`,
+        };
     }
-    const charged = nextChargedAt(charge, now);
-    if (next && (!charged || next.start < charged)) {
-        return { tone: 'warning', text: `Free now · no parking from ${formatChargeStart(next.start, now)}` };
+    if (next && next.start.getTime() - new Date(now).getTime() < SHORT_LIMIT * 60000) {
+        return { tone: 'warning', text: `No parking from ${formatClock(next.start)}` };
     }
-    return { tone: 'free', text: charged ? `Free now · charged from ${formatChargeStart(charged, now)}` : 'Free now' };
+    const change = nextRateChange(periods, charge, now, SHORT_LIMIT);
+    if (change?.rate === 0) return { tone: 'plain', text: `Free from ${formatClock(change.at)}` };
+    if (change?.rate) return { tone: 'plain', text: `${formatHourly(change.rate)} from ${formatClock(change.at)}` };
+    return null;
 }
 
 // A list row's second line: the block and the walk for street parking
@@ -209,33 +238,55 @@ export function getRowMeta(spot) {
     return [getCrossStreets(spot) || getSpotKind(spot), getWalkLabel(spot)].filter(Boolean).join(' · ');
 }
 
-// Numeric hourly rate when the data has one, else null. A 0 from the API means
-// "no price zone", not free, so it is treated as unknown.
-export function getHourlyRate(spot) {
-    const value = Number(spot?.price_per_hour ?? spot?.price);
-    return Number.isFinite(value) && value > 0 ? value : null;
+// The City's rates by time of day (utils/rates), or null when unknown.
+export function getRatePeriods(spot) {
+    const periods = spot?.spot_type === 'on_street' ? spot?.rates?.periods : null;
+    return Array.isArray(periods) && periods.length ? periods : null;
 }
 
-// { amount: "$5.00", unit: "/ hour" } or { note: "Rates posted at lot", short: "At lot" }.
-// `short` fits a narrow price column.
-export function getRateDisplay(spot) {
-    const rate = getHourlyRate(spot);
-    if (rate !== null) return { amount: `$${rate.toFixed(2)}`, unit: '/ hour' };
-    if (spot?.spot_type === 'residential') return { note: 'Permit holders only', short: 'Permit' };
-    if (spot?.spot_type === 'off_street') return { note: 'Rates posted at lot', short: 'At lot' };
-    return { note: 'Check posted signs', short: 'See signs' };
+// "$2.25 an hour"
+export const formatHourly = (rate) => `$${rate.toFixed(2)} an hour`;
+
+// The hourly rate as of `now`: a number, 0 while the City is not charging,
+// or null when it is and no rate is known (lots, permit zones, a zone with
+// no published rate). Never anything else: no price is made up.
+export function getHourlyRate(spot, now = Date.now()) {
+    if (spot?.spot_type !== 'on_street') return null;
+    const charge = getChargeHours(spot);
+    if (charge && !isChargedAt(charge, now)) return 0;
+    return periodAt(getRatePeriods(spot), now)?.rate ?? null;
 }
 
-// Cheapest known rate first, ties and unknown rates by distance.
-export function sortByValue(spots) {
-    return [...spots].sort((a, b) => {
-        const ra = getHourlyRate(a);
-        const rb = getHourlyRate(b);
-        if (ra !== null && rb !== null && ra !== rb) return ra - rb;
-        if (ra === null && rb !== null) return 1;
-        if (rb === null && ra !== null) return -1;
-        return (a.distance ?? Infinity) - (b.distance ?? Infinity);
-    });
+// The rate as of `now`, to show: { amount: "$2.25", unit: "/ hour" },
+// { amount: "Free", unit: "now" }, or { note: "Rates posted at lot", short:
+// "At lot" }; `short` fits a narrow price column, `spoken` is for screen
+// readers.
+export function getRateDisplay(spot, now = Date.now()) {
+    if (spot?.spot_type === 'residential') return { note: 'Permit holders only', short: 'Permit', spoken: 'Permit holders only' };
+    if (spot?.spot_type === 'off_street') return { note: 'Rates posted at lot', short: 'At lot', spoken: 'Rates posted at lot' };
+    if (isRestrictedNow(spot, now)) return { note: 'No parking now', short: 'No parking', spoken: 'No parking now' };
+    const rate = getHourlyRate(spot, now);
+    if (rate === 0) return { amount: 'Free', unit: 'now', spoken: 'Free now' };
+    if (rate !== null) {
+        const amount = `$${rate.toFixed(2)}`;
+        return { amount, unit: '/ hour', spoken: `${amount} per hour` };
+    }
+    return { note: 'Check posted signs', short: 'See signs', spoken: 'Check posted signs' };
+}
+
+// A known rate before an unknown one, the cheaper first; 0 when they tie.
+const byRate = (a, b, now) => {
+    const ra = getHourlyRate(a, now);
+    const rb = getHourlyRate(b, now);
+    if (ra !== null && rb !== null) return ra - rb;
+    if (ra === null && rb !== null) return 1;
+    if (rb === null && ra !== null) return -1;
+    return 0;
+};
+
+// Cheapest rate now first, ties and unknown rates by distance.
+export function sortByValue(spots, now = Date.now()) {
+    return [...spots].sort((a, b) => byRate(a, b, now) || (a.distance ?? Infinity) - (b.distance ?? Infinity));
 }
 
 export function sortByDistance(spots) {
@@ -247,36 +298,35 @@ const walkMinutes = (spot) => {
     return Number.isFinite(minutes) ? minutes : Math.ceil((spot?.distance ?? Infinity) / 80);
 };
 
-// Nearest by walk; for the same walk, the cheaper known rate first (an
+// Nearest by walk; for the same walk, the cheaper rate now first (an
 // unknown rate after a known one), then the nearer.
-export function sortByWalk(spots) {
-    return [...spots].sort((a, b) => {
-        const wa = walkMinutes(a);
-        const wb = walkMinutes(b);
-        if (wa !== wb) return wa - wb;
-        const ra = getHourlyRate(a);
-        const rb = getHourlyRate(b);
-        if (ra !== null && rb !== null && ra !== rb) return ra - rb;
-        if (ra === null && rb !== null) return 1;
-        if (rb === null && ra !== null) return -1;
-        return (a.distance ?? Infinity) - (b.distance ?? Infinity);
-    });
+export function sortByWalk(spots, now = Date.now()) {
+    return [...spots].sort((a, b) => (
+        walkMinutes(a) - walkMinutes(b)
+        || byRate(a, b, now)
+        || (a.distance ?? Infinity) - (b.distance ?? Infinity)
+    ));
 }
 
-// Permit-only blocks after everywhere a visitor can park, unless the driver
-// asked for permit zones.
+// Anyone may park here: not a permit zone, not placard holders only.
+const forEveryone = (spot) => spot.spot_type !== 'residential' && !isPlacardOnly(spot);
+
+// Permit-only and placard-only blocks after everywhere anyone can park, in
+// that order, unless the driver asked for permit zones.
 export function permitLast(spots, activeFilter = 'all') {
     if (activeFilter === 'residential') return spots;
     return [
-        ...spots.filter((s) => s.spot_type !== 'residential'),
+        ...spots.filter(forEveryone),
+        ...spots.filter(isPlacardOnly),
         ...spots.filter((s) => s.spot_type === 'residential'),
     ];
 }
 
 // Under an hour suits a quick stop, not most trips: a short posted maximum,
-// or a restriction starting soon.
+// a restriction starting soon, or a loading zone.
 const BRIEF_LIMIT = 60; // minutes
 const isBrief = (spot, now) => {
+    if (isLoadingZone(spot)) return true;
     const limit = getStayLimit(spot, now);
     return limit !== null && limit.reason !== 'restricted' && limit.minutes < BRIEF_LIMIT;
 };
@@ -294,12 +344,12 @@ export function restrictedLast(spots, now = Date.now()) {
 // The order every list and map uses for "near": by walk, then blocks where a
 // stay can't last an hour, then no parking right now, permit-only last.
 export function rankSpots(spots, activeFilter = 'all', now = Date.now()) {
-    return permitLast(restrictedLast(briefLast(sortByWalk(spots || []), now), now), activeFilter);
+    return permitLast(restrictedLast(briefLast(sortByWalk(spots || [], now), now), now), activeFilter);
 }
 
 // The same, cheapest known rate first.
 export function rankByValue(spots, activeFilter = 'all', now = Date.now()) {
-    return permitLast(restrictedLast(briefLast(sortByValue(spots || []), now), now), activeFilter);
+    return permitLast(restrictedLast(briefLast(sortByValue(spots || [], now), now), now), activeFilter);
 }
 
 // The first spot worth suggesting from an already-sorted list. Permit-only
@@ -309,7 +359,7 @@ export function rankByValue(spots, activeFilter = 'all', now = Date.now()) {
 export function pickTopSpot(spots, activeFilter = 'all', now = Date.now()) {
     if (!spots?.length) return null;
     if (activeFilter === 'residential') return spots[0];
-    const open = spots.filter((s) => s.spot_type !== 'residential' && !isRestrictedNow(s, now));
+    const open = spots.filter((s) => forEveryone(s) && !isRestrictedNow(s, now));
     return open.find((s) => !isBrief(s, now)) || open[0] || spots.find((s) => !isRestrictedNow(s, now)) || null;
 }
 

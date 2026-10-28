@@ -1,10 +1,11 @@
 // How a parking_spots row becomes a spot in /api/parking/nearby. Kept apart
 // from the route so the shape can be tested without a database.
 
-// Calgary price-zone -> $/hour. The mobile app reads both `price` and
-// `price_per_hour`, so /nearby returns both from this one source.
-const PRICE_BY_ZONE = { '1': 1.0, '2': 2.0, '3': 3.0, '4': 4.0, '5': 5.0, '6': 6.0 };
-const priceForZone = (zone) => (zone ? PRICE_BY_ZONE[zone] || 0 : 0);
+const { parseZoneRate, rateAt } = require('./zoneRates');
+
+// Street zones the public can't park in: for taxis, valets, registered
+// commercial vehicles and Access Calgary vans. /nearby leaves them out.
+const NOT_PUBLIC_ZONES = ['Taxi Zone', 'Valet Parking Zone', 'Registered Loading Zone', 'Access Calgary Loading Zone'];
 
 // The City writes "none" for a block without a rush-hour restriction.
 const restriction = (value) => {
@@ -12,7 +13,11 @@ const restriction = (value) => {
   return text && text.toLowerCase() !== 'none' ? text : null;
 };
 
-function toSpot(spot) {
+// `now`: when the request is answered, for `price_per_hour`.
+function toSpot(spot, now = new Date()) {
+  // The City's rates by time of day (utils/zoneRates); null when unknown.
+  const rates = parseZoneRate(spot.html_zone_rate);
+  const rateNow = rateAt(rates, now);
   return {
     id: spot.id,
     spot_type: spot.spot_type,
@@ -27,7 +32,6 @@ function toSpot(spot) {
     zone_info: {
       permit_zone: spot.permit_zone,
       price_zone: spot.price_zone,
-      html_zone_rate: spot.html_zone_rate,
       zone_type: spot.zone_type,
       parking_zone: spot.parking_zone,
       enforceable_time: spot.enforceable_time,
@@ -57,11 +61,14 @@ function toSpot(spot) {
       octant: spot.octant,
     },
 
-    price: priceForZone(spot.price_zone),
-    price_per_hour: priceForZone(spot.price_zone),
+    // The rate periods are the source; these say the rate when asked, in
+    // Calgary, and are null when no period covers that time.
+    rates,
+    price: rateNow,
+    price_per_hour: rateNow,
 
     max_duration_minutes: spot.max_time ? parseFloat(spot.max_time) : null,
   };
 }
 
-module.exports = { toSpot };
+module.exports = { toSpot, NOT_PUBLIC_ZONES };

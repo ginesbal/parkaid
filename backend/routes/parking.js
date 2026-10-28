@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/env');
 const { jlog } = require('../utils/logger');
-const { toSpot } = require('../utils/spotRows');
+const { NOT_PUBLIC_ZONES, toSpot } = require('../utils/spotRows');
 
 router.get('/nearby', async (req, res) => {
   const started = Date.now();
@@ -21,6 +21,11 @@ router.get('/nearby', async (req, res) => {
     where.push(`ST_DWithin(location, ST_MakePoint($${p + 1}, $${p})::geography, $${p + 2})`);
     params.push(lat, lng, radius);
     p += 3;
+
+    // Taxi, valet and other zones the public can't park in.
+    where.push(`(zone_type IS NULL OR zone_type <> ALL($${p}))`);
+    params.push(NOT_PUBLIC_ZONES);
+    p += 1;
 
     if (type && type !== 'all') {
       where.push(`spot_type = $${p}`);
@@ -87,7 +92,7 @@ router.get('/nearby', async (req, res) => {
     res.json({
       success: true,
       count: result.rows.length,
-      data: result.rows.map(toSpot),
+      data: result.rows.map((row) => toSpot(row)),
     });
   } catch (error) {
     jlog('nearby_search_error', { error: error.message }, 'error');

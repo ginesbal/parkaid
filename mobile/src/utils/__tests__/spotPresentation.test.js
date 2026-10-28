@@ -14,15 +14,19 @@ import {
     tidyName,
 } from '../spotPresentation';
 
-// Shapes follow backend/routes/parking.js and City of Calgary open data.
+// A rate all day, every day (see utils/rates).
+const rates = (rate) => ({ periods: [{ days: [0, 1, 2, 3, 4, 5, 6], from: 0, to: 1440, rate, dayMax: null }] });
+// Local times; 2026-10-20 is a Tuesday.
+const NOW = new Date('2026-10-20T13:40:00');
+
+// Shapes follow backend/utils/spotRows.js and City of Calgary open data.
 const street = (over = {}) => ({
     id: 's',
     spot_type: 'on_street',
     address: 'Eau Claire Av SW ,  Fr 4 St SW To 5 St SW',
     distance: 200,
     zone_info: { parking_zone: '1008', enforceable_time: '0910-1750 MON-SAT' },
-    price: 5,
-    price_per_hour: 5,
+    rates: rates(5),
     max_duration_minutes: 180,
     ...over,
 });
@@ -102,23 +106,31 @@ describe('row lines', () => {
 });
 
 describe('rates', () => {
-    it('shows a known hourly rate', () => {
-        expect(getRateDisplay(street())).toEqual({ amount: '$5.00', unit: '/ hour' });
+    it('shows the rate now, from the City\'s rates by time of day', () => {
+        expect(getRateDisplay(street(), NOW)).toEqual({ amount: '$5.00', unit: '/ hour', spoken: '$5.00 per hour' });
     });
 
-    it('never calls an unknown rate free', () => {
-        expect(getRateDisplay(street({ price: 0, price_per_hour: 0 })).note).toBe('Check posted signs');
-        expect(getRateDisplay({ spot_type: 'off_street', price: 0 }).note).toBe('Rates posted at lot');
-        expect(getRateDisplay({ spot_type: 'residential', price: 0 }).note).toBe('Permit holders only');
+    it('says free while the City isn\'t charging, known rate or not', () => {
+        const evening = new Date('2026-10-20T19:00:00');
+        expect(getRateDisplay(street(), evening)).toEqual({ amount: 'Free', unit: 'now', spoken: 'Free now' });
+        expect(getRateDisplay(street({ rates: null }), evening).amount).toBe('Free');
     });
 
-    it('sorts by known rate, unknown last, ties by distance', () => {
+    it('never calls an unknown rate free, or makes one up', () => {
+        expect(getRateDisplay(street({ rates: null }), NOW).note).toBe('Check posted signs');
+        // A price from the old API is a guess from the zone code; it is ignored.
+        expect(getRateDisplay(street({ rates: null, price_per_hour: 6 }), NOW).note).toBe('Check posted signs');
+        expect(getRateDisplay({ spot_type: 'off_street' }).note).toBe('Rates posted at lot');
+        expect(getRateDisplay({ spot_type: 'residential' }).note).toBe('Permit holders only');
+    });
+
+    it('sorts by the rate now, unknown last, ties by distance', () => {
         const sorted = sortByValue([
-            street({ id: 'unknown', price: 0, price_per_hour: 0, distance: 10 }),
-            street({ id: 'six', price: 6, price_per_hour: 6, distance: 50 }),
-            street({ id: 'two-far', price: 2, price_per_hour: 2, distance: 400 }),
-            street({ id: 'two-near', price: 2, price_per_hour: 2, distance: 100 }),
-        ]);
+            street({ id: 'unknown', rates: null, distance: 10 }),
+            street({ id: 'six', rates: rates(6), distance: 50 }),
+            street({ id: 'two-far', rates: rates(2), distance: 400 }),
+            street({ id: 'two-near', rates: rates(2), distance: 100 }),
+        ], NOW);
         expect(sorted.map((s) => s.id)).toEqual(['two-near', 'two-far', 'six', 'unknown']);
     });
 });
@@ -178,16 +190,16 @@ describe('time limits', () => {
 describe('ranking', () => {
     const { permitLast, rankSpots, sortByWalk } = require('../spotPresentation');
     const spot = (id, distance, price, type = 'on_street') => ({
-        id, distance, walkingTime: Math.ceil(distance / 80), price_per_hour: price, spot_type: type,
+        id, distance, walkingTime: Math.ceil(distance / 80), rates: price ? rates(price) : null, spot_type: type,
     });
 
     it('puts the cheaper spot first when the walk is the same', () => {
-        const ranked = sortByWalk([spot('a', 140, 6), spot('b', 150, 3), spot('c', 60, 9)]);
+        const ranked = sortByWalk([spot('a', 140, 6), spot('b', 150, 3), spot('c', 60, 9)], NOW);
         expect(ranked.map((s) => s.id)).toEqual(['c', 'b', 'a']);
     });
 
     it('keeps a known rate ahead of an unknown one for the same walk', () => {
-        const ranked = sortByWalk([spot('lot', 100, 0, 'off_street'), spot('street', 120, 4)]);
+        const ranked = sortByWalk([spot('lot', 100, 0, 'off_street'), spot('street', 120, 4)], NOW);
         expect(ranked.map((s) => s.id)).toEqual(['street', 'lot']);
     });
 

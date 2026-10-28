@@ -69,6 +69,7 @@ Backend
 Database and data
 - PostgreSQL, hosted on Supabase
 - Parking data from Calgary's Open Data (about 2,700 spots)
+- Street rates by zone and time of day from the City's on-street parking map
 - Google Places API for address search
 
 Hosting and testing
@@ -137,7 +138,7 @@ cd backend
 cp .env.example .env     # then put your DATABASE_URL in .env (see below)
 npm install
 npm run migrate          # creates the parking_spots table and indexes
-npm run setup            # loads about 2,700 spots from Calgary Open Data
+npm run setup            # loads about 2,700 spots from Calgary Open Data, with street rates
 npm start                # runs on http://localhost:3000
 ```
 
@@ -239,7 +240,7 @@ at `/api/test-db` instead.
 | ------ | -------- | ------------ |
 | GET | `/health` | Says the server is up. Used by Render. Always returns 200 when running. |
 | GET | `/api/test-db` | Checks the database connection and returns how many spots are stored. |
-| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. |
+| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. Street spots include the City's rates by time of day (`rates`) and rush-hour restrictions. Taxi, valet and other zones the public can't use are left out. |
 | GET | `/api/places/autocomplete?input=` | Address search suggestions (calls Google from the server). |
 | GET | `/api/places/details?place_id=` | Details for one address (calls Google from the server). |
 
@@ -269,6 +270,9 @@ The main things I did:
   it stays fast (around 30ms for the closest 100 spots).
 - Wrote a script that pulls four datasets from Calgary's open data and loads
   them into one table. It's safe to run again without making duplicates.
+- Added the City's street rates by time of day and its rush-hour
+  restrictions, so the app never shows a guessed price or calls a restricted
+  hour free.
 - Cleaned up the old code: removed files nothing imported, dropped a dependency
   we didn't need, and stopped committing `node_modules` (about 1,900 files).
 - Kept the Google API key on the server by having the app call the backend

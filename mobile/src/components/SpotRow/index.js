@@ -14,10 +14,9 @@ import { getCaution, getRateDisplay, getRowMeta, getSpotName } from '../../utils
 // `now`: the time the caution is for (useMinute), so the row updates with it.
 function SpotRow({ spot, onPress, selected = false, first = false, last = false, chevron = false, inset = SPACING.xl, now = Date.now() }) {
     const { title } = getSpotName(spot);
-    const rate = getRateDisplay(spot);
+    const rate = getRateDisplay(spot, now);
     const meta = getRowMeta(spot);
     const limit = getCaution(spot, now);
-    const rateSpoken = rate.amount ? `${rate.amount} per hour` : rate.note;
 
     return (
         <View style={[styles.group, { marginHorizontal: inset }, first && styles.first, last && styles.last]}>
@@ -25,7 +24,7 @@ function SpotRow({ spot, onPress, selected = false, first = false, last = false,
                 onPress={() => onPress(spot)}
                 style={({ pressed }) => [styles.row, selected && styles.selected, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel={[title, meta, limit, rateSpoken].filter(Boolean).join('. ') + '.'}
+                accessibilityLabel={[title, meta, limit, rate.spoken].filter(Boolean).join('. ') + '.'}
                 aria-selected={selected}
             >
                 <View style={styles.info}>

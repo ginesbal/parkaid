@@ -4,10 +4,11 @@ import { AppState, Linking, Text, TextInput, TouchableOpacity, View } from 'reac
 import { TOKENS } from '../../../../constants/theme';
 import { DURATION_OPTIONS } from '../../../../constants/session';
 import { REMINDERS_SUPPORTED, remindersBlocked } from '../../../../services/reminders';
-import { chargedCost, chargedMinutes, describeFreeNow } from '../../../../utils/chargeHours';
+import { chargedCost, chargedMinutes } from '../../../../utils/chargeHours';
+import { nextRateChange, periodsCost } from '../../../../utils/rates';
 import { formatCost, formatMoney } from '../../../../utils/formatters';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
-import { formatMaxStay } from '../../../../utils/spotPresentation';
+import { formatHourly, formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
 const QUICK = DURATION_OPTIONS.filter((opt) => opt.quickSelect);
@@ -69,7 +70,10 @@ export function startBlocker({ plate, needsPlace }) {
  * summary of what Start will commit to: when it ends and what it costs. Just
  * above Start it says where to pay, since starting the timer pays for nothing.
  *
- * rate:     the spot's hourly rate, or null with a rateNote: no price is made up
+ * rate:     the spot's hourly rate now (0 while the City isn't charging), or
+ *           null with a rateNote: no price is made up
+ * ratePeriods: the City's rates by time of day (utils/rates); a stay is
+ *           priced minute by minute from them when known
  * chargeHours: when the City charges (utils/chargeHours); only those minutes
  *           are priced. null: every minute is
  * maxMinutes: the longest stay here (the posted maximum, or until a
@@ -89,6 +93,7 @@ const SetupCard = ({
     onStartSession,
     rate = null,
     rateNote = null,
+    ratePeriods = null,
     chargeHours = null,
     maxMinutes = null,
     limitNote = null,
@@ -99,14 +104,20 @@ const SetupCard = ({
 }) => {
     const durations = useMemo(() => durationsFor(maxMinutes), [maxMinutes]);
     const duration = snapDuration(durations, selectedDuration);
-    const costFor = (minutes) => chargedCost(rate, chargeHours, now, minutes);
+    // null when the price of any of it is unknown.
+    const costFor = (minutes) => (ratePeriods
+        ? periodsCost(ratePeriods, chargeHours, now, minutes)
+        : chargedCost(rate, chargeHours, now, minutes));
     const totalCost = costFor(duration);
-    // Why the cost is less than rate times time, when it is.
+    // Why the cost is not the rate now times the time, when it isn't: the
+    // rate changes, or the City starts or stops charging, during the stay.
     let costNote = null;
-    if (rate !== null) {
+    const change = totalCost !== null ? nextRateChange(ratePeriods, chargeHours, now, duration) : null;
+    if (change) {
+        costNote = change.rate ? `${formatHourly(change.rate)} from ${formatClock(change.at)}.` : `Free from ${formatClock(change.at)}.`;
+    } else if (totalCost !== null && !ratePeriods) {
         const charged = chargedMinutes(chargeHours, now, duration);
-        costNote = describeFreeNow(chargeHours, now)
-            ?? (charged < duration ? `Only ${formatDuration(charged)} of it is charged.` : null);
+        costNote = charged < duration ? `Only ${formatDuration(charged)} of it is charged.` : null;
     }
 
     // The shown duration is what Start uses. The driver's own pick is kept, so
@@ -182,7 +193,7 @@ const SetupCard = ({
                                         style={[styles.durationOption, selected && styles.durationOptionActive]}
                                         accessibilityRole="radio"
                                         aria-checked={selected}
-                                        accessibilityLabel={rate === null
+                                        accessibilityLabel={costFor(option.value) === null
                                             ? formatDuration(option.value)
                                             : `${formatDuration(option.value)}, ${formatCost(costFor(option.value))}`}
                                     >
@@ -196,7 +207,7 @@ const SetupCard = ({
                                                 {formatDuration(option.value)}
                                             </Text>
                                         </View>
-                                        {rate !== null ? (
+                                        {costFor(option.value) !== null ? (
                                             <Text
                                                 style={[styles.durationCost, selected && styles.durationCostActive]}
                                                 numberOfLines={1}
@@ -227,7 +238,7 @@ const SetupCard = ({
                             <Text style={styles.summaryValue}>
                                 {rate === null
                                     ? rateNote
-                                    : `${formatMoney(rate)} / hour${zoneLabel ? ` · ${zoneLabel}` : ''}`}
+                                    : `${rate ? `${formatMoney(rate)} / hour` : 'Free now'}${zoneLabel ? ` · ${zoneLabel}` : ''}`}
                             </Text>
                         </View>
                         {totalCost !== null ? (

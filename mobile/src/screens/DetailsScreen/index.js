@@ -16,11 +16,13 @@ import {
     getMaxStayLabel,
     getNowLine,
     getRateDisplay,
+    getRatePeriods,
     getRestrictions,
     getSpotKind,
     getSpotName,
     getWalkLabel,
     getZoneLabel,
+    isPlacardOnly,
     isRestrictedNow,
 } from '../../utils/spotPresentation';
 import { styles } from './styles';
@@ -66,6 +68,14 @@ function buildLines(spot) {
     const maxStay = getMaxStayLabel(spot);
     if (maxStay) {
         lines.push({ icon: 'timer-outline', title: maxStay, body: 'The signs at the curb have the final say.' });
+    }
+
+    if (isPlacardOnly(spot)) {
+        lines.push({
+            icon: 'wheelchair-accessibility',
+            title: 'Placard holders only',
+            body: 'For cars showing a disability parking placard.',
+        });
     }
 
     // Rush hour: nobody may park here then, paid or not.
@@ -114,10 +124,9 @@ export default function DetailsScreen({ route, navigation }) {
     const { title, detail } = getSpotName(spot);
     const kind = getSpotKind(spot);
     const rate = getRateDisplay(spot);
-    const zone = getZoneLabel(spot);
     const chargedHours = formatEnforceableTime(spot?.zone_info?.enforceable_time);
-    // Right now: no parking (rush hour), or free until the City charges,
-    // said before anything else about the rate.
+    // What comes next, under the rate: until when there's no parking, when
+    // the City starts charging, or when the rate changes.
     const nowLine = getNowLine(spot);
     const lines = buildLines(spot);
     const directionsUrl = getDirectionsUrl(spot);
@@ -125,11 +134,14 @@ export default function DetailsScreen({ route, navigation }) {
     const canStart = spot.spot_type !== 'residential' && !isRestrictedNow(spot);
     const thumbWidth = Math.min(width, LAYOUT.column) - 40;
 
-    // When the City charges, said the same way as "Free now · charged from".
-    const charged = chargedHours ? `charged ${chargedHours.charAt(0).toLowerCase()}${chargedHours.slice(1)}` : null;
-    const rateBasis = rate.amount
-        ? [zone ? `${zone} rate` : 'Posted rate', charged].filter(Boolean).join(' · ')
-        : charged && `${charged.charAt(0).toUpperCase()}${charged.slice(1)}`;
+    // When the City charges at all; the rate above is the one right now. A
+    // zone that is free whenever its rules apply (a loading zone) is never
+    // charged.
+    const periods = getRatePeriods(spot);
+    const neverCharged = periods !== null && periods.every((p) => !p.rate);
+    const rateBasis = chargedHours && !neverCharged
+        ? `Charged ${chargedHours.charAt(0).toLowerCase()}${chargedHours.slice(1)}`
+        : null;
 
     const handleStart = () => {
         logger.log('details_start_session', { spotId: spot.id }, 'UI_EVENT');
@@ -174,7 +186,7 @@ export default function DetailsScreen({ route, navigation }) {
                     <View style={styles.column}>
                         <View style={styles.priceRow}>
                             {rate.amount ? (
-                                <Text style={styles.price} accessibilityLabel={`${rate.amount} per hour`}>
+                                <Text style={styles.price} accessibilityLabel={rate.spoken}>
                                     {rate.amount}
                                     <Text style={styles.priceUnit}> {rate.unit}</Text>
                                 </Text>
@@ -186,7 +198,7 @@ export default function DetailsScreen({ route, navigation }) {
                             </View>
                         </View>
                         {nowLine ? (
-                            <Text style={[styles.freeNow, nowLine.tone === 'warning' && styles.nowWarning]}>
+                            <Text style={[styles.freeNow, nowLine.tone === 'warning' ? styles.nowWarning : styles.nowPlain]}>
                                 {nowLine.text}
                             </Text>
                         ) : null}

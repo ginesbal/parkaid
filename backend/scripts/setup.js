@@ -1,6 +1,7 @@
 require('dotenv').config();
 const axios = require('axios');
 const { Pool } = require('pg');
+const { fetchZoneRates } = require('../utils/zoneRates');
 
 async function loadParkingData() {
     const pool = new Pool({
@@ -19,6 +20,16 @@ async function loadParkingData() {
     ];
 
     let totalLoaded = 0;
+
+    // Street rates by zone and time of day, from the City's map layer; the
+    // open-data list of zones has no rates.
+    let ratesByZone = new Map();
+    try {
+        ratesByZone = await fetchZoneRates(axios.get);
+        console.log(`Loaded rates for ${ratesByZone.size} street zones`);
+    } catch (error) {
+        console.error(`  Failed to load street rates: ${error.message}`);
+    }
 
     for (const dataset of datasets) {
         console.log(`\nLoading ${dataset.type} parking...`);
@@ -129,7 +140,8 @@ async function loadParkingData() {
                         record.status || 'Active',                   // $6 status
                         record.permit_zone || null,                  // $7 permit_zone
                         record.price_zone || null,                   // $8 price_zone
-                        record.html_zone_rate || null,               // $9 html_zone_rate
+                        (dataset.type === 'on_street' && ratesByZone.get(String(record.parking_zone)))
+                            || record.html_zone_rate || null,       // $9 html_zone_rate
                         record.block_side || null,                   // $10 block_side
                         record.enforceable_time || null,             // $11 enforceable_time
                         parseInt(record.zone_cap) || null,           // $12 zone_cap

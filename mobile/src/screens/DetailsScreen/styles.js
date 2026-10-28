@@ -107,6 +107,9 @@ export const styles = StyleSheet.create({
     nowWarning: {
         color: TOKENS.warningInk,
     },
+    nowPlain: {
+        color: TOKENS.text,
+    },
     rateBasis: {
         marginTop: SPACING.xs,
         fontSize: 14,

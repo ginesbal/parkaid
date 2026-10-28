@@ -302,7 +302,7 @@ const ParkingBottomSheet = forwardRef(({
             .filter(Boolean)
             .join(' \u00B7 '),
         limit: getCaution(featuredSpot, now),
-        rate: getRateDisplay(featuredSpot),
+        rate: getRateDisplay(featuredSpot, now),
     } : null;
 
     return (
@@ -376,7 +376,7 @@ const ParkingBottomSheet = forwardRef(({
                         <View
                             style={styles.featured}
                             accessible
-                            accessibilityLabel={`${[featured.reason, featured.name, featured.meta, featured.limit].filter(Boolean).join('. ')}. ${featured.rate.amount ? `${featured.rate.amount} per hour` : featured.rate.note}.`}
+                            accessibilityLabel={`${[featured.reason, featured.name, featured.meta, featured.limit, featured.rate.spoken].filter(Boolean).join('. ')}.`}
                         >
                             <View style={styles.featuredInfo}>
                                 <Text style={styles.featuredReason}>{featured.reason}</Text>

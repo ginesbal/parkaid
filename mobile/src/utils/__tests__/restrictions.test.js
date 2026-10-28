@@ -20,7 +20,16 @@ const block = (over = {}) => ({
     address: '6 Av SW ,  Fr 8 St SW To 9 St SW',
     distance: 140,
     walkingTime: 2,
-    price_per_hour: 2,
+    // As the City has it: weekdays by time of day, free on weekends.
+    rates: {
+        periods: [
+            { days: [1, 2, 3, 4, 5], from: 540, to: 660, rate: 2, dayMax: null },
+            { days: [1, 2, 3, 4, 5], from: 660, to: 810, rate: 2.25, dayMax: null },
+            { days: [1, 2, 3, 4, 5], from: 810, to: 930, rate: 2, dayMax: null },
+            { days: [6], from: 540, to: 1080, rate: 0, dayMax: null },
+            { days: [0], from: 0, to: 1440, rate: 0, dayMax: null },
+        ],
+    },
     max_duration_minutes: 120,
     zone_info: {
         parking_zone: '1684',
@@ -91,15 +100,20 @@ describe('a block with a rush-hour restriction', () => {
     });
 
     it('never calls a restricted hour free', () => {
-        expect(getNowLine(block(), at(20, '15:40'))).toEqual({ tone: 'warning', text: expect.stringMatching(/^No parking now · until 6:00.PM$/) });
-        expect(words(getNowLine(block(), at(20, '15:25')).text)).toBe('Free now · no parking from 3:30 PM');
-        expect(words(getNowLine(block(), at(20, '19:00')).text)).toBe('Free now · no parking from 7:00 AM Wed');
-        expect(words(getNowLine(block(), at(20, '14:00')).text)).toBe('No parking from 3:30 PM');
-        expect(getNowLine(block(), at(20, '10:00'))).toBeNull();
+        const line = (spot, time) => ({ ...getNowLine(spot, time), text: words(getNowLine(spot, time).text) });
+        expect(line(block(), at(20, '15:40'))).toEqual({ tone: 'warning', text: 'Until 6:00 PM' });
+        expect(line(block(), at(20, '15:25')).text).toBe('No parking from 3:30 PM');
+        expect(line(block(), at(20, '19:00')).text).toBe('No parking from 7:00 AM Wed');
+        expect(line(block(), at(20, '14:00')).text).toBe('No parking from 3:30 PM');
         // Saturday: free here all weekend, but the car must move before Monday's rush hour
-        expect(words(getNowLine(block(), at(24, '12:00')).text)).toBe('Free now · no parking from 7:00 AM Mon');
+        expect(line(block(), at(24, '12:00'))).toEqual({ tone: 'warning', text: 'No parking from 7:00 AM Mon' });
+    });
+
+    it('says when the City starts charging, and when the rate changes', () => {
         const plain = block({ zone_info: { enforceable_time: '0910-1520 MON-FRI' } });
-        expect(words(getNowLine(plain, at(24, '12:00')).text)).toBe('Free now · charged from 9:10 AM Mon');
+        expect(words(getNowLine(plain, at(24, '12:00')).text)).toBe('Charged from 9:10 AM Mon, $2.00 an hour');
+        expect(getNowLine(block(), at(20, '10:00'))).toEqual({ tone: 'plain', text: expect.stringMatching(/^\$2\.25 an hour from 11:00.AM$/) });
+        expect(getNowLine(block({ rates: null }), at(20, '10:00'))).toBeNull();
     });
 
     it('ranks it after open blocks while restricted, and never suggests it', () => {
@@ -156,5 +170,26 @@ describe('getExtendLimit', () => {
             .toEqual({ minutes: 30, reason: 'max', at: null });
         expect(getExtendLimit(session({ noParking: null, maxDuration: null })))
             .toEqual({ minutes: null, reason: null, at: null });
+    });
+});
+
+describe('special street zones', () => {
+    const { getCaution: caution, getSpotKind, pickTopSpot: pick, rankSpots: rank } = require('../spotPresentation');
+    const free = { periods: [{ days: [0, 1, 2, 3, 4, 5, 6], from: 0, to: 1440, rate: 0, dayMax: null }] };
+    const loading = block({ id: 'loading', walkingTime: 1, distance: 30, rates: free, zone_info: { zone_type: 'Loading Zone', enforceable_time: '0001-2359 MON-SUN' }, max_duration_minutes: 20 });
+    const placard = block({ id: 'placard', walkingTime: 1, distance: 40, zone_info: { zone_type: 'Handicapped Zone', enforceable_time: '0910-1750 MON-SAT' } });
+    const paid = block({ id: 'paid', walkingTime: 3, distance: 200, zone_info: { zone_type: 'Parking Zone', enforceable_time: '0910-1750 MON-SAT' } });
+    const now = at(20, '10:40');
+
+    it('names them, and says so on the lists', () => {
+        expect(getSpotKind(loading)).toBe('Loading zone');
+        expect(getSpotKind(placard)).toBe('Accessible parking');
+        expect(words(caution(loading, now))).toBe('Loading zone');
+        expect(words(caution(placard, now))).toBe('Placard holders only');
+    });
+
+    it('never suggests them while ordinary parking is near', () => {
+        expect(pick(rank([loading, placard, paid], 'all', now), 'all', now).id).toBe('paid');
+        expect(rank([loading, placard, paid], 'all', now).map((s) => s.id)).toEqual(['paid', 'loading', 'placard']);
     });
 });

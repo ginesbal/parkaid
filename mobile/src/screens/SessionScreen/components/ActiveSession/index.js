@@ -3,8 +3,8 @@ import { AccessibilityInfo, Animated, Platform, ScrollView, Text, TouchableOpaci
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EXTEND_STEP } from '../../../../constants/session';
 import { useEntrance } from '../../../../hooks/useEntrance';
-import { chargedCost, parseChargeHours } from '../../../../utils/chargeHours';
 import { getExtendNote, getSessionZone } from '../../../../utils/parkPlus';
+import { sessionCost } from '../../../../utils/rates';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
@@ -47,7 +47,7 @@ const ActiveSession = ({
     // What the added time costs, charged minutes only; no price when the rate
     // is unknown, never a made-up one. Add changes the timer only, and the
     // note says so.
-    const extendCost = chargedCost(session.hourlyRate ?? null, parseChargeHours(session.chargeHours), endTime, step);
+    const extendCost = sessionCost(session, endTime, step);
     const extendNote = getExtendNote({ cost: extendCost, zone });
 
     // The last Extend, while it can still be undone.

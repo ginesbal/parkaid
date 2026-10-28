@@ -5,6 +5,7 @@ import ParkPlusActions from '../../../../components/ParkPlusActions';
 import { MOTION, TOKENS } from '../../../../constants/theme';
 import { formatCost, formatMoney } from '../../../../utils/formatters';
 import { getExpiredLine, getSessionPayLine, getSessionZone } from '../../../../utils/parkPlus';
+import { sessionRateAt } from '../../../../utils/rates';
 import { formatClock, formatDuration, formatRemaining } from '../../../../utils/sessionHelpers';
 import StatusBadge from '../shared/StatusBadge';
 import { styles } from './styles';
@@ -44,6 +45,8 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
     const expired = sessionState === 'expired';
     const expiring = sessionState === 'expiring';
     const walk = session?.walkMinutes;
+    // The rate right now: it can change during the session.
+    const rate = sessionRateAt(session, Date.now());
     const remaining = formatRemaining(timeRemainingMs);
     const endsAt = formatClock(endTime);
     const zone = getSessionZone(session);
@@ -115,9 +118,9 @@ export default function TimerCard({ session, sessionState, timeRemainingMs, endT
             <Row label="Started" value={formatClock(session.startedAt)} />
             <Row
                 label="Rate"
-                value={session.hourlyRate === null
+                value={rate === null
                     ? (session.rateNote || 'Posted at the spot')
-                    : `${formatMoney(session.hourlyRate)} / hour`}
+                    : rate === 0 ? 'Free now' : `${formatMoney(rate)} / hour`}
             />
             {totalCost !== null ? (
                 <Row label={`Cost for ${formatDuration(session.duration)}`} value={formatCost(totalCost)} />

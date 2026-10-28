@@ -1,6 +1,6 @@
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { chargedCost, parseChargeHours } from '../../../../utils/chargeHours';
 import { formatCost } from '../../../../utils/formatters';
+import { sessionCost } from '../../../../utils/rates';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { styles } from './styles';
 
@@ -26,7 +26,7 @@ export default function EndSummary({ session, onParkAgain, onFindParking }) {
     // Ended early, or later than its time: it covered up to whichever came first.
     const end = new Date(Math.min(new Date(session.endedAt).getTime(), new Date(session.scheduledEnd).getTime()));
     const minutes = Math.max(0, Math.round((end - start) / 60000));
-    const cost = chargedCost(session.hourlyRate ?? null, parseChargeHours(session.chargeHours), start, minutes);
+    const cost = sessionCost(session, start, minutes);
     const place = [session.locationName, session.locationAddress].filter(Boolean).join(' · ');
 
     return (
