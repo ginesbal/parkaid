@@ -43,7 +43,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() })
                                 <Text style={styles.reasonText}>{reason}</Text>
                             </View>
                             <Text style={styles.title} numberOfLines={2}>{title}</Text>
-                            {detail ? <Text style={styles.detail} numberOfLines={1}>{detail}</Text> : null}
+                            {detail ? <Text style={styles.detail} numberOfLines={2}>{detail}</Text> : null}
                             <Text style={styles.meta} numberOfLines={2}>
                                 {meta}
                                 {limit ? <Text style={styles.limit}>{` · ${limit}`}</Text> : null}

@@ -1,5 +1,6 @@
 import {
     formatEnforceableTime,
+    getBlockSide,
     getCrossStreets,
     getDayRates,
     getMaxStayLabel,
@@ -88,8 +89,10 @@ describe('row lines', () => {
     const permit = { spot_type: 'residential', address: '00 Block 6 AV SW', walkingTime: 2 };
 
     it('names a block by its cross streets, without repeating the quadrant', () => {
-        expect(getCrossStreets(street())).toBe('4 St to 5 St');
+        expect(words(getCrossStreets(street()))).toBe('4–5 St');
+        expect(words(getCrossStreets(street({ address: '6 St SW ,  Fr 10 Av SW To 11 Av SW' })))).toBe('10–11 Ave');
         expect(getCrossStreets(street({ address: '3 Av SW ,  Fr Centre St S To 1 St SW' }))).toBe('Centre St S to 1 St');
+        expect(getCrossStreets(street({ address: '2 Av SW ,  Fr 4 St SW To Bow River' }))).toBe('4 St to Bow River');
         expect(getCrossStreets(lot)).toBeNull();
     });
 
@@ -101,9 +104,25 @@ describe('row lines', () => {
     });
 
     it('describes a row by its block and walk, or its kind and walk', () => {
-        expect(getRowMeta(street({ walkingTime: 3 }))).toBe('4 St to 5 St · 3 min walk');
-        expect(getRowMeta(lot)).toBe('Parkade · 4 min walk');
-        expect(getRowMeta(permit)).toBe('Permit zone · 2 min walk');
+        expect(words(getRowMeta(street({ walkingTime: 3 })))).toBe('4–5 St · 3 min walk');
+        expect(words(getRowMeta(lot))).toBe('Parkade · 4 min walk');
+        expect(words(getRowMeta(permit))).toBe('Permit zone · 2 min walk');
+    });
+
+    // Eau Claire Av SW from 4 to 5 St is zone 1008 on the north side and
+    // zone 1062 on the south.
+    it('tells the two sides of a block apart', () => {
+        const north = street({ walkingTime: 3, metadata: { block_side: 'N' } });
+        expect(getBlockSide(north)).toBe('north side');
+        expect(getBlockSide(street({ metadata: { block_side: 'w' } }))).toBe('west side');
+        expect(words(getRowMeta(north))).toBe('4–5 St, north side · 3 min walk');
+        expect(getSpotName(north)).toEqual({ title: 'Eau Claire Ave SW', detail: '4 St SW to 5 St SW, north side' });
+    });
+
+    it('names no side it does not know', () => {
+        expect(getBlockSide(street())).toBeNull();
+        expect(getBlockSide(street({ metadata: { block_side: 'X' } }))).toBeNull();
+        expect(getBlockSide({ ...lot, metadata: { block_side: 'N' } })).toBeNull();
     });
 });
 

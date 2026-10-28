@@ -199,7 +199,10 @@ export default function DetailsScreen({ route, navigation }) {
                     </View>
 
                     <Text style={styles.title} accessibilityRole="header">{title}</Text>
-                    <Text style={styles.subtitle}>{[detail, 'Calgary'].filter(Boolean).join(', ')}</Text>
+                    {/* A street block says its cross streets and side; a lot, its address */}
+                    <Text style={styles.subtitle}>
+                        {[detail, spot.spot_type === 'on_street' ? null : 'Calgary'].filter(Boolean).join(', ')}
+                    </Text>
 
                     <SpotMap spot={spot} width={thumbWidth} height={132} style={styles.thumb} />
                 </View>

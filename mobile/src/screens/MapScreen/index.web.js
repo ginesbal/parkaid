@@ -19,7 +19,7 @@ import { useParkingSpots } from '../../hooks/useParkingSpots';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { apiTypeFor, applyType, getTypeNote } from '../../utils/filters';
 import { distanceMeters } from '../../utils/geo';
-import { getCoordinates, getSpotName, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
+import { getBlockSide, getCoordinates, getSpotName, pickTopSpot, rankSpots } from '../../utils/spotPresentation';
 import ParkingBottomSheet from './components/ParkingBottomSheet';
 import SpotPill, { getMarkerDescription } from './components/SpotPill';
 import { styles as mapStyles } from './styles';
@@ -132,7 +132,7 @@ export default function MapScreen({ route, navigation }) {
                         onPress={() => setSelectedSpot(spot)}
                         style={styles.marker}
                         accessibilityRole="button"
-                        accessibilityLabel={`Select ${getSpotName(spot).title}, ${getMarkerDescription(spot, now)}`}
+                        accessibilityLabel={`Select ${[getSpotName(spot).title, getBlockSide(spot), getMarkerDescription(spot, now)].filter(Boolean).join(', ')}`}
                     >
                         <SpotPill spot={spot} selected={selected} now={now} />
                     </Pressable>

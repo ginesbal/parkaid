@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { TOKENS } from '../../../../constants/theme';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
-import { getCrossStreets, getRateDisplay, getSpotKind, getSpotName, getZoneLabel } from '../../../../utils/spotPresentation';
+import { getBlockLabel, getRateDisplay, getSpotKind, getSpotName, getZoneLabel } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
 // The choice for a place not in the list.
@@ -12,11 +12,11 @@ export const ELSEWHERE = 'elsewhere';
 // How far a place is from the phone, to the nearest 10 m: "40 m", "1.2 km".
 const awayLabel = (meters) => getDistanceLabel(Math.max(10, Math.round(meters / 10) * 10));
 
-// A street spot is told apart by its block and zone, as on the sign; the
-// setup below gives its rate.
+// A street spot is told apart by its block, side and zone, as on the sign;
+// the setup below gives its rate.
 function describePlace(spot) {
-    const cross = getCrossStreets(spot);
-    if (cross) return [cross, getZoneLabel(spot)].filter(Boolean).join(' · ');
+    const block = getBlockLabel(spot);
+    if (block) return [block, getZoneLabel(spot)].filter(Boolean).join(' · ');
     const rate = getRateDisplay(spot);
     return [getZoneLabel(spot) || getSpotKind(spot), rate.amount ? `${rate.amount} ${rate.unit}` : rate.short].join(' · ');
 }

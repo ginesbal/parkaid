@@ -87,7 +87,16 @@ export function tidyName(text) {
 const BLOCK_FACE = /^(.+?)\s*,\s*Fr\s+(.+?)\s+To\s+(.+)$/i;
 const TRAILING_QUADRANT = /\s(NW|NE|SW|SE|N|S|E|W)$/;
 
-// { title, detail }: "Eau Claire Ave SW" + "4 St SW to 5 St SW"
+// Which side of the street a block's zone is on, from the City's block_side:
+// "north side", or null. A block often has a zone on each side, each with its
+// own rate and rules.
+const SIDES = { N: 'north side', S: 'south side', E: 'east side', W: 'west side' };
+export function getBlockSide(spot) {
+    if (spot?.spot_type !== 'on_street') return null;
+    return SIDES[String(spot?.metadata?.block_side ?? '').trim().toUpperCase()] ?? null;
+}
+
+// { title, detail }: "Eau Claire Ave SW" + "4 St SW to 5 St SW, north side"
 export function getSpotName(spot) {
     const address = (spot?.address || '').trim();
     if (!address || address === 'Unknown Address') {
@@ -96,7 +105,8 @@ export function getSpotName(spot) {
 
     const block = address.match(BLOCK_FACE);
     if (block) {
-        return { title: tidyName(block[1]), detail: `${tidyName(block[2])} to ${tidyName(block[3])}` };
+        const cross = `${tidyName(block[2])} to ${tidyName(block[3])}`;
+        return { title: tidyName(block[1]), detail: [cross, getBlockSide(spot)].filter(Boolean).join(', ') };
     }
 
     // Permit zones: "00 Block 6 AV SW" is 6 Ave SW from address 0 to 99.
@@ -125,8 +135,12 @@ export function getWalkLabel(spot) {
     return Number.isFinite(minutes) && minutes > 0 ? `${minutes} min walk` : null;
 }
 
-// A street block's cross streets, short: "4 St to 5 St". A cross street keeps
-// its quadrant only when it differs from the block's own ("Centre St S").
+// Two numbered streets of one kind: "4 St", "10 Ave", "9A St".
+const NUMBERED = /^(\d+[A-Z]?) (St|Ave)$/;
+
+// A street block's cross streets, short: "4–5 St" between numbered streets
+// of one kind, else "Centre St S to 1 St". A cross street keeps its quadrant
+// only when it differs from the block's own ("Centre St S").
 export function getCrossStreets(spot) {
     const block = (spot?.address || '').trim().match(BLOCK_FACE);
     if (!block) return null;
@@ -135,7 +149,19 @@ export function getCrossStreets(spot) {
         const tidy = tidyName(name);
         return quadrant && tidy.endsWith(` ${quadrant}`) ? tidy.slice(0, -quadrant.length - 1) : tidy;
     };
-    return `${short(block[2])} to ${short(block[3])}`;
+    const from = short(block[2]);
+    const to = short(block[3]);
+    const a = from.match(NUMBERED);
+    const b = to.match(NUMBERED);
+    return a && b && a[2] === b[2] ? `${a[1]}${RANGE_DASH}${b[1]} ${a[2]}` : `${from} to ${to}`;
+}
+
+// A street block, short: its cross streets and side, "4–5 St, north side";
+// null for lots and permit zones. The side never splits across lines.
+export function getBlockLabel(spot) {
+    const cross = getCrossStreets(spot);
+    const side = getBlockSide(spot);
+    return cross ? [cross, side && oneLine(side)].filter(Boolean).join(', ') : null;
 }
 
 // A posted maximum under this is called out wherever the spot is listed.
@@ -233,9 +259,11 @@ export function getNowLine(spot, now = Date.now()) {
 }
 
 // A list row's second line: the block and the walk for street parking
-// ("4 St to 5 St · 3 min walk"), else the kind and the walk.
+// ("4–5 St, north side · 3 min walk"), else the kind and the walk. When it
+// wraps, the walk moves down whole.
 export function getRowMeta(spot) {
-    return [getCrossStreets(spot) || getSpotKind(spot), getWalkLabel(spot)].filter(Boolean).join(' · ');
+    const walk = getWalkLabel(spot);
+    return [getBlockLabel(spot) || getSpotKind(spot), walk && oneLine(walk)].filter(Boolean).join(' · ');
 }
 
 // The City's rates by time of day (utils/rates), or null when unknown.

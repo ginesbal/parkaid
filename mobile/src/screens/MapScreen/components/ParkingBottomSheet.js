@@ -8,6 +8,7 @@ import { LAYOUT, MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constan
 import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
+    getBlockSide,
     getCaution,
     getRateDisplay,
     getSpotName,
@@ -31,6 +32,12 @@ const EMPTY_HINT = {
     pinned: Platform.OS === 'web'
         ? 'Drag the map, then tap Search this area.'
         : 'Move your pin, or pick a wider distance in the filters.',
+};
+
+// "North side": which side of its block a street zone is on.
+const sideLabel = (spot) => {
+    const side = getBlockSide(spot);
+    return side ? `${side.charAt(0).toUpperCase()}${side.slice(1)}` : null;
 };
 
 // Momentum threshold — a quick flick should snap regardless of drag distance.
@@ -300,9 +307,9 @@ const ParkingBottomSheet = forwardRef(({
             : pinned ? (pinName ? `Closest to ${pinName}` : 'Closest to the middle')
                 : fromDowntown ? 'Closest to downtown' : 'Closest to you',
         name: getSpotName(featuredSpot).title,
-        // Zone and walk; a maximum stay under 2 hours too, since it changes
-        // the choice. Longer ones are on Details.
-        meta: [getZoneLabel(featuredSpot), getWalkLabel(featuredSpot)]
+        // Zone, side of the street and walk; a maximum stay under 2 hours
+        // too, since it changes the choice. Longer ones are on Details.
+        meta: [getZoneLabel(featuredSpot), sideLabel(featuredSpot), getWalkLabel(featuredSpot)]
             .filter(Boolean)
             .join(' \u00B7 '),
         limit: getCaution(featuredSpot, now),
