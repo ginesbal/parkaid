@@ -1,10 +1,12 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
+import MetaLine from '../../../../components/MetaLine';
 import SpotMap from '../../../../components/SpotMap';
 import {
     getCaution,
     getRateDisplay,
     getRowMeta,
+    getRowMetaParts,
     getSpotName,
 } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
@@ -22,6 +24,7 @@ const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() })
     const rate = getRateDisplay(spot, now);
     // The rows' second line, with the zone to pay with.
     const meta = getRowMeta(spot, { withZone: true });
+    const metaParts = getRowMetaParts(spot, { withZone: true });
     const limit = getCaution(spot, now);
 
     // The whole card is one target; "View spot" shows what a tap does.
@@ -40,10 +43,11 @@ const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() })
                                 <Text style={styles.reasonText}>{reason}</Text>
                             </View>
                             <Text style={styles.title} numberOfLines={2}>{title}</Text>
-                            <Text style={styles.meta} numberOfLines={2}>
-                                {meta}
-                                {limit ? <Text style={styles.limit}>{` · ${limit}`}</Text> : null}
-                            </Text>
+                            <MetaLine
+                                parts={[...metaParts.map((text) => ({ text })), { text: limit, style: styles.limit }]}
+                                style={styles.meta}
+                                containerStyle={styles.metaLine}
+                            />
                             {rate.amount ? (
                                 <Text style={styles.price}>
                                     {rate.amount}

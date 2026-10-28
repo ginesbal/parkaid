@@ -42,11 +42,13 @@ export const styles = StyleSheet.create({
         letterSpacing: -0.2,
         color: TOKENS.text,
     },
+    metaLine: {
+        marginTop: 2,
+    },
     meta: {
         fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
-        marginTop: 2,
     },
     // A short maximum stay, in the warning colour: it changes the choice.
     limit: {

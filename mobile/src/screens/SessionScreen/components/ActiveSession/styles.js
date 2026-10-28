@@ -114,8 +114,10 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.text,
     },
-    placeDetail: {
+    placeDetailLine: {
         marginTop: 2,
+    },
+    placeDetail: {
         fontSize: 14,
         lineHeight: 20,
         color: TOKENS.textMuted,

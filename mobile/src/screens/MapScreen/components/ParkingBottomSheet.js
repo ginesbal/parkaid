@@ -3,14 +3,17 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import BrandLoader from '../../../components/BrandLoader';
 import { useReduceMotion } from '../../../hooks/useReduceMotion';
+import MetaLine from '../../../components/MetaLine';
 import SpotRow from '../../../components/SpotRow';
 import { LAYOUT, MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constants/theme';
+import { noLoneWord } from '../../../utils/formatters';
 import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
     getCaution,
     getRateDisplay,
     getRowMeta,
+    getRowMetaParts,
     getSpotName,
     getZoneShown,
 } from '../../../utils/spotPresentation';
@@ -312,6 +315,7 @@ const ParkingBottomSheet = forwardRef(({
         name: getSpotName(featuredSpot).title,
         // The rows' second line, with the zone to pay with; a caution below.
         meta: getRowMeta(featuredSpot, { withZone: true }),
+        metaParts: getRowMetaParts(featuredSpot, { withZone: true }),
         limit: getCaution(featuredSpot, now),
         rate: getRateDisplay(featuredSpot, now),
     } : null;
@@ -393,12 +397,10 @@ const ParkingBottomSheet = forwardRef(({
                             <View style={styles.featuredInfo}>
                                 <Text style={styles.featuredReason}>{featured.reason}</Text>
                                 <Text style={styles.featuredName} numberOfLines={1}>{featured.name}</Text>
-                                {featured.meta ? (
-                                    <Text style={styles.featuredMeta} numberOfLines={2}>
-                                        {featured.meta}
-                                        {featured.limit ? <Text style={styles.featuredLimit}>{` · ${featured.limit}`}</Text> : null}
-                                    </Text>
-                                ) : null}
+                                <MetaLine
+                                    parts={[...featured.metaParts.map((text) => ({ text })), { text: featured.limit, style: styles.featuredLimit }]}
+                                    style={styles.featuredMeta}
+                                />
                             </View>
                             {featured.rate.amount ? (
                                 <Text style={styles.featuredPrice}>
@@ -426,7 +428,7 @@ const ParkingBottomSheet = forwardRef(({
                             // As on Home: what went wrong, and two ways on.
                             <>
                                 <Text style={styles.emptyHint}>
-                                    {failure.body} Already parked? You can still start a session with the zone on the sign.
+                                    {noLoneWord(`${failure.body} Already parked? You can still start a session with the zone on the sign.`)}
                                 </Text>
                                 <View style={styles.failureActions}>
                                     {onRetry ? (
@@ -453,7 +455,7 @@ const ParkingBottomSheet = forwardRef(({
                             </>
                         ) : (
                             // The count line above already says there's none.
-                            <Text style={styles.emptyHint}>{EMPTY_HINT[pinned ? 'pinned' : 'current']}</Text>
+                            <Text style={styles.emptyHint}>{noLoneWord(EMPTY_HINT[pinned ? 'pinned' : 'current'])}</Text>
                         )}
                     </View>
                 )}
@@ -701,14 +703,16 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
     },
     // A text button, lined up with the message above it.
-    // After a failure: Try again and Start a session, side by side.
+    // After a failure: Try again and Start a session, side by side, or one
+    // above the other at the same width where they don't fit.
     failureActions: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: SPACING.sm,
         marginTop: SPACING.md,
     },
     failureButton: {
-        flex: 1,
+        flexGrow: 1,
         flexDirection: 'row',
         gap: SPACING.xs,
         paddingHorizontal: SPACING.sm,

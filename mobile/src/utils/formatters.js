@@ -33,6 +33,10 @@ export const formatMoney = (amount) => {
 // A cost that may fall wholly outside charging hours: "$3.00" or "Free".
 export const formatCost = (amount) => (amount === 0 ? 'Free' : formatMoney(amount));
 
+// A hint with its last two words joined by a no-break space, so that when it
+// wraps, its last line never holds one word alone.
+export const noLoneWord = (text) => (typeof text === 'string' ? text.replace(/ (\S+)\s*$/, '\u00A0$1') : text);
+
 /**
  * Format date to time string
  * @param {Date} date - Date object

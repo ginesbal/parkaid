@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
+import MetaLine from '../../../../components/MetaLine';
 import ParkPlusActions from '../../../../components/ParkPlusActions';
 import { MOTION, TOKENS } from '../../../../constants/theme';
 import { formatCost, formatMoney } from '../../../../utils/formatters';
@@ -118,16 +119,17 @@ export function SessionDetails({ session, sessionState, totalCost }) {
     // after it in MyParking. The cost below covers the session's own time.
     const rate = sessionRateAt(session, Date.now());
     const zone = getSessionZone(session);
-    // "Somewhere else" with a zone is named after it; say it once.
-    const placeDetail = [session.locationAddress, session.spotId]
+    // "Somewhere else" with a zone is named after it; say it once. The zone
+    // never splits from its number.
+    const placeParts = [session.locationAddress, session.spotId]
         .filter((part) => part && part !== session.locationName)
-        .join(' · ');
+        .map((text) => ({ text: text.replace(/^Zone /, 'Zone\u00A0') }));
 
     return (
         <View style={styles.card}>
             <View style={styles.place}>
                 {session.locationName ? <Text style={styles.placeName}>{session.locationName}</Text> : null}
-                {placeDetail ? <Text style={styles.placeDetail}>{placeDetail}</Text> : null}
+                <MetaLine parts={placeParts} style={styles.placeDetail} containerStyle={styles.placeDetailLine} />
                 {expired ? null : (
                     <>
                         <Text style={styles.pay}>{getSessionPayLine(session)}</Text>

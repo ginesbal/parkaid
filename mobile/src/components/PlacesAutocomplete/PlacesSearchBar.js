@@ -196,7 +196,8 @@ export default function PlacesSearchBar({
 
   return (
     <View style={[styles.container, containerStyle, style]}>
-      <View style={styles.inputContainer}>
+      {/* On the web, the focus ring goes round this box (utils/focusRing) */}
+      <View style={styles.inputContainer} dataSet={{ focusRing: 'around' }}>
         <MaterialCommunityIcons
           name="magnify"
           size={20}

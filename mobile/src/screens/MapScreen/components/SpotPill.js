@@ -3,6 +3,9 @@
 //   street: the pin alone (no known rate: check the signs)
 //   lot:    a P and "Lot" (rates posted at the lot)
 //   permit: muted, a permit card and "Permit" (permit holders only)
+//   loading: muted, a truck and "Loading" (a loading zone: free, but not
+//           for parking)
+//   placard: muted, a wheelchair and "Placard" (placard holders only)
 //   closed: muted, a crossed-out car (no parking now: rush hour)
 // Selected, it turns ink and a size up; the pin then sits on a white disc so
 // it stays visible. Shared by the iOS Marker and the web preview; Android
@@ -14,11 +17,21 @@ import { memo } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { PIN } from '../../../components/BrandPin';
 import { RADIUS, TOKENS } from '../../../constants/theme';
-import { getCaution, getHourlyRate, getRateDisplay, isRestrictedNow } from '../../../utils/spotPresentation';
+import {
+    getCaution,
+    getHourlyRate,
+    getRateDisplay,
+    isLoadingZone,
+    isPlacardOnly,
+    isRestrictedNow,
+} from '../../../utils/spotPresentation';
 
 export function getMarkerKind(spot, now = Date.now()) {
     if (spot?.spot_type === 'residential') return 'permit';
     if (isRestrictedNow(spot, now)) return 'closed';
+    // Not parking for everyone, whatever it costs: never shown as a price.
+    if (isLoadingZone(spot)) return 'loading';
+    if (isPlacardOnly(spot)) return 'placard';
     if (getHourlyRate(spot, now) !== null) return 'priced';
     if (spot?.spot_type === 'off_street') return 'lot';
     return 'street';
@@ -57,13 +70,22 @@ export function getGroupDescription(spots, now = Date.now()) {
 // What a screen reader says after the spot's name.
 export function getMarkerDescription(spot, now = Date.now()) {
     if (isRestrictedNow(spot, now)) return getCaution(spot, now).replace(/\u00A0/g, ' ');
-    return getRateDisplay(spot, now).spoken;
+    const spoken = getRateDisplay(spot, now).spoken;
+    if (isLoadingZone(spot)) return `Loading zone, ${spoken.toLowerCase()}`;
+    if (isPlacardOnly(spot)) return `Placard holders only, ${spoken.toLowerCase()}`;
+    return spoken;
 }
 
-const ICONS = { lot: 'parking', permit: 'card-account-details-outline', closed: 'car-off' };
-// Quieter than anywhere a visitor can park now.
-const MUTED = new Set(['permit', 'closed']);
-const WORDS = { lot: 'Lot', permit: 'Permit' };
+const ICONS = {
+    lot: 'parking',
+    permit: 'card-account-details-outline',
+    closed: 'car-off',
+    loading: 'truck-outline',
+    placard: 'wheelchair-accessibility',
+};
+// Quieter than anywhere any visitor can park now.
+const MUTED = new Set(['permit', 'closed', 'loading', 'placard']);
+const WORDS = { lot: 'Lot', permit: 'Permit', loading: 'Loading', placard: 'Placard' };
 
 function Pin({ selected, size, onImageLoad }) {
     const image = (

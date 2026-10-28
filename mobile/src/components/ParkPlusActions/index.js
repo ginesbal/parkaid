@@ -69,9 +69,13 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: SPACING.sm,
     },
+    // Each fills its share of the row, so when a narrow phone stacks them
+    // they stack at the same width.
     button: {
+        flexGrow: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 6,
         minHeight: 44,
         paddingHorizontal: SPACING.md,

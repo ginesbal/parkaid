@@ -6,7 +6,7 @@ import { DURATION_OPTIONS } from '../../../../constants/session';
 import { REMINDERS_SUPPORTED, remindersBlocked } from '../../../../services/reminders';
 import { chargedCost, chargedMinutes } from '../../../../utils/chargeHours';
 import { nextRateChange, periodsCost } from '../../../../utils/rates';
-import { formatCost, formatMoney } from '../../../../utils/formatters';
+import { formatCost, formatMoney, noLoneWord } from '../../../../utils/formatters';
 import { formatClock, formatDuration } from '../../../../utils/sessionHelpers';
 import { formatHourly, formatMaxStay } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
@@ -220,7 +220,7 @@ const SetupCard = ({
                             })}
                         </View>
                     )}
-                    {limitNote && !noParkingUntil ? <Text style={styles.setupHint}>{limitNote}</Text> : null}
+                    {limitNote && !noParkingUntil ? <Text style={styles.setupHint}>{noLoneWord(limitNote)}</Text> : null}
                 </View>
             </View>
 
@@ -279,7 +279,7 @@ const SetupCard = ({
                     Start session {'·'} {formatDuration(duration)}
                 </Text>
             </TouchableOpacity>
-            {blocker ? <Text style={styles.disabledHint}>{blocker}</Text> : null}
+            {blocker ? <Text style={styles.disabledHint}>{noLoneWord(blocker)}</Text> : null}
             {isValid && REMINDERS_SUPPORTED && !blocked ? (
                 <Text style={styles.disabledHint}>We’ll remind you when it’s time to head back.</Text>
             ) : null}

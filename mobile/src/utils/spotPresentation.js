@@ -279,12 +279,15 @@ export function getNowLine(spot, now = Date.now()) {
 // `withZone`, the zone too ("· Zone 3367 ·"), for a row that would otherwise
 // read like another (see getZoneShown). When it wraps, the walk moves down
 // whole.
-export function getRowMeta(spot, { withZone = false } = {}) {
+export function getRowMeta(spot, options) {
+    return getRowMetaParts(spot, options).join(' · ');
+}
+
+// The same line as its parts, for components/MetaLine.
+export function getRowMetaParts(spot, { withZone = false } = {}) {
     const walk = getWalkLabel(spot);
     const zone = withZone ? getZoneLabel(spot) : null;
-    return [getBlockLabel(spot) || getSpotKind(spot), zone && oneLine(zone), walk && oneLine(walk)]
-        .filter(Boolean)
-        .join(' · ');
+    return [getBlockLabel(spot) || getSpotKind(spot), zone && oneLine(zone), walk && oneLine(walk)].filter(Boolean);
 }
 
 // The street spots in a list that share their street and side of the block

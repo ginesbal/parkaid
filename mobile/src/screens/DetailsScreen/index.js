@@ -10,6 +10,7 @@ import SpotMap from '../../components/SpotMap';
 import ParkPlusActions from '../../components/ParkPlusActions';
 import { LAYOUT, TOKENS } from '../../constants/theme';
 import { useSession, useSessionStatus } from '../../context/SessionContext';
+import { noLoneWord } from '../../utils/formatters';
 import { logger } from '../../utils/loggers';
 import { formatRestrictions } from '../../utils/restrictions';
 import { formatClock, formatRemaining } from '../../utils/sessionHelpers';
@@ -51,7 +52,7 @@ function InfoLine({ icon, title, rows, body, zone }) {
                         ))}
                     </View>
                 ) : null}
-                {body ? <Text style={styles.lineBody}>{body}</Text> : null}
+                {body ? <Text style={styles.lineBody}>{noLoneWord(body)}</Text> : null}
                 {zone ? <ParkPlusActions zone={zone} style={styles.lineActions} /> : null}
             </View>
         </View>

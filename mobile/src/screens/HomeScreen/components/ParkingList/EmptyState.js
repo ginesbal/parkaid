@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import { TOKENS, alpha } from '../../../../constants/theme';
+import { noLoneWord } from '../../../../utils/formatters';
 import { getLoadError } from '../../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
@@ -47,7 +48,7 @@ const EmptyState = ({ onExpandSearch, onViewMap, onStartSession, onRetry, error,
             </View>
 
             <Text style={styles.emptyText} accessibilityRole="header">{title}</Text>
-            <Text style={styles.emptySubtext}>{body}</Text>
+            <Text style={styles.emptySubtext}>{noLoneWord(body)}</Text>
 
             <View style={styles.emptyActions}>
                 {isError || canExpand ? (

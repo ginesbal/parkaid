@@ -9,7 +9,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RADIUS, SELECTED, SELECTED_BORDER, SPACING, TOKENS } from '../../constants/theme';
-import { getCaution, getRateDisplay, getRowMeta, getSpotName } from '../../utils/spotPresentation';
+import { getCaution, getRateDisplay, getRowMeta, getRowMetaParts, getSpotName } from '../../utils/spotPresentation';
+import MetaLine from '../MetaLine';
 
 // `now`: the time the caution is for (useMinute), so the row updates with it.
 // `showZone`: say the zone too, when another row shares the block side
@@ -18,6 +19,7 @@ function SpotRow({ spot, onPress, selected = false, first = false, last = false,
     const { title } = getSpotName(spot);
     const rate = getRateDisplay(spot, now);
     const meta = getRowMeta(spot, { withZone: showZone });
+    const metaParts = getRowMetaParts(spot, { withZone: showZone });
     const limit = getCaution(spot, now);
 
     return (
@@ -37,12 +39,11 @@ function SpotRow({ spot, onPress, selected = false, first = false, last = false,
             >
                 <View style={styles.info}>
                     <Text style={[styles.title, selected && SELECTED.text]} numberOfLines={1}>{title}</Text>
-                    {meta ? (
-                        <Text style={styles.meta} numberOfLines={2}>
-                            {meta}
-                            {limit ? <Text style={styles.limit}>{` · ${limit}`}</Text> : null}
-                        </Text>
-                    ) : null}
+                    <MetaLine
+                        parts={[...metaParts.map((text) => ({ text })), { text: limit, style: styles.limit }]}
+                        style={styles.meta}
+                        containerStyle={styles.metaLine}
+                    />
                 </View>
                 {rate.amount ? (
                     <Text style={styles.price}>
@@ -120,8 +121,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: TOKENS.text,
     },
-    meta: {
+    metaLine: {
         marginTop: 2,
+    },
+    meta: {
         fontSize: 14,
         lineHeight: 18,
         color: TOKENS.textMuted,
