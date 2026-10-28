@@ -1,6 +1,7 @@
 require('dotenv').config();
 const axios = require('axios');
 const { Pool } = require('pg');
+const { lineMidpoint } = require('../utils/geometry');
 const { fetchZoneRates } = require('../utils/zoneRates');
 
 async function loadParkingData() {
@@ -51,6 +52,9 @@ async function loadParkingData() {
             for (const record of response.data) {
                 try {
                     let lng, lat;
+                    // Where a line starts: it names a record without an id
+                    // of its own, as it always has.
+                    let start = null;
 
                     // Extract coordinates based on geometry type
                     if (dataset.type === 'off_street' && record.multipolygon?.coordinates) {
@@ -58,7 +62,9 @@ async function loadParkingData() {
                         lng = polygon.reduce((sum, pt) => sum + pt[0], 0) / polygon.length;
                         lat = polygon.reduce((sum, pt) => sum + pt[1], 0) / polygon.length;
                     } else if (record.line?.coordinates?.[0]?.[0]) {
-                        [lng, lat] = record.line.coordinates[0][0];
+                        // Halfway along the block, not at its corner.
+                        start = record.line.coordinates[0][0];
+                        [lng, lat] = lineMidpoint(record.line.coordinates);
                     } else if (record.the_geom?.coordinates?.[0]?.[0]) {
                         [lng, lat] = record.the_geom.coordinates[0][0];
                     } else if (record.point?.coordinates) {
@@ -69,8 +75,9 @@ async function loadParkingData() {
                     }
 
                     // Generate a unique ID if not provided
+                    const [idLng, idLat] = start || [lng, lat];
                     const globalId = record.globalid_guid || record.globalid ||
-                        `${dataset.type}-${record.parking_zone || ''}-${lng.toFixed(6)}-${lat.toFixed(6)}`;
+                        `${dataset.type}-${record.parking_zone || ''}-${idLng.toFixed(6)}-${idLat.toFixed(6)}`;
 
                     await pool.query(`
                         INSERT INTO parking_spots (
@@ -101,6 +108,7 @@ async function loadParkingData() {
                             $32, $33
                         )
                         ON CONFLICT (global_id) DO UPDATE SET
+                            location = EXCLUDED.location,
                             address_desc = EXCLUDED.address_desc,
                             status = EXCLUDED.status,
                             permit_zone = EXCLUDED.permit_zone,

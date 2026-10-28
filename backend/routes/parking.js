@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/env');
 const { jlog } = require('../utils/logger');
-const { NOT_PUBLIC_ZONES, toSpot } = require('../utils/spotRows');
+const { NOT_PUBLIC_ZONES, mergeSegments, toSpot } = require('../utils/spotRows');
 
 router.get('/nearby', async (req, res) => {
   const started = Date.now();
@@ -74,10 +74,13 @@ router.get('/nearby', async (req, res) => {
       FROM parking_spots
       WHERE ${where.join(' AND ')}
       ORDER BY distance
-      LIMIT 100
+      LIMIT 250
     `;
 
     const result = await pool.query(sql, params);
+    // The segments of one zone's stretch of a block come back as one spot;
+    // more rows are read so that 100 places are left after that.
+    const spots = mergeSegments(result.rows).slice(0, 100);
     const ms = Date.now() - started;
 
     jlog('nearby_search_completed', {
@@ -85,14 +88,15 @@ router.get('/nearby', async (req, res) => {
       radius: `${radius}m`,
       type: type || 'all',
       freeOnly: free === 'true',
-      spotsFound: result.rows.length,
+      spotsFound: spots.length,
+      rowsRead: result.rows.length,
       queryTimeMs: ms,
     });
 
     res.json({
       success: true,
-      count: result.rows.length,
-      data: result.rows.map((row) => toSpot(row)),
+      count: spots.length,
+      data: spots.map((row) => toSpot(row)),
     });
   } catch (error) {
     jlog('nearby_search_error', { error: error.message }, 'error');

@@ -7,6 +7,34 @@ const { parseZoneRate, rateAt } = require('./zoneRates');
 // commercial vehicles and Access Calgary vans. /nearby leaves them out.
 const NOT_PUBLIC_ZONES = ['Taxi Zone', 'Valet Parking Zone', 'Registered Loading Zone', 'Access Calgary Loading Zone'];
 
+// The City splits a zone's stretch of a block into segments (around a
+// driveway or a hydrant), each a row with the same zone, side and rules. It
+// is one place to park, so /nearby sends it once, at its nearest segment.
+// So with a permit block's segments. Segments whose rules differ, such as a
+// 20-minute stretch in a 2-hour zone, stay apart.
+function samePlace(row) {
+  if (row.spot_type === 'on_street' && row.parking_zone) {
+    return ['on_street', row.parking_zone, row.address_desc, row.block_side, row.zone_type,
+      row.enforceable_time, row.max_time, row.parking_restrict_time].join('|');
+  }
+  if (row.spot_type === 'residential' && row.address_desc) {
+    return ['residential', row.address_desc, row.permit_zone, row.enforceable_time,
+      row.parking_restriction, row.time_restriction].join('|');
+  }
+  return `id:${row.id}`;
+}
+
+// `rows` nearest first; keeps the first row of each place.
+function mergeSegments(rows) {
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = samePlace(row);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // The City writes "none" for a block without a rush-hour restriction.
 const restriction = (value) => {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -71,4 +99,4 @@ function toSpot(spot, now = new Date()) {
   };
 }
 
-module.exports = { toSpot, NOT_PUBLIC_ZONES };
+module.exports = { toSpot, mergeSegments, NOT_PUBLIC_ZONES };
