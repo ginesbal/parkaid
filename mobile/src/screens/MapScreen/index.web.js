@@ -267,6 +267,7 @@ export default function MapScreen({ route, navigation }) {
                 savedAt={savedAt}
                 stale={stale}
                 onRetry={refetch}
+                onStartSession={() => navigation?.navigate('Park')}
                 selectedSpot={selectedSpot}
                 featuredSpot={featuredSpot}
                 now={now}

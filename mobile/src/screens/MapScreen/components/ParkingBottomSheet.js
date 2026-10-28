@@ -8,12 +8,10 @@ import { LAYOUT, MOTION, RADIUS, SPACING, TOKENS, alpha } from '../../../constan
 import { describeSaved, getLoadError } from '../../../utils/loadStatus';
 import { getDistanceLabel } from '../../../utils/parkingHelpers';
 import {
-    getBlockSide,
     getCaution,
     getRateDisplay,
+    getRowMeta,
     getSpotName,
-    getWalkLabel,
-    getZoneLabel,
     getZoneShown,
 } from '../../../utils/spotPresentation';
 import { SCREEN_HEIGHT } from '../constants';
@@ -33,12 +31,6 @@ const EMPTY_HINT = {
     pinned: Platform.OS === 'web'
         ? 'Drag the map, then tap Search this area.'
         : 'Move your pin, or pick a wider distance in the filters.',
-};
-
-// "North side": which side of its block a street zone is on.
-const sideLabel = (spot) => {
-    const side = getBlockSide(spot);
-    return side ? `${side.charAt(0).toUpperCase()}${side.slice(1)}` : null;
 };
 
 // Momentum threshold — a quick flick should snap regardless of drag distance.
@@ -79,6 +71,8 @@ const ParkingBottomSheet = forwardRef(({
     onItemPress,
     onViewSpot,
     onClearPin,
+    // Park, for a session with the zone on the sign when the list can't load.
+    onStartSession,
     onPeekHeightChange,
     tabBarHeight = 80,
     topInset = 0,
@@ -311,11 +305,8 @@ const ParkingBottomSheet = forwardRef(({
             : pinned ? (pinName ? `Closest to ${pinName}` : 'Closest to the middle')
                 : fromDowntown ? 'Closest to downtown' : 'Closest to you',
         name: getSpotName(featuredSpot).title,
-        // Zone, side of the street and walk; a maximum stay under 2 hours
-        // too, since it changes the choice. Longer ones are on Details.
-        meta: [getZoneLabel(featuredSpot), sideLabel(featuredSpot), getWalkLabel(featuredSpot)]
-            .filter(Boolean)
-            .join(' \u00B7 '),
+        // The rows' second line, with the zone to pay with; a caution below.
+        meta: getRowMeta(featuredSpot, { withZone: true }),
         limit: getCaution(featuredSpot, now),
         rate: getRateDisplay(featuredSpot, now),
     } : null;
@@ -427,17 +418,33 @@ const ParkingBottomSheet = forwardRef(({
                         {loading ? (
                             <BrandLoader size={40} label="Finding parking around here" delay={150} />
                         ) : failure ? (
+                            // As on Home: what went wrong, and two ways on.
                             <>
-                                <Text style={styles.emptyHint}>{failure.body}</Text>
-                                {onRetry ? (
-                                    <Pressable
-                                        onPress={onRetry}
-                                        style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
-                                        accessibilityRole="button"
-                                    >
-                                        <Text style={styles.retryText}>Try again</Text>
-                                    </Pressable>
-                                ) : null}
+                                <Text style={styles.emptyHint}>
+                                    {failure.body} Already parked? You can still start a session with the zone on the sign.
+                                </Text>
+                                <View style={styles.failureActions}>
+                                    {onRetry ? (
+                                        <Pressable
+                                            onPress={onRetry}
+                                            style={({ pressed }) => [styles.viewButton, styles.failureButton, pressed && styles.viewButtonPressed]}
+                                            accessibilityRole="button"
+                                        >
+                                            <MaterialCommunityIcons name="refresh" size={18} color={TOKENS.surface} />
+                                            <Text style={styles.viewButtonText}>Try again</Text>
+                                        </Pressable>
+                                    ) : null}
+                                    {onStartSession ? (
+                                        <Pressable
+                                            onPress={onStartSession}
+                                            style={({ pressed }) => [styles.secondaryButton, styles.failureButton, pressed && styles.viewButtonPressed]}
+                                            accessibilityRole="button"
+                                        >
+                                            <MaterialCommunityIcons name="timer-outline" size={18} color={TOKENS.primaryInk} />
+                                            <Text style={styles.secondaryButtonText}>Start a session</Text>
+                                        </Pressable>
+                                    ) : null}
+                                </View>
                             </>
                         ) : (
                             // The count line above already says there's none.
@@ -689,16 +696,27 @@ const styles = StyleSheet.create({
         color: TOKENS.textMuted,
     },
     // A text button, lined up with the message above it.
-    retry: {
-        alignSelf: 'flex-start',
-        minHeight: 44,
-        marginTop: SPACING.xs,
+    // After a failure: Try again and Start a session, side by side.
+    failureActions: {
+        flexDirection: 'row',
+        gap: SPACING.sm,
+        marginTop: SPACING.md,
+    },
+    failureButton: {
+        flex: 1,
+        flexDirection: 'row',
+        gap: SPACING.xs,
+        paddingHorizontal: SPACING.sm,
+    },
+    secondaryButton: {
+        minHeight: 48,
+        borderRadius: RADIUS.lg,
+        borderWidth: 1,
+        borderColor: TOKENS.primaryBorder,
+        alignItems: 'center',
         justifyContent: 'center',
     },
-    retryPressed: {
-        opacity: 0.6,
-    },
-    retryText: {
+    secondaryButtonText: {
         fontSize: 16,
         fontWeight: '600',
         color: TOKENS.primaryInk,

@@ -42,12 +42,6 @@ export const styles = StyleSheet.create({
         letterSpacing: -0.2,
         color: TOKENS.text,
     },
-    detail: {
-        fontSize: 14,
-        lineHeight: 18,
-        color: TOKENS.textMuted,
-        marginTop: 2,
-    },
     meta: {
         fontSize: 14,
         lineHeight: 18,

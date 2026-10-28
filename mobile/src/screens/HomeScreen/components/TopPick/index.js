@@ -4,10 +4,8 @@ import SpotMap from '../../../../components/SpotMap';
 import {
     getCaution,
     getRateDisplay,
-    getSpotKind,
+    getRowMeta,
     getSpotName,
-    getWalkLabel,
-    getZoneLabel,
 } from '../../../../utils/spotPresentation';
 import { styles } from './styles';
 
@@ -20,11 +18,10 @@ const REASONS = {
 // now: the time the caution is for (useMinute).
 const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() }) => {
     const reason = view === 'near' && fromDowntown ? 'Closest to downtown' : REASONS[view];
-    const { title, detail } = getSpotName(spot);
+    const { title } = getSpotName(spot);
     const rate = getRateDisplay(spot, now);
-    const meta = [getZoneLabel(spot) || getSpotKind(spot), getWalkLabel(spot)]
-        .filter(Boolean)
-        .join(' · ');
+    // The rows' second line, with the zone to pay with.
+    const meta = getRowMeta(spot, { withZone: true });
     const limit = getCaution(spot, now);
 
     // The whole card is one target; "View spot" shows what a tap does.
@@ -43,7 +40,6 @@ const TopPick = ({ spot, view, onView, fromDowntown = false, now = Date.now() })
                                 <Text style={styles.reasonText}>{reason}</Text>
                             </View>
                             <Text style={styles.title} numberOfLines={2}>{title}</Text>
-                            {detail ? <Text style={styles.detail} numberOfLines={2}>{detail}</Text> : null}
                             <Text style={styles.meta} numberOfLines={2}>
                                 {meta}
                                 {limit ? <Text style={styles.limit}>{` · ${limit}`}</Text> : null}

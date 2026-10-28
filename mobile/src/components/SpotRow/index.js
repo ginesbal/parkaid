@@ -8,7 +8,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { RADIUS, SPACING, TOKENS } from '../../constants/theme';
+import { RADIUS, SELECTED, SELECTED_BORDER, SPACING, TOKENS } from '../../constants/theme';
 import { getCaution, getRateDisplay, getRowMeta, getSpotName } from '../../utils/spotPresentation';
 
 // `now`: the time the caution is for (useMinute), so the row updates with it.
@@ -24,13 +24,19 @@ function SpotRow({ spot, onPress, selected = false, first = false, last = false,
         <View style={[styles.group, { marginHorizontal: inset }, first && styles.first, last && styles.last]}>
             <Pressable
                 onPress={() => onPress(spot)}
-                style={({ pressed }) => [styles.row, selected && styles.selected, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                    styles.row,
+                    selected && styles.selected,
+                    selected && first && styles.selectedFirst,
+                    selected && last && styles.selectedLast,
+                    pressed && styles.pressed,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel={[title, meta, limit, rate.spoken].filter(Boolean).join('. ') + '.'}
                 aria-selected={selected}
             >
                 <View style={styles.info}>
-                    <Text style={styles.title} numberOfLines={1}>{title}</Text>
+                    <Text style={[styles.title, selected && SELECTED.text]} numberOfLines={1}>{title}</Text>
                     {meta ? (
                         <Text style={styles.meta} numberOfLines={2}>
                             {meta}
@@ -82,10 +88,24 @@ const styles = StyleSheet.create({
         paddingLeft: SPACING.lg,
         paddingRight: SPACING.md,
     },
-    // A lighter fill than SELECTED's, so the row's grey and amber text
-    // keeps 4.5:1 on it.
+    // SELECTED's border and ink-blue title, with a lighter fill so the row's
+    // grey and amber text keeps 4.5:1 on it. The border comes out of the
+    // padding, so the row keeps its size; it rounds with the group's corners.
     selected: {
         backgroundColor: TOKENS.primarySoft,
+        borderWidth: SELECTED_BORDER,
+        borderColor: SELECTED.surface.borderColor,
+        paddingVertical: SPACING.md - SELECTED_BORDER,
+        paddingLeft: SPACING.lg - SELECTED_BORDER,
+        paddingRight: SPACING.md - SELECTED_BORDER,
+    },
+    selectedFirst: {
+        borderTopLeftRadius: RADIUS.lg,
+        borderTopRightRadius: RADIUS.lg,
+    },
+    selectedLast: {
+        borderBottomLeftRadius: RADIUS.lg,
+        borderBottomRightRadius: RADIUS.lg,
     },
     pressed: {
         backgroundColor: TOKENS.surfaceMuted,
