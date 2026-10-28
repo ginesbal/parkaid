@@ -1,5 +1,6 @@
 // DetailsScreen — one parking spot, on the ink canvas. Pushed over the tabs from
-// Home and Map. "Start session" hands the spot to the Park tab.
+// Home and Map. "Start session" hands the spot to the Park tab; while you are
+// parked here it shows the time left and "View session" instead.
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenStatusBar from '../../components/ScreenStatusBar';
@@ -8,8 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SpotMap from '../../components/SpotMap';
 import ParkPlusActions from '../../components/ParkPlusActions';
 import { LAYOUT, TOKENS } from '../../constants/theme';
+import { useSession, useSessionStatus } from '../../context/SessionContext';
 import { logger } from '../../utils/loggers';
 import { formatRestrictions } from '../../utils/restrictions';
+import { formatClock, formatRemaining } from '../../utils/sessionHelpers';
 import {
     formatEnforceableTime,
     getDayRates,
@@ -23,8 +26,10 @@ import {
     getSpotName,
     getWalkLabel,
     getZoneLabel,
+    isParkedAt,
     isPlacardOnly,
     isRestrictedNow,
+    nameApart,
 } from '../../utils/spotPresentation';
 import { styles } from './styles';
 
@@ -48,6 +53,23 @@ function InfoLine({ icon, title, rows, body, zone }) {
                 ) : null}
                 {body ? <Text style={styles.lineBody}>{body}</Text> : null}
                 {zone ? <ParkPlusActions zone={zone} style={styles.lineActions} /> : null}
+            </View>
+        </View>
+    );
+}
+
+// While you are parked at this spot: the time left, kept current.
+function ParkedHere() {
+    const { sessionState, timeRemainingMs, endTime } = useSession();
+    const status = sessionState === 'expired'
+        ? `Time’s up · Ended at ${formatClock(endTime)}`
+        : `${formatRemaining(timeRemainingMs)} left · Ends at ${formatClock(endTime)}`;
+    return (
+        <View style={styles.parked}>
+            <MaterialCommunityIcons name="car-clock" size={22} color={TOKENS.primaryInk} />
+            <View style={styles.parkedText}>
+                <Text style={styles.parkedTitle}>You’re parked here</Text>
+                <Text style={styles.parkedStatus}>{status}</Text>
             </View>
         </View>
     );
@@ -130,6 +152,8 @@ export default function DetailsScreen({ route, navigation }) {
     const spot = route?.params?.spot;
     const insets = useSafeAreaInsets();
     const { width } = useWindowDimensions();
+    // Where you are parked, if anywhere: this spot, or somewhere else.
+    const { parked, state: sessionState } = useSessionStatus();
 
     if (!spot) {
         // Deep link or stale param: nothing to show, go back.
@@ -154,6 +178,18 @@ export default function DetailsScreen({ route, navigation }) {
     const directionsUrl = getDirectionsUrl(spot);
     // Nothing to start on a permit-only block, or while nobody may park here.
     const canStart = spot.spot_type !== 'residential' && !isRestrictedNow(spot);
+    const parkedHere = isParkedAt(parked, spot);
+    // Parked somewhere else: Park ends that session before this one starts.
+    let parkedNote = null;
+    if (parked && !parkedHere) {
+        const where = nameApart(parked.locationName, parked.locationAddress, title);
+        // " at 10 Ave SW, 4 St SW to 5 St SW, north side," closes its commas.
+        const at = where ? ` at ${where}${where.includes(',') ? ',' : ''}` : '';
+        const clock = formatClock(parked.scheduledEnd);
+        parkedNote = sessionState === 'expired'
+            ? `Your time${at} ran out at ${clock}.`
+            : `You’re parked${at} until ${clock}.`;
+    }
     const thumbWidth = Math.min(width, LAYOUT.column) - 40;
 
     // When the City charges at all; the rate above is the one right now. A
@@ -168,6 +204,11 @@ export default function DetailsScreen({ route, navigation }) {
     const handleStart = () => {
         logger.log('details_start_session', { spotId: spot.id }, 'UI_EVENT');
         navigation.navigate('Tabs', { screen: 'Park', params: { spot } });
+    };
+
+    const handleViewSession = () => {
+        logger.log('details_view_session', { spotId: spot.id }, 'UI_EVENT');
+        navigation.navigate('Tabs', { screen: 'Park' });
     };
 
     const handleDirections = () => {
@@ -236,15 +277,32 @@ export default function DetailsScreen({ route, navigation }) {
                         </View>
 
                         <View style={styles.actions}>
-                            {canStart ? (
-                                <Pressable
-                                    onPress={handleStart}
-                                    style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
-                                    accessibilityRole="button"
-                                    accessibilityHint="Opens the Park tab to set up a session here"
-                                >
-                                    <Text style={styles.primaryText}>Start session</Text>
-                                </Pressable>
+                            {parkedHere ? (
+                                <>
+                                    <ParkedHere />
+                                    <Pressable
+                                        onPress={handleViewSession}
+                                        style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+                                        accessibilityRole="button"
+                                        accessibilityHint="Opens your parking session"
+                                    >
+                                        <Text style={styles.primaryText}>View session</Text>
+                                    </Pressable>
+                                </>
+                            ) : canStart ? (
+                                <>
+                                    {parkedNote ? <Text style={styles.parkedNote}>{parkedNote}</Text> : null}
+                                    <Pressable
+                                        onPress={handleStart}
+                                        style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+                                        accessibilityRole="button"
+                                        accessibilityHint={parkedNote
+                                            ? 'Opens the Park tab, where you end your current session first'
+                                            : 'Opens the Park tab to set up a session here'}
+                                    >
+                                        <Text style={styles.primaryText}>{parkedNote ? 'Park here instead' : 'Start session'}</Text>
+                                    </Pressable>
+                                </>
                             ) : null}
                             {directionsUrl ? (
                                 <Pressable

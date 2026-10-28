@@ -130,6 +130,22 @@ export function getZoneLabel(spot) {
     return spot?.spot_type === 'on_street' && zone ? `Zone ${zone}` : null;
 }
 
+// Whether a session is at `spot`: the spot it was started at, or another
+// stretch of the same street zone, which is paid for as one.
+export function isParkedAt(session, spot) {
+    if (!session || !spot) return false;
+    if (session.parkingSpotId != null && String(session.parkingSpotId) === String(spot.id)) return true;
+    const zone = getZoneLabel(spot);
+    return zone !== null && session.spotId === zone;
+}
+
+// A place's name for a sentence: "9 Ave SW", or "10 Ave SW, 4 St SW to 5 St
+// SW, north side" when the other place it is told apart from has the same
+// street name.
+export function nameApart(title, detail, otherTitle) {
+    return title && title === otherTitle && detail ? `${title}, ${detail}` : title;
+}
+
 export function getWalkLabel(spot) {
     const minutes = Number(spot?.walkingTime);
     return Number.isFinite(minutes) && minutes > 0 ? `${minutes} min walk` : null;

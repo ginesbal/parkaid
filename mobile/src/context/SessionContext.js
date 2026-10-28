@@ -2,9 +2,13 @@
 // can show that you are parked, not only the Park tab.
 //
 // useSession():       everything from useSessionManager; changes every second
-// useSessionStatus(): { isLoaded, active, state }; changes only when a
-//                     session starts, ends or turns (active, expiring,
-//                     expired), so the tabs do not re-render every second
+// useSessionStatus(): { isLoaded, active, state, parked }; changes only
+//                     when a session starts, ends, turns (active, expiring,
+//                     expired) or gets more time, so the tabs and Details do
+//                     not re-render every second. `parked`: the session's
+//                     place and end, in its own keys (parkingSpotId,
+//                     spotId, locationName, locationAddress, scheduledEnd),
+//                     or null
 
 import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import { AccessibilityInfo } from 'react-native';
@@ -12,7 +16,7 @@ import { useSessionManager } from '../hooks/useSessionManager';
 import { formatClock } from '../utils/sessionHelpers';
 
 const SessionContext = createContext(null);
-const SessionStatusContext = createContext({ isLoaded: false, active: false, state: null });
+const SessionStatusContext = createContext({ isLoaded: false, active: false, state: null, parked: null });
 
 export const useSession = () => useContext(SessionContext);
 export const useSessionStatus = () => useContext(SessionStatusContext);
@@ -23,7 +27,13 @@ export function SessionProvider({ children }) {
     const active = Boolean(session);
     const state = active ? sessionState : null;
 
-    const status = useMemo(() => ({ isLoaded, active, state }), [isLoaded, active, state]);
+    const { parkingSpotId = null, spotId = null, locationName = null, locationAddress = null, scheduledEnd = null } = session ?? {};
+    const status = useMemo(() => ({
+        isLoaded,
+        active,
+        state,
+        parked: active ? { parkingSpotId, spotId, locationName, locationAddress, scheduledEnd } : null,
+    }), [isLoaded, active, state, parkingSpotId, spotId, locationName, locationAddress, scheduledEnd]);
 
     // Say it when the session turns, wherever the driver is in the app; a
     // view appearing on the Park tab is not announced on its own.

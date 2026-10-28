@@ -176,6 +176,37 @@ export const styles = StyleSheet.create({
         marginTop: SPACING['3xl'],
         gap: SPACING.md,
     },
+    // While you are parked here: in place of Start, above View session.
+    parked: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
+        padding: SPACING.lg,
+        borderRadius: RADIUS.lg,
+        backgroundColor: TOKENS.primarySoft,
+    },
+    parkedText: {
+        flex: 1,
+    },
+    parkedTitle: {
+        fontSize: 16,
+        lineHeight: 21,
+        fontWeight: '600',
+        color: TOKENS.text,
+    },
+    parkedStatus: {
+        marginTop: 2,
+        fontSize: 14,
+        lineHeight: 20,
+        color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
+    },
+    // Parked somewhere else: said just above "Park here instead".
+    parkedNote: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: TOKENS.textMuted,
+    },
     primary: {
         minHeight: 52,
         paddingVertical: SPACING.md,

@@ -11,6 +11,8 @@ import {
     getSpotName,
     getZoneLabel,
     isCovered,
+    isParkedAt,
+    nameApart,
     pickTopSpot,
     sortByValue,
     tidyName,
@@ -32,6 +34,26 @@ const street = (over = {}) => ({
     rates: rates(5),
     max_duration_minutes: 180,
     ...over,
+});
+
+describe('where you are parked', () => {
+    // As stored by useSessionManager: the spot's id, and its zone.
+    const session = { parkingSpotId: 7, spotId: 'Zone 1008', locationName: 'Eau Claire Ave SW' };
+
+    it('knows the spot, and another stretch of its zone', () => {
+        expect(isParkedAt(session, street({ id: 7 }))).toBe(true);
+        expect(isParkedAt(session, street({ id: 8 }))).toBe(true);
+        expect(isParkedAt(session, street({ id: 9, zone_info: { parking_zone: '1062' } }))).toBe(false);
+        expect(isParkedAt({ parkingSpotId: 7, spotId: 'Parkade' }, { id: 7, spot_type: 'off_street' })).toBe(true);
+        expect(isParkedAt(null, street())).toBe(false);
+    });
+
+    it('tells two blocks of one street apart in a sentence', () => {
+        expect(nameApart('Eau Claire Ave SW', '4 St SW to 5 St SW, north side', '9 Ave SW')).toBe('Eau Claire Ave SW');
+        expect(nameApart('Eau Claire Ave SW', '4 St SW to 5 St SW, north side', 'Eau Claire Ave SW'))
+            .toBe('Eau Claire Ave SW, 4 St SW to 5 St SW, north side');
+        expect(nameApart(null, null, '9 Ave SW')).toBeNull();
+    });
 });
 
 describe('getSpotName', () => {

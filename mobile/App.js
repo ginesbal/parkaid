@@ -80,12 +80,10 @@ function MainTabs() {
     }, []);
 
     return (
-        <SessionProvider>
-            {/* Type and distance, the same on Home and Map */}
-            <FilterProvider>
-                <Tabs />
-            </FilterProvider>
-        </SessionProvider>
+        // Type and distance, the same on Home and Map
+        <FilterProvider>
+            <Tabs />
+        </FilterProvider>
     );
 }
 
@@ -240,7 +238,11 @@ export default function App() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
-                <AppNavigation />
+                {/* Above the navigator, so Details, pushed over the tabs, knows
+                    when you are parked too */}
+                <SessionProvider>
+                    <AppNavigation />
+                </SessionProvider>
                 {/* Web's yes/no questions (see utils/confirm); phones use the system alert. */}
                 {Platform.OS === 'web' ? <ConfirmHost /> : null}
             </SafeAreaProvider>

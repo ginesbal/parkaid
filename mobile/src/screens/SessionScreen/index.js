@@ -9,7 +9,7 @@ import { useSession } from '../../context/SessionContext';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { orderPlaces, recallSearch } from '../../services/recentSearch';
 import { logger } from '../../utils/loggers';
-import { getSpotName } from '../../utils/spotPresentation';
+import { getSpotName, isParkedAt, nameApart } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
 import EmptyState from './components/EmptyState';
 import EndSummary from './components/EmptyState/EndSummary';
@@ -77,6 +77,8 @@ export default function SessionScreen({ route, navigation }) {
   React.useEffect(() => {
     if (!routeSpot || !isLoaded) return;
     navigation?.setParams({ spot: undefined });
+    // Already parked there: the running session is all there is to show.
+    if (isParkedAt(session, routeSpot)) return;
     // A new spot to park at replaces the last session's summary.
     dismissEnded();
     // Keep the new spot either way: if a session is running, it is set up
@@ -84,8 +86,11 @@ export default function SessionScreen({ route, navigation }) {
     setPendingSpot(routeSpot);
     rememberPendingSpot(routeSpot);
     if (session) {
+      // Two blocks of one street are told apart by their cross streets and side.
+      const next = getSpotName(routeSpot);
+      const here = nameApart(session.locationName, session.locationAddress, next.title);
       setNotice(
-        `You\u2019re already parked${session.locationName ? ` at ${session.locationName}` : ''}. End this session to park at ${getSpotName(routeSpot).title}.`
+        `You\u2019re already parked${here ? ` at ${here}` : ''}. End this session to park at ${nameApart(next.title, next.detail, session.locationName)}.`
       );
     }
   }, [routeSpot, isLoaded, session, navigation, dismissEnded]);
