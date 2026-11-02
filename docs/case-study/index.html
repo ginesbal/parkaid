@@ -4,588 +4,306 @@
 <meta charset="utf-8">
 <title>ParkAid case study</title>
 <style>
-  :root {
-    --ink: #0F1A26;
-    --muted: #5B6B7C;
-    --brand: #1D6D8B;
-    --brand-ink: #15495D;
-    --soft: #EDF6F9;
-    --line: #E6EAF0;
-    --bg: #F7F8FA;
-    --amber: #8F6216;
-    --amber-soft: #FBF5EA;
-  }
-  @page { size: 1280px 720px; margin: 0; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-  body {
-    font-family: Inter, sans-serif;
-    color: var(--ink);
-    font-size: 15px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    font-feature-settings: 'cv11', 'ss01';
-  }
-  .page {
-    position: relative;
-    width: 1280px;
-    height: 720px;
-    padding: 52px 72px 64px;
-    overflow: hidden;
-    page-break-after: always;
-    break-after: page;
-    background: #fff;
-  }
-  .page:last-child { page-break-after: auto; break-after: auto; }
-  .kicker {
-    font-size: 12.5px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--brand);
-  }
-  h1, h2, h3 { font-family: 'Inter Display', Inter, sans-serif; margin: 0; }
-  h1 { font-size: 76px; line-height: 1; font-weight: 700; letter-spacing: -0.025em; }
-  h2 { font-size: 34px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em; margin-top: 8px; max-width: 900px; }
-  h3 { font-size: 17px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; }
-  p { margin: 0; }
-  .muted { color: var(--muted); }
-  .small { font-size: 13px; line-height: 1.45; }
-  ul { margin: 0; padding: 0; list-style: none; }
-  li { position: relative; padding-left: 16px; }
-  li + li { margin-top: 7px; }
-  li::before { content: ''; position: absolute; left: 0; top: 0.62em; width: 6px; height: 6px; border-radius: 3px; background: var(--brand); opacity: 0.55; }
-  a { color: var(--brand-ink); text-decoration: none; }
-  .num { font-variant-numeric: tabular-nums; }
-  .footer {
-    position: absolute; left: 72px; right: 72px; bottom: 26px;
-    display: flex; justify-content: space-between;
-    font-size: 11.5px; color: var(--muted);
-    border-top: 1px solid var(--line); padding-top: 10px;
-  }
-  .shot {
-    border-radius: 20px;
-    border: 1px solid var(--line);
-    box-shadow: 0 1px 2px rgba(15, 26, 38, 0.06), 0 10px 28px rgba(15, 26, 38, 0.08);
-    overflow: hidden;
-    background: #fff;
-  }
-  .shot img { display: block; width: 100%; height: auto; }
-  .cap { margin-top: 10px; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
-  .cap b { color: var(--ink); font-weight: 600; }
-  .tag {
-    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-    padding: 3px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line);
-  }
-  .tag.after { background: var(--soft); color: var(--brand-ink); border-color: #CFE3EC; }
-  .card { border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; background: #fff; }
-  .panel { background: var(--bg); border-radius: 16px; padding: 18px 20px; }
+@font-face { font-family: 'Plex Sans'; src: url('fonts/IBMPlexSans-400.woff') format('woff'); font-weight: 400; }
+@font-face { font-family: 'Plex Sans'; src: url('fonts/IBMPlexSans-500.woff') format('woff'); font-weight: 500; }
+@font-face { font-family: 'Plex Sans'; src: url('fonts/IBMPlexSans-600.woff') format('woff'); font-weight: 600; }
+@font-face { font-family: 'Plex Sans'; src: url('fonts/IBMPlexSans-700.woff') format('woff'); font-weight: 700; }
+@font-face { font-family: 'Plex Mono'; src: url('fonts/IBMPlexMono-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Plex Mono'; src: url('fonts/IBMPlexMono-500.woff2') format('woff2'); font-weight: 500; }
+@font-face { font-family: 'Plex Mono'; src: url('fonts/IBMPlexMono-600.woff2') format('woff2'); font-weight: 600; }
+:root {
+  --ink: #0F1A26; --ink2: #2E3D4D; --muted: #5B6B7C; --faint: #8796A5;
+  --brand: #1D6D8B; --brand-ink: #15495D; --brand-50: #EDF6F9; --brand-100: #D7EBF2;
+  --line: #E3E8EE; --panel: #F4F6F9;
+  --amber: #8F6216; --amber-50: #FBF4E6; --amber-100: #F3E2C2;
+  --green: #2C7A6B; --green-50: #E9F4F1;
+}
+@page { size: 1280px 720px; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #fff; }
+body { font-family: 'Plex Sans', sans-serif; color: var(--ink); font-size: 15px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+a { color: inherit; text-decoration: none; }
+.page { position: relative; width: 1280px; height: 720px; overflow: hidden; padding: 98px 64px 44px;
+  break-after: page; page-break-after: always; background: #fff; }
+.page:last-child { break-after: auto; page-break-after: auto; }
+.page::before { content: ''; position: absolute; left: 64px; right: 64px; top: 70px; height: 1px; background: var(--line); }
+.page.cover::before { display: none; }
+.page.cover { padding: 64px; }
+.toc { display: grid; grid-template-columns: repeat(6, 1fr); position: relative; }
+.toc::before { content: ''; position: absolute; left: 5px; right: 40px; top: 5px; height: 2px; background: var(--brand-100); }
+.toc div { position: relative; }
+.toc i { display: block; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); }
+.toc b { display: block; margin-top: 8px; font-size: 12.5px; font-weight: 600; }
+.toc span { font-family: 'Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+.ic { fill: currentColor; flex: none; display: block; }
+.ic.arr { color: var(--faint); }
 
-  /* Cover */
-  .cover { padding: 0; display: grid; grid-template-columns: 600px 1fr; }
-  .cover-left { padding: 64px 0 0 72px; }
-  .cover .lede { font-size: 21px; line-height: 1.4; margin-top: 18px; max-width: 470px; color: var(--ink); }
-  .meta { margin: 30px 0 0; display: grid; gap: 12px; max-width: 480px; }
-  .meta div { display: grid; grid-template-columns: 86px 1fr; gap: 12px; }
-  .meta dt { font-size: 12.5px; font-weight: 600; color: var(--muted); padding-top: 1px; }
-  .meta dd { margin: 0; font-size: 14px; line-height: 1.45; }
-  .links { margin-top: 30px; display: grid; gap: 8px; max-width: 480px; }
-  .links a {
-    display: grid; grid-template-columns: 130px 1fr; align-items: center;
-    padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; color: var(--brand-ink);
-  }
-  .links a span { font-size: 12.5px; font-weight: 600; color: var(--ink); }
-  .byline { position: absolute; left: 72px; bottom: 34px; font-size: 13px; color: var(--muted); }
-  .cover-right { position: relative; background: var(--bg); }
-  .cover-right .shot { position: absolute; width: 196px; }
+/* Route navigation */
+.nav { position: absolute; top: 28px; left: 64px; right: 64px; height: 26px; display: flex; align-items: center; gap: 36px; }
+.nb, .stop, .pg, .mono { font-family: 'Plex Mono', monospace; }
+.nb { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.route { flex: 1; display: flex; align-items: center; }
+.stop { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+.stop i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #C3CED9; background: #fff; flex: none; }
+.stop.past { color: var(--muted); }
+.stop.past i { background: var(--brand); border-color: var(--brand); }
+.stop.now { color: var(--ink); font-weight: 600; }
+.stop .here { height: 20px; width: auto; flex: none; margin-top: -4px; }
+.seg { flex: 1; height: 2px; margin: 0 12px; background-image: linear-gradient(90deg, #C3CED9 55%, transparent 55%); background-size: 7px 2px; }
+.seg.past { background: var(--brand); }
+.pg { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pg em { font-style: normal; font-weight: 400; color: var(--faint); }
 
-  /* Grids */
-  .cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .stat { border-top: 2px solid var(--brand); padding-top: 12px; }
-  .stat .big { font-family: 'Inter Display', Inter, sans-serif; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-  .stat p { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--muted); }
-  .toc { display: grid; grid-template-columns: repeat(4, auto); gap: 6px 28px; font-size: 12.5px; color: var(--muted); }
-  .toc b { color: var(--brand); font-weight: 600; margin-right: 6px; font-variant-numeric: tabular-nums; }
+/* Type */
+.eyebrow { display: inline-block; font-family: 'Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--brand-ink); background: var(--brand-50); border-radius: 999px; padding: 4px 12px; }
+.title { font-size: 36px; line-height: 1.12; font-weight: 600; letter-spacing: -.012em; margin-top: 12px; }
+.sub { font-size: 16.5px; line-height: 1.4; color: var(--muted); margin-top: 6px; }
+.h3 { font-size: 16px; font-weight: 600; line-height: 1.3; }
+.label { font-family: 'Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; line-height: 1.4; }
 
-  .q { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: baseline; }
-  .q .n { font-weight: 600; color: var(--brand); font-variant-numeric: tabular-nums; }
-  .issue { padding: 12px 14px; border-radius: 12px; background: var(--amber-soft); border: 1px solid #F0E3C8; }
-  .issue + .issue { margin-top: 8px; }
-  .issue b { color: var(--amber); font-weight: 600; }
+/* Pieces */
+.shot { position: relative; flex: none; }
+.scr { width: 100%; height: 100%; overflow: hidden; border: 1px solid #DCE3EA; background: #fff; }
+.scr img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mk { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: var(--ink);
+  border: 2px solid #fff; color: #fff; font: 600 11.5px/20px 'Plex Mono', monospace; text-align: center; }
+.mk.amber { background: var(--amber); }
+.mk.inline { position: static; margin: 0; display: inline-block; flex: none; }
+.ib { width: 40px; height: 40px; border-radius: 12px; background: var(--brand-50); color: var(--brand); display: flex; align-items: center; justify-content: center; flex: none; }
+.ib.amber { background: var(--amber-50); color: var(--amber); }
+.ib.green { background: var(--green-50); color: var(--green); }
+.ib.ink { background: var(--ink); color: #fff; }
+.card { border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.tint { background: var(--panel); border-radius: 24px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink2); background: var(--panel); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+.chip .ic { color: var(--brand); }
+.tag { display: inline-block; font-family: 'Plex Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; }
+.tag.before { background: var(--amber-50); color: var(--amber); }
+.tag.after { background: var(--brand-50); color: var(--brand-ink); }
+.row { display: flex; align-items: center; }
+.big { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -.02em; }
+pre { font-family: 'Plex Mono', monospace; font-size: 11px; line-height: 1.5; color: #DCE7EF; background: var(--ink); border-radius: 16px; padding: 16px 18px; white-space: pre; }
+pre .c { color: #7F93A6; } pre .k { color: #8CCBE0; }
+.qr { fill: var(--ink); flex: none; }
 
-  .timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; margin-top: 34px; }
-  .timeline::before { content: ''; position: absolute; left: 6px; right: 6px; top: 6px; height: 2px; background: var(--line); }
-  .tl { position: relative; padding-right: 22px; }
-  .tl .dot { width: 14px; height: 14px; border-radius: 7px; background: #fff; border: 3px solid var(--brand); position: relative; }
-  .tl .when { margin-top: 14px; font-size: 12.5px; font-weight: 600; color: var(--brand); }
-  .tl h3 { margin-top: 4px; font-size: 15.5px; }
-  .tl p { margin-top: 4px; font-size: 13px; line-height: 1.45; color: var(--muted); }
-  .loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .step { background: var(--bg); border-radius: 14px; padding: 16px 16px 18px; }
-  .step .n { font-size: 12px; font-weight: 600; color: var(--brand); }
-  .step h3 { margin-top: 4px; font-size: 15.5px; }
-  .step p { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--muted); }
-
-  .pairs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 26px; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .pair .tag { margin-bottom: 8px; }
-  .pair-cap { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
-  .pair-cap b { color: var(--ink); }
-
-  .decisions { margin-top: 26px; display: grid; gap: 12px; }
-  .decision { display: grid; grid-template-columns: 40px 340px 1fr 180px; gap: 20px; align-items: start; padding: 18px 22px; border: 1px solid var(--line); border-radius: 14px; }
-  .decision .n { font-family: 'Inter Display', Inter, sans-serif; font-size: 24px; font-weight: 600; color: var(--brand); line-height: 1.1; }
-  .decision h3 { font-size: 17px; }
-  .decision p { font-size: 14.5px; line-height: 1.5; color: var(--muted); }
-  .decision .where { font-size: 13px; color: var(--muted); }
-  .decision .where b { display: block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
-
-  .arch { display: grid; gap: 8px; }
-  .node { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; background: #fff; }
-  .node h3 { font-size: 14px; }
-  .node p { font-size: 12.5px; line-height: 1.4; color: var(--muted); margin-top: 2px; }
-  .node.app { border-color: #CFE3EC; background: var(--soft); }
-  .arrow { text-align: center; color: var(--muted); font-size: 13px; line-height: 1; }
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  pre {
-    margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--ink); color: #E6EEF4;
-    font-family: 'DejaVu Sans Mono', monospace; font-size: 11.5px; line-height: 1.55; white-space: pre; overflow: hidden;
-  }
-  pre .c { color: #8FA3B5; }
-  pre .k { color: #9FD0E3; }
-
-  .challenges { margin-top: 22px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-  .ch { border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; min-height: 400px; }
-  .ch h3 { font-size: 16.5px; }
-  .ch .lab { margin-top: 12px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
-  .ch p { margin-top: 4px; font-size: 13.6px; line-height: 1.5; }
-  .ch .res { margin-top: auto; padding-top: 12px; }
-  .ch .res p { color: var(--brand-ink); font-weight: 500; }
-
-  table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.4; }
-  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 8px 0; border-bottom: 1px solid var(--line); }
-  td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-  td:first-child { font-weight: 600; width: 120px; }
-  td:last-child { color: var(--brand-ink); font-weight: 500; }
-
-  .gap-box { border-radius: 14px; padding: 16px 18px; background: var(--amber-soft); border: 1px solid #F0E3C8; }
-  .gap-box h3 { color: var(--amber); font-size: 15px; }
-  .gap-box li::before { background: var(--amber); }
+.tl-grid { display: grid; grid-template-columns: 110px repeat(6, 1fr); row-gap: 14px; align-items: center; }
+.tl-col { font-size: 11.5px; font-weight: 600; color: var(--ink2); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.tl-lane { grid-column: 1; font-family: 'Plex Mono', monospace; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.tl-mile { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.25; color: var(--ink2); padding-right: 8px; }
+.tl-mile img { height: 16px; flex: none; }
+.bar { height: 40px; border-radius: 10px; display: flex; align-items: center; padding: 0 12px; font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; }
+.bar.team { background: #E7ECF1; color: var(--ink2); margin-right: 10px; }
+.bar.me { background: var(--brand); color: #fff; }
+.bar.ai { background: var(--brand-100); color: var(--brand-ink); }
+.split { display: flex; height: 36px; border-radius: 10px; overflow: hidden; margin-top: 10px; font-size: 12.5px; font-weight: 600; }
+.split span { display: flex; align-items: center; padding: 0 12px; white-space: nowrap; }
+.split .ai { background: var(--brand-100); color: var(--brand-ink); }
+.split .me { background: var(--brand); color: #fff; justify-content: center; padding: 0 6px; }
+.crop { flex: none; align-self: flex-start; border-radius: 12px; overflow: hidden; border: 1px solid #DCE3EA; background: #fff; }
+.crop img { display: block; max-width: 100%; max-height: 106px; width: auto; height: auto; }
+.imp { display: grid; grid-template-columns: 40px 104px 1fr 18px 1fr; gap: 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; }
+.imp .was { font-size: 13px; color: var(--muted); text-decoration: line-through; text-decoration-color: #C3CED9; }
+.imp .now { font-size: 13.5px; font-weight: 600; color: var(--brand-ink); }
 </style>
 </head>
 <body>
 
-<!-- 1 Cover -->
 <section class="page cover">
-  <div class="cover-left">
-    <div class="kicker">Case study · Mobile app</div>
-    <h1 style="margin-top:14px">ParkAid</h1>
-    <p class="lede">Street parking in downtown Calgary, with the City’s real rates, time limits and rush-hour rules.</p>
-    <dl class="meta">
-      <div><dt>Role</dt><dd>Capstone team member (team of five), then the follow-up work on my own, with AI coding help</dd></div>
-      <div><dt>Build</dt><dd>React Native (Expo SDK 54) for iOS, Android and web. Node and Express API, Postgres with PostGIS.</dd></div>
-      <div><dt>Timeline</dt><dd>SAIT capstone, then September 2025 to November 2026</dd></div>
-    </dl>
-    <div class="links">
-      <a href="https://github.com/ginesbal/parkaid"><span>Source code</span>github.com/ginesbal/parkaid</a>
-      <a href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough"><span>Demo</span>Seven recordings of the real build</a>
-      <a href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid"><span>Figma</span>Design file: components and screens</a>
-    </div>
-    <div class="byline">Ehrl Balquin · <a href="https://www.linkedin.com/in/ehrlbalquin/">linkedin.com/in/ehrlbalquin</a></div>
-  </div>
-  <div class="cover-right">
-    <div class="shot" style="left:44px; top:118px"><img src="img/home.jpg" alt="Home screen"></div>
-    <div class="shot" style="left:262px; top:64px"><img src="img/map.jpg" alt="Map screen"></div>
-    <div class="shot" style="left:480px; top:150px"><img src="img/details.jpg" alt="Spot details screen"></div>
-  </div>
-</section>
-
-<!-- 2 At a glance -->
-<section class="page">
-  <div class="kicker">02 · At a glance</div>
-  <h2>Real rates and rules, in the order a driver needs them</h2>
-  <div class="cols-3" style="margin-top:28px">
-    <div>
-      <h3>The problem</h3>
-      <p class="muted" style="margin-top:8px">Calgary publishes each block’s zone, rates by time of day and rush-hour rules as open data. The capstone version guessed prices from zone codes, showed raw City addresses and listed the same block several times.</p>
-    </div>
-    <div>
-      <h3>What I did</h3>
-      <p class="muted" style="margin-top:8px">Rebuilt the data path and the interface around four questions: can I park here now, what does it cost right now, until when, and which zone do I pay? Then three rounds of critique, each followed by small, tested fixes.</p>
-    </div>
-    <div>
-      <h3>The result</h3>
-      <p class="muted" style="margin-top:8px">Rates and rush-hour rules come straight from the City’s data. A busy downtown map reads at a glance. Payment is plain: ParkAid keeps time, and MyParking, the City’s app, takes the money.</p>
-    </div>
-  </div>
-  <div class="stats" style="margin-top:40px">
-    <div class="stat"><div class="big">23.5%</div><p>of downtown street rows were repeats of the same stretch (277 of 1,178). Each now comes back once.</p></div>
-    <div class="stat"><div class="big">45 → 15</div><p>pins on the opening map view. 44 overlapped before; 4 touch now.</p></div>
-    <div class="stat"><div class="big">170</div><p>automated tests passing: 152 in the app, 18 in the backend.</p></div>
-    <div class="stat"><div class="big">4.23 → 4.74</div><p>contrast ratio for grey text on a selected row, now above the 4.5 : 1 AA minimum.</p></div>
-  </div>
-  <div class="panel" style="margin-top:40px; padding:16px 20px">
-    <div class="toc">
-      <span><b>03</b>The problem</span><span><b>06</b>Before and after</span><span><b>09</b>React Native build</span><span><b>12</b>Walkthrough</span>
-      <span><b>04</b>My contribution</span><span><b>07</b>Key decisions</span><span><b>10</b>Technical challenges</span><span><b>13</b>Figma file</span>
-      <span><b>05</b>Process</span><span><b>08</b>Map and filters</span><span><b>11</b>Testing and results</span><span><b>14</b>Outcome, gaps, links</span>
-    </div>
-  </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 2</span></div>
-</section>
-
-<!-- 3 Problem -->
-<section class="page">
-  <div style="display:grid; grid-template-columns: 1fr 236px; gap:56px">
-    <div>
-      <div class="kicker">03 · The problem</div>
-      <h2>The City’s data was right. The capstone app read it loosely.</h2>
-      <p style="margin-top:20px; max-width:640px">Downtown parking changes by block, by side of the street and by the hour. Before leaving the car, a driver needs four answers:</p>
-      <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; max-width:640px">
-        <div class="q"><span class="n">1</span><span>Can I park here now?</span></div>
-        <div class="q"><span class="n">2</span><span>What does it cost right now?</span></div>
-        <div class="q"><span class="n">3</span><span>Until when? Time limits, rush-hour tow-away.</span></div>
-        <div class="q"><span class="n">4</span><span>Which zone do I pay in MyParking?</span></div>
+  <div style="display:grid; grid-template-columns: 560px 1fr; gap:48px; height:100%; padding-top:2px">
+    <div style="display:flex; flex-direction:column">
+      <div class="row" style="gap:10px"><img src="img/pin.png" alt="" style="height:30px"><span class="label">Case study · Ehrl Balquin · 2025 to 2026</span></div>
+      <h1 style="font-size:88px; line-height:1; font-weight:700; letter-spacing:-.025em; margin-top:22px">ParkAid</h1>
+      <p style="font-size:23px; line-height:1.35; color:var(--ink2); margin-top:16px; max-width:500px">Street parking in downtown Calgary, with the City’s real rates, time limits and rush-hour rules.</p>
+      <div style="display:grid; gap:12px; margin-top:28px">
+        <div class="row" style="gap:12px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,5A3.5,3.5 0 0,0 8.5,8.5A3.5,3.5 0 0,0 12,12A3.5,3.5 0 0,0 15.5,8.5A3.5,3.5 0 0,0 12,5M12,7A1.5,1.5 0 0,1 13.5,8.5A1.5,1.5 0 0,1 12,10A1.5,1.5 0 0,1 10.5,8.5A1.5,1.5 0 0,1 12,7M5.5,8A2.5,2.5 0 0,0 3,10.5C3,11.44 3.53,12.25 4.29,12.68C4.65,12.88 5.06,13 5.5,13C5.94,13 6.35,12.88 6.71,12.68C7.08,12.47 7.39,12.17 7.62,11.81C6.89,10.86 6.5,9.7 6.5,8.5C6.5,8.41 6.5,8.31 6.5,8.22C6.2,8.08 5.86,8 5.5,8M18.5,8C18.14,8 17.8,8.08 17.5,8.22C17.5,8.31 17.5,8.41 17.5,8.5C17.5,9.7 17.11,10.86 16.38,11.81C16.5,12 16.63,12.15 16.78,12.3C16.94,12.45 17.1,12.58 17.29,12.68C17.65,12.88 18.06,13 18.5,13C18.94,13 19.35,12.88 19.71,12.68C20.47,12.25 21,11.44 21,10.5A2.5,2.5 0 0,0 18.5,8M12,14C9.66,14 5,15.17 5,17.5V19H19V17.5C19,15.17 14.34,14 12,14M4.71,14.55C2.78,14.78 0,15.76 0,17.5V19H3V17.07C3,16.06 3.69,15.22 4.71,14.55M19.29,14.55C20.31,15.22 21,16.06 21,17.07V19H24V17.5C24,15.76 21.22,14.78 19.29,14.55M12,16C13.53,16 15.24,16.5 16.23,17H7.77C8.76,16.5 10.47,16 12,16Z"/></svg></span><span>Capstone team of five, then my own follow-up work with AI coding help</span></div>
+        <div class="row" style="gap:12px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1Z"/></svg></span><span>React Native (Expo): iOS, Android and web from one codebase</span></div>
+        <div class="row" style="gap:12px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M9,10H7V12H9V10M13,10H11V12H13V10M17,10H15V12H17V10M19,3H18V1H16V3H8V1H6V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z"/></svg></span><span>SAIT capstone, then September 2025 to November 2026</span></div>
       </div>
-      <p style="margin-top:22px; max-width:640px">The City publishes all of this as open data. The capstone code, as of October 2025:</p>
-      <div style="margin-top:12px; max-width:700px">
-        <div class="issue"><b>Guessed prices.</b> The price came from a lookup on the zone’s code, not the City’s rates. Zone 1684 showed $6.00 an hour; the City charges $2.00 to $2.25.</div>
-        <div class="issue"><b>Wrong “FREE”.</b> Blocks on 11 Ave SW, which the City charges for on weekdays, showed FREE.</div>
-        <div class="issue"><b>Hard to read.</b> Rows used raw City addresses (“11 Av SW , Fr 5 St SW To 6 St SW”), and the same block appeared several times.</div>
-        <div class="issue"><b>Not real yet.</b> The web build showed a static map image, and the session screen was a demo with rates you picked yourself.</div>
+      <div class="row" style="gap:10px; margin-top:28px">
+        <a class="chip" style="font-size:13.5px; padding:8px 14px" href="https://github.com/ginesbal/parkaid"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"/></svg>Source code</a>
+        <a class="chip" style="font-size:13.5px; padding:8px 14px" href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,16.5L16,12L10,7.5V16.5Z"/></svg>Demo recordings</a>
+        <a class="chip" style="font-size:13.5px; padding:8px 14px" href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2C17.5,2 22,6 22,11A6,6 0 0,1 16,17H14.2C13.9,17 13.7,17.2 13.7,17.5C13.7,17.6 13.8,17.7 13.8,17.8C14.2,18.3 14.4,18.9 14.4,19.5C14.5,20.9 13.4,22 12,22M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C12.3,20 12.5,19.8 12.5,19.5C12.5,19.3 12.4,19.2 12.4,19.1C12,18.6 11.8,18.1 11.8,17.5C11.8,16.1 12.9,15 14.3,15H16A4,4 0 0,0 20,11C20,7.1 16.4,4 12,4M6.5,10C7.3,10 8,10.7 8,11.5C8,12.3 7.3,13 6.5,13C5.7,13 5,12.3 5,11.5C5,10.7 5.7,10 6.5,10M9.5,6C10.3,6 11,6.7 11,7.5C11,8.3 10.3,9 9.5,9C8.7,9 8,8.3 8,7.5C8,6.7 8.7,6 9.5,6M14.5,6C15.3,6 16,6.7 16,7.5C16,8.3 15.3,9 14.5,9C13.7,9 13,8.3 13,7.5C13,6.7 13.7,6 14.5,6M17.5,10C18.3,10 19,10.7 19,11.5C19,12.3 18.3,13 17.5,13C16.7,13 16,12.3 16,11.5C16,10.7 16.7,10 17.5,10Z"/></svg>Figma file</a>
+        <a class="chip" style="font-size:13.5px; padding:8px 14px" href="https://www.linkedin.com/in/ehrlbalquin/"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 3A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H19M18.5 18.5V13.2A3.26 3.26 0 0 0 15.24 9.94C14.39 9.94 13.4 10.46 12.92 11.24V10.13H10.13V18.5H12.92V13.57C12.92 12.8 13.54 12.17 14.31 12.17A1.4 1.4 0 0 1 15.71 13.57V18.5H18.5M6.88 8.56A1.68 1.68 0 0 0 8.56 6.88C8.56 5.95 7.81 5.19 6.88 5.19A1.69 1.69 0 0 0 5.19 6.88C5.19 7.81 5.95 8.56 6.88 8.56M8.27 18.5V10.13H5.5V18.5H8.27Z"/></svg>LinkedIn</a>
       </div>
-    </div>
-    <div style="padding-top:8px">
-      <div class="shot"><img src="img/before-home.jpg" alt="Capstone home list with raw addresses and FREE labels"></div>
-      <p class="cap"><b>Capstone code, October 2025,</b> run with the City’s current records. Its pricing logic was re-created from the old backend.</p>
-    </div>
-  </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 3</span></div>
-</section>
+      <div style="margin-top:auto"><div class="label" style="margin-bottom:12px">The route through this case study</div><div class="toc"><div><i></i><b>Overview</b><span>p. 02</span></div><div><i></i><b>Problem</b><span>p. 03</span></div><div><i></i><b>Process</b><span>p. 04</span></div><div><i></i><b>Design</b><span>p. 05–07</span></div><div><i></i><b>Build</b><span>p. 08</span></div><div><i></i><b>Results</b><span>p. 09–10</span></div></div></div>
 
-<!-- 4 My contribution -->
-<section class="page">
-  <div class="kicker">04 · My contribution</div>
-  <h2>From a team capstone to a product I kept improving</h2>
-  <div style="display:grid; grid-template-columns: 380px 1fr; gap:28px; margin-top:26px">
-    <div class="panel" style="padding:20px 22px">
-      <span class="tag">Capstone · team of five</span>
-      <h3 style="margin-top:12px">SAIT, Year 2, Semester 2</h3>
-      <p class="muted" style="margin-top:8px">We built the base app together: an Expo app with a home list, a map and a parking session, a Node and Express API, and an import of the City’s parking data.</p>
-      <p class="muted" style="margin-top:10px">This repo starts from that finished code (first commit September 29, 2025), so the team’s own commit history isn’t in it.</p>
     </div>
-    <div class="card" style="padding:20px 24px; border-color:#CFE3EC">
-      <span class="tag after">After the capstone · September 2025 to November 2026</span>
-      <h3 style="margin-top:12px">My own work, with AI coding help</h3>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:12px">
-        <ul>
-          <li>Made the backend deployable: Render with push-to-deploy, Supabase Postgres with PostGIS, one required setting.</li>
-          <li>Replaced guessed prices with the City’s rates by time of day, and added rush-hour restrictions.</li>
-          <li>Merged repeated segments and placed each block’s pin at its midpoint.</li>
-        </ul>
-        <ul>
-          <li>Redesigned the app: a calmer palette and type scale, block names that match the signs, and a plain payment flow.</li>
-          <li>Put a real map on the web and grouped pins that overlap.</li>
-          <li>Ran three rounds of design critique and shipped the fixes in small, tested steps.</li>
-        </ul>
-      </div>
+    <div class="tint" style="display:flex; align-items:center; justify-content:center; gap:20px; background:var(--brand-50)">
+      <div class="shot" style="width:172px;height:372px"><div class="scr" style="border-radius:23px"><img src="img/home.jpg" alt="Home"></div></div>
+      <div style="margin-top:-48px"><div class="shot" style="width:172px;height:372px"><div class="scr" style="border-radius:23px"><img src="img/map.jpg" alt="Map"></div></div></div>
+      <div class="shot" style="width:172px;height:372px"><div class="scr" style="border-radius:23px"><img src="img/details.jpg" alt="Spot details"></div></div>
     </div>
   </div>
-  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top:22px">
-    <div class="stat"><div class="big">101 of 128</div><p>commits were written by Claude Code, an AI coding agent, from March 2026 on, working from my instructions.</p></div>
-    <div class="stat"><div class="big">27</div><p>commits are under my own accounts. A few came from an OpenAI Codex branch merged in April 2026.</p></div>
-    <div class="stat"><div class="big">Every round</div><p>I set the priorities and made the product calls: what to fix, in what order, and what the app should promise.</p></div>
+</section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop now"><img class="here" src="img/pin.png" alt="">Overview</span><span class="seg"></span><span class="stop "><i></i>Problem</span><span class="seg"></span><span class="stop "><i></i>Process</span><span class="seg"></span><span class="stop "><i></i>Design</span><span class="seg"></span><span class="stop "><i></i>Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">02<em> / 10</em></span></div>
+<div class="eyebrow">Overview</div><h2 class="title">Real rates and rules, in the order a driver needs them</h2>
+<div style="display:grid; grid-template-columns: 470px 1fr; gap:48px; margin-top:28px">
+  <div style="display:grid; gap:22px; align-content:start"><div class="row" style="gap:16px; align-items:flex-start; position:relative"><span class="ib amber"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"/></svg></span><div><div class="label">Problem</div><p style="margin-top:4px; font-size:15.5px; line-height:1.45">The capstone app guessed prices from zone codes, showed raw City addresses and listed the same block again and again.</p></div></div><div class="row" style="gap:16px; align-items:flex-start; position:relative"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.61,19L13.53,9.91C14.46,7.57 14,4.81 12.09,2.91C9.79,0.61 6.21,0.4 3.66,2.26L7.5,6.11L6.08,7.5L2.25,3.69C0.39,6.23 0.6,9.82 2.9,12.11C4.76,13.97 7.47,14.46 9.79,13.59L18.9,22.7C19.29,23.09 19.92,23.09 20.31,22.7L22.61,20.4C23,20 23,19.39 22.61,19M19.61,20.59L10.15,11.13C9.54,11.58 8.86,11.85 8.15,11.95C6.79,12.15 5.36,11.74 4.32,10.7C3.37,9.76 2.93,8.5 3,7.26L6.09,10.35L10.33,6.11L7.24,3C8.5,2.95 9.73,3.39 10.68,4.33C11.76,5.41 12.17,6.9 11.92,8.29C11.8,9 11.5,9.66 11.04,10.25L20.5,19.7L19.61,20.59Z"/></svg></span><div><div class="label">What I did</div><p style="margin-top:4px; font-size:15.5px; line-height:1.45">Rebuilt the data path and the screens around four driver questions, then ran three rounds of critique and fixes.</p></div></div><div class="row" style="gap:16px; align-items:flex-start; position:relative"><span class="ib green"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 12L20.6 9.2L20.9 5.5L17.3 4.7L15.4 1.5L12 3L8.6 1.5L6.7 4.7L3.1 5.5L3.4 9.2L1 12L3.4 14.8L3.1 18.5L6.7 19.3L8.6 22.5L12 21L15.4 22.5L17.3 19.3L20.9 18.5L20.6 14.8L23 12M18.7 16.9L16 17.5L14.6 19.9L12 18.8L9.4 19.9L8 17.5L5.3 16.9L5.5 14.1L3.7 12L5.5 9.9L5.3 7.1L8 6.5L9.4 4.1L12 5.2L14.6 4.1L16 6.5L18.7 7.1L18.5 9.9L20.3 12L18.5 14.1L18.7 16.9M16.6 7.6L18 9L10 17L6 13L7.4 11.6L10 14.2L16.6 7.6Z"/></svg></span><div><div class="label">Result</div><p style="margin-top:4px; font-size:15.5px; line-height:1.45">The City’s own rates and rush-hour rules, a map that reads at a glance, and an honest payment flow.</p></div></div></div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px"><div class="card" style="padding:18px 20px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,18.54L19.37,12.8L21,14.07L12,21.07L3,14.07L4.62,12.81L12,18.54M12,16L3,9L12,2L21,9L12,16M12,4.53L6.26,9L12,13.47L17.74,9L12,4.53Z"/></svg></span><div class="big" style="margin-top:16px">23.5%</div><p class="small muted" style="margin-top:8px">of downtown street rows were repeats (277 of 1,178). Now each comes back once.</p></div><div class="card" style="padding:18px 20px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 9C11.5 7.62 12.62 6.5 14 6.5C15.1 6.5 16.03 7.21 16.37 8.19C16.45 8.45 16.5 8.72 16.5 9C16.5 10.38 15.38 11.5 14 11.5C12.91 11.5 12 10.81 11.64 9.84C11.55 9.58 11.5 9.29 11.5 9M5 9C5 13.5 10.08 19.66 11 20.81L10 22C10 22 3 14.25 3 9C3 5.83 5.11 3.15 8 2.29C6.16 3.94 5 6.33 5 9M14 2C17.86 2 21 5.13 21 9C21 14.25 14 22 14 22C14 22 7 14.25 7 9C7 5.13 10.14 2 14 2M14 4C11.24 4 9 6.24 9 9C9 10 9 12 14 18.71C19 12 19 10 19 9C19 6.24 16.76 4 14 4Z"/></svg></span><div class="big" style="margin-top:16px">45<span style="display:inline-block; vertical-align:middle; margin:0 6px"><svg class="ic arr" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></span>15</div><p class="small muted" style="margin-top:8px">pins on the opening map view. 44 overlapped; 4 touch now.</p></div><div class="card" style="padding:18px 20px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M7,2V4H8V18A4,4 0 0,0 12,22A4,4 0 0,0 16,18V4H17V2H7M11,16C10.4,16 10,15.6 10,15C10,14.4 10.4,14 11,14C11.6,14 12,14.4 12,15C12,15.6 11.6,16 11,16M13,12C12.4,12 12,11.6 12,11C12,10.4 12.4,10 13,10C13.6,10 14,10.4 14,11C14,11.6 13.6,12 13,12M14,7H10V4H14V7Z"/></svg></span><div class="big" style="margin-top:16px">170</div><p class="small muted" style="margin-top:8px">automated tests passing: 152 in the app, 18 in the backend.</p></div><div class="card" style="padding:18px 20px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20C9.79,20 7.79,19.1 6.34,17.66L17.66,6.34C19.1,7.79 20,9.79 20,12A8,8 0 0,1 12,20M6,8H8V6H9.5V8H11.5V9.5H9.5V11.5H8V9.5H6M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,16H17V14.5H12V16Z"/></svg></span><div class="big" style="margin-top:16px">4.74 : 1</div><p class="small muted" style="margin-top:8px">contrast for grey text on a selected row, up from 4.23. AA asks for 4.5.</p></div></div>
+</div>
+<div class="row" style="gap:8px; flex-wrap:wrap; position:absolute; left:64px; right:64px; bottom:40px">
+  <span class="label" style="margin-right:6px">Stack</span><span class="chip">Expo SDK 54</span><span class="chip">React Native 0.81</span><span class="chip">React Navigation</span><span class="chip">react-native-maps</span><span class="chip">MapLibre GL JS</span><span class="chip">Node + Express</span><span class="chip">Postgres + PostGIS</span><span class="chip">Supabase</span><span class="chip">Render</span><span class="chip">Jest</span>
+</div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Problem</span><span class="seg"></span><span class="stop "><i></i>Process</span><span class="seg"></span><span class="stop "><i></i>Design</span><span class="seg"></span><span class="stop "><i></i>Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">03<em> / 10</em></span></div>
+<div style="display:grid; grid-template-columns: 1fr 400px; gap:56px">
+  <div>
+    <div class="eyebrow">The problem</div><h2 class="title">The City’s data was right. The capstone app read it loosely.</h2>
+    <div class="label" style="margin-top:26px">Four answers a driver needs before leaving the car</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px"><div class="card row" style="gap:12px; padding:12px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,11L6.5,6.5H17.5L19,11M17.5,16A1.5,1.5 0 0,1 16,14.5A1.5,1.5 0 0,1 17.5,13A1.5,1.5 0 0,1 19,14.5A1.5,1.5 0 0,1 17.5,16M6.5,16A1.5,1.5 0 0,1 5,14.5A1.5,1.5 0 0,1 6.5,13A1.5,1.5 0 0,1 8,14.5A1.5,1.5 0 0,1 6.5,16M18.92,6C18.72,5.42 18.16,5 17.5,5H6.5C5.84,5 5.28,5.42 5.08,6L3,12V20A1,1 0 0,0 4,21H5A1,1 0 0,0 6,20V19H18V20A1,1 0 0,0 19,21H20A1,1 0 0,0 21,20V12L18.92,6Z"/></svg></span><span class="h3" style="font-size:15px">Can I park here now?</span></div><div class="card row" style="gap:12px; padding:12px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 16.82L19.94 18.23L19.19 19.53L16 17.69V14H17.5V16.82M24 17C24 20.87 20.87 24 17 24S10 20.87 10 17C10 16.66 10.03 16.33 10.08 16H2V4H20V10.68C22.36 11.81 24 14.21 24 17M10.68 14C10.86 13.64 11.05 13.3 11.28 12.97C11.19 13 11.1 13 11 13C9.34 13 8 11.66 8 10S9.34 7 11 7 14 8.34 14 10C14 10.25 13.96 10.5 13.9 10.73C14.84 10.27 15.89 10 17 10C17.34 10 17.67 10.03 18 10.08V8C16.9 8 16 7.11 16 6H6C6 7.11 5.11 8 4 8V12C5.11 12 6 12.9 6 14H10.68M22 17C22 14.24 19.76 12 17 12S12 14.24 12 17 14.24 22 17 22 22 19.76 22 17Z"/></svg></span><span class="h3" style="font-size:15px">What does it cost right now?</span></div><div class="card row" style="gap:12px; padding:12px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7V13L16.2 16.1L17 14.9L12.5 12.2V7H11M20 12V18H22V12H20M20 20V22H22V20H20M18 20C16.3 21.3 14.3 22 12 22C6.5 22 2 17.5 2 12S6.5 2 12 2C16.8 2 20.9 5.4 21.8 10H19.7C18.8 6.6 15.7 4 12 4C7.6 4 4 7.6 4 12S7.6 20 12 20C14.4 20 16.5 18.9 18 17.3V20Z"/></svg></span><span class="h3" style="font-size:15px">Until when?</span></div><div class="card row" style="gap:12px; padding:12px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17,19V5H7V19H17M17,1A2,2 0 0,1 19,3V21A2,2 0 0,1 17,23H7C5.89,23 5,22.1 5,21V3C5,1.89 5.89,1 7,1H17M9,7H15V9H9V7M9,11H13V13H9V11Z"/></svg></span><span class="h3" style="font-size:15px">Which zone do I pay?</span></div></div>
+    <div class="label" style="margin-top:28px">What the capstone app showed, October 2025</div>
+    <div style="display:grid; gap:14px; margin-top:12px"><div class="row" style="gap:12px; align-items:flex-start"><span class="mk amber inline">1</span><div><div class="h3" style="font-size:15px">Raw City addresses</div><p class="small muted" style="margin-top:2px">“11 Av SW , Fr 5 St SW To 6…”</p></div></div><div class="row" style="gap:12px; align-items:flex-start"><span class="mk amber inline">2</span><div><div class="h3" style="font-size:15px">FREE on a charged block</div><p class="small muted" style="margin-top:2px">Prices came from a zone-code lookup. Zone 1684 showed $6.00; the City charges $2.00 to $2.25.</p></div></div><div class="row" style="gap:12px; align-items:flex-start"><span class="mk amber inline">3</span><div><div class="h3" style="font-size:15px">The same block, again and again</div><p class="small muted" style="margin-top:2px">One stretch of curb, split into segments, listed once per segment.</p></div></div></div>
+    <div class="row" style="gap:10px; margin-top:16px; color:var(--muted)"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"/></svg><span class="small">Also: a static map image on the web, and a demo session where you picked the rate yourself.</span></div>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 4</span></div>
-</section>
-
-<!-- 5 Process -->
-<section class="page">
-  <div class="kicker">05 · Design and development process</div>
-  <h2>Look at the running app, decide, fix, check</h2>
-  <div class="timeline">
-    <div class="tl"><div class="dot"></div><div class="when">Year 2 · capstone</div><h3>Base app</h3><p>Team of five builds the app, API and data import.</p></div>
-    <div class="tl"><div class="dot"></div><div class="when">September 2025</div><h3>New repo</h3><p>The finished capstone code moves to this repo.</p></div>
-    <div class="tl"><div class="dot"></div><div class="when">March to May 2026</div><h3>Redesign and deploy</h3><p>New interface; backend live on Render; renamed ParkAid.</p></div>
-    <div class="tl"><div class="dot"></div><div class="when">October 2026</div><h3>Critique and fix</h3><p>Three critique rounds. The last one became ten fix steps.</p></div>
-    <div class="tl"><div class="dot"></div><div class="when">November 2026</div><h3>Show the work</h3><p>Real-data recordings, the Figma file and this case study.</p></div>
+  <div class="tint" style="background:var(--amber-50); display:flex; flex-direction:column; align-items:center; justify-content:center; height:578px; margin-top:-2px">
+    <div class="shot" style="width:232px;height:502px"><div class="scr" style="border-radius:31px"><img src="img/before-home.jpg" alt="Capstone home list"></div><span class="mk amber" style="left:76.92%;top:26.30%">1</span><span class="mk amber" style="left:78.21%;top:35.55%">2</span><span class="mk amber" style="left:6.15%;top:31.99%">3</span></div>
+    <p class="small muted" style="margin-top:12px; text-align:center; max-width:300px">Capstone code, run with today’s City records. Its pricing logic re-created from the old backend.</p>
   </div>
-  <h3 style="margin-top:40px">How each round worked</h3>
-  <div class="loop" style="margin-top:12px">
-    <div class="step"><div class="n">1 · Capture</div><h3>Run the real build</h3><p>The web build with the City’s records for the blocks around 11 Ave SW and 5 St SW, at a fixed time (a Tuesday, 1:40 PM). Screenshot every screen.</p></div>
-    <div class="step"><div class="n">2 · Critique</div><h3>Review it</h3><p>Usability heuristics, wording, and accessibility: contrast, keyboard order, screen-reader labels, small and wide screens.</p></div>
-    <div class="step"><div class="n">3 · Decide</div><h3>Choose the order</h3><p>My call for the last round: money facts first (rates, rush hour, cost), load the City’s real rates, and fix the backend too.</p></div>
-    <div class="step"><div class="n">4 · Fix and check</div><h3>One step at a time</h3><p>Each fix in its own commit, with Jest tests, the web build checked at 360, 390 and 1280 px, and an Android bundle build.</p></div>
+</div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Process</span><span class="seg"></span><span class="stop "><i></i>Design</span><span class="seg"></span><span class="stop "><i></i>Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">04<em> / 10</em></span></div>
+<div class="eyebrow">Process</div><h2 class="title">From a team capstone to work I kept improving</h2>
+<div class="tl" style="margin-top:24px">
+  <div class="tl-grid">
+    <div></div><div class="tl-col mono">Capstone</div><div class="tl-col mono">Sep 2025</div><div class="tl-col mono">Mar 2026</div><div class="tl-col mono">May 2026</div><div class="tl-col mono">Oct 2026</div><div class="tl-col mono">Nov 2026</div>
+    <div class="tl-lane">Milestones</div><div class="tl-mile" style="grid-column:3"><img src="img/pin.png" alt="">Code moves to this repo</div><div class="tl-mile" style="grid-column:5"><img src="img/pin.png" alt="">Backend live, renamed ParkAid</div><div class="tl-mile" style="grid-column:6"><img src="img/pin.png" alt="">3 critique rounds, 10 fixes</div><div class="tl-mile" style="grid-column:7"><img src="img/pin.png" alt="">Recordings, Figma, this case study</div>
+    <div class="tl-lane">Team of five</div><div class="bar team" style="grid-column:2 / 3">Base app</div>
+    <div class="tl-lane">Me</div><div class="bar me" style="grid-column:3 / 8">Direction and product calls · 27 commits</div>
+    <div class="tl-lane">AI agents</div><div class="bar ai" style="grid-column:4 / 8">Claude Code · 101 commits from March 2026</div>
   </div>
-  <p class="small muted" style="margin-top:16px">The critiques were AI-assisted reviews of the running build, not sessions with drivers.</p>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 5</span></div>
-</section>
-
-<!-- 6 Before and after -->
-<section class="page">
-  <div class="kicker">06 · Initial and refined screens</div>
-  <h2>Same City data, clearer answers</h2>
-  <div class="pairs">
-    <div class="pair">
-      <div><span class="tag">Before</span><div class="shot"><img src="img/before-home.jpg" alt="Capstone home"></div></div>
-      <div><span class="tag after">After</span><div class="shot"><img src="img/home.jpg" alt="Refined home"></div></div>
-      <p class="pair-cap"><b>Home.</b> Raw addresses and FREE on charged blocks became block, side and zone in plain words, the rate now, and the rush-hour warning in amber.</p>
-    </div>
-    <div class="pair">
-      <div><span class="tag">Before</span><div class="shot"><img src="img/before-map.jpg" alt="Capstone map"></div></div>
-      <div><span class="tag after">After</span><div class="shot"><img src="img/map.jpg" alt="Refined map"></div></div>
-      <p class="pair-cap"><b>Map.</b> A static image on the web build with pins that show no price became a real map, with overlapping pins grouped by count and lowest rate.</p>
-    </div>
-    <div class="pair">
-      <div><span class="tag">Before</span><div class="shot"><img src="img/before-session.jpg" alt="Capstone session demo"></div></div>
-      <div><span class="tag after">After</span><div class="shot"><img src="img/park.jpg" alt="Refined park setup"></div></div>
-      <p class="pair-cap"><b>Park.</b> A demo where you chose the hourly rate became the City’s rate, the end time and the cost before you start, and a pointer to pay in ParkPlus.</p>
-    </div>
+</div>
+<div style="display:grid; grid-template-columns: 300px 1fr; gap:40px; margin-top:48px">
+  <div>
+    <div class="label">Who wrote the code, to Oct 28, 2026</div>
+    <div class="split"><span style="width:78.9%" class="ai">101 by Claude Code</span><span style="width:21.1%" class="me">27 mine</span></div>
+    <p class="small muted" style="margin-top:10px">27 commits are under my own accounts, a few of them from an OpenAI Codex branch (April 2026). The team’s capstone history isn’t in this repo.</p>
   </div>
-  <p class="small muted" style="margin-top:14px">Before: the capstone code from October 2025, run locally. After: the current web build. Both use the City’s records for the same downtown blocks.</p>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 6</span></div>
-</section>
-
-<!-- 7 Key decisions -->
-<section class="page">
-  <div class="kicker">07 · Key decisions</div>
-  <h2>Five calls that shaped the app</h2>
-  <div class="decisions">
-    <div class="decision"><div class="n">1</div><h3>Show the City’s rate for right now, and the rest of the day</h3><p>One price is wrong for most of the day. On 11 Ave SW the rate is $1.00 until 11 AM, $2.00 until 1:30 PM, then $1.75.</p><div class="where"><b>Where</b>Rows, map pins, Details</div></div>
-    <div class="decision"><div class="n">2</div><h3>Treat rush hour as a rule, not a note</h3><p>A car left in a tow-away window gets ticketed or towed. So the list warns, lengths stop before the window, and Start isn’t offered during it.</p><div class="where"><b>Where</b>Home, Details, Park</div></div>
-    <div class="decision"><div class="n">3</div><h3>Be plain about money</h3><p>ParkAid doesn’t take payment. It times the stay, shows the cost, copies the zone, opens MyParking, and reminds you to end that session too.</p><div class="where"><b>Where</b>Park, session, summary</div></div>
-    <div class="decision"><div class="n">4</div><h3>Name blocks the way the signs do</h3><p>“5–6 St, north side · Zone 3100” matches what a driver sees at the curb. Two zones on one block are told apart by side.</p><div class="where"><b>Where</b>Rows and cards</div></div>
-    <div class="decision"><div class="n">5</div><h3>Group pins that would overlap</h3><p>Downtown, 45 blocks fit within 250 m. One pin shows the count and the lowest rate; a tap zooms in until the spots part.</p><div class="where"><b>Where</b>Map, on phones and web</div></div>
+  <div>
+    <div class="label">How each round worked</div>
+    <div class="row" style="gap:10px; align-items:flex-start; margin-top:12px"><div style="width:128px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20,4H16.83L15,2H9L7.17,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M20,18H4V6H8.05L9.88,4H14.12L15.95,6H20V18M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Capture</div><p class="small muted" style="margin-top:2px">Run the real build with City data</p></div><div style="display:flex; align-items:center; height:40px"><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div style="width:128px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,4H9.5C9.25,4.64 9.09,5.31 9.04,6H4V16H10V19.08L13.08,16H18V13.23L20,15.23V16A2,2 0 0,1 18,18H13.9L10.2,21.71C10,21.9 9.75,22 9.5,22H9A1,1 0 0,1 8,21V18H4A2,2 0 0,1 2,16V6C2,4.89 2.9,4 4,4M15.5,2C18,2 20,4 20,6.5C20,7.38 19.75,8.2 19.31,8.89L22.41,12L21,13.39L17.89,10.31C17.2,10.75 16.38,11 15.5,11C13,11 11,9 11,6.5C11,4 13,2 15.5,2M15.5,4A2.5,2.5 0 0,0 13,6.5A2.5,2.5 0 0,0 15.5,9A2.5,2.5 0 0,0 18,6.5A2.5,2.5 0 0,0 15.5,4Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Critique</div><p class="small muted" style="margin-top:2px">Heuristics, contrast, keyboard, screen sizes</p></div><div style="display:flex; align-items:center; height:40px"><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div style="width:128px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,4V12.5L6,9.5L9,13C10,14 10,15 10,15V21H14V14C14,14 14,13 13.47,12C12.94,11 12,10 12,10L9,6.58L11.5,4M18,4L13.54,8.47L14,9C14,9 14.93,10 15.47,11C15.68,11.4 15.8,11.79 15.87,12.13L21,7"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Decide</div><p class="small muted" style="margin-top:2px">I chose what to fix first</p></div><div style="display:flex; align-items:center; height:40px"><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div style="width:128px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.61,19L13.53,9.91C14.46,7.57 14,4.81 12.09,2.91C9.79,0.61 6.21,0.4 3.66,2.26L7.5,6.11L6.08,7.5L2.25,3.69C0.39,6.23 0.6,9.82 2.9,12.11C4.76,13.97 7.47,14.46 9.79,13.59L18.9,22.7C19.29,23.09 19.92,23.09 20.31,22.7L22.61,20.4C23,20 23,19.39 22.61,19M19.61,20.59L10.15,11.13C9.54,11.58 8.86,11.85 8.15,11.95C6.79,12.15 5.36,11.74 4.32,10.7C3.37,9.76 2.93,8.5 3,7.26L6.09,10.35L10.33,6.11L7.24,3C8.5,2.95 9.73,3.39 10.68,4.33C11.76,5.41 12.17,6.9 11.92,8.29C11.8,9 11.5,9.66 11.04,10.25L20.5,19.7L19.61,20.59Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Fix</div><p class="small muted" style="margin-top:2px">One step per commit</p></div><div style="display:flex; align-items:center; height:40px"><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div style="width:128px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 12L20.6 9.2L20.9 5.5L17.3 4.7L15.4 1.5L12 3L8.6 1.5L6.7 4.7L3.1 5.5L3.4 9.2L1 12L3.4 14.8L3.1 18.5L6.7 19.3L8.6 22.5L12 21L15.4 22.5L17.3 19.3L20.9 18.5L20.6 14.8L23 12M18.7 16.9L16 17.5L14.6 19.9L12 18.8L9.4 19.9L8 17.5L5.3 16.9L5.5 14.1L3.7 12L5.5 9.9L5.3 7.1L8 6.5L9.4 4.1L12 5.2L14.6 4.1L16 6.5L18.7 7.1L18.5 9.9L20.3 12L18.5 14.1L18.7 16.9M16.6 7.6L18 9L10 17L6 13L7.4 11.6L10 14.2L16.6 7.6Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Verify</div><p class="small muted" style="margin-top:2px">Jest, 3 screen widths, Android bundle</p></div></div>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 7</span></div>
-</section>
-
-<!-- 8 Map and filters -->
-<section class="page">
-  <div class="kicker">08 · Map interactions and filtering</div>
-  <h2>Compare spots without tapping every pin</h2>
-  <div style="display:grid; grid-template-columns: 196px 196px 196px 1fr; gap:22px; margin-top:24px">
-    <div><div class="shot"><img src="img/map-groups.jpg" alt="Map opening view with grouped pins"></div><p class="cap"><b>Opening view.</b> A group shows its count and its lowest rate.</p></div>
-    <div><div class="shot"><img src="img/map-parted.jpg" alt="Map zoomed into a group with a selected pin"></div><p class="cap"><b>After a tap on a group.</b> The map zooms until the spots part; the chosen pin turns dark.</p></div>
-    <div><div class="shot"><img src="img/filters.jpg" alt="Home with filters open"></div><p class="cap"><b>Filters.</b> Best value, street only, within 500 m.</p></div>
-    <div style="padding-left:6px">
-      <h3>Sort</h3>
-      <p class="muted" style="margin-top:6px"><b style="color:var(--ink)">Near me</b> ranks by walk, then price. <b style="color:var(--ink)">Best value</b> ranks by the rate now, then distance. In both, short stays, blocks with no parking right now, and permit-only blocks go lower.</p>
-      <h3 style="margin-top:18px">Filter</h3>
-      <p class="muted" style="margin-top:6px">Parking type (street, lot, parkade, permit) and distance (150 m to 1 km). The list and the map share the same filters.</p>
-      <h3 style="margin-top:18px">Move around</h3>
-      <p class="muted" style="margin-top:6px">Search an address, drop a pin, or drag the map and search that area.</p>
-      <h3 style="margin-top:18px">Grouping rule</h3>
-      <p class="muted" style="margin-top:6px">Pins closer than a group pill (70 × 34 px at the current zoom) share one pin, led by the best-ranked spot. If every spot in a group is within 12 m, a tap selects the lead instead of zooming.</p>
+</div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop past"><i></i>Process</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Design</span><span class="seg"></span><span class="stop "><i></i>Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">05<em> / 10</em></span></div>
+<div class="eyebrow">Design · 1 of 3</div><h2 class="title">Same City data, clearer answers</h2>
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:36px; margin-top:20px">
+  <div>
+    <div class="h3">Home</div>
+    <div style="display:grid; grid-template-columns:150px 150px; gap:14px; margin-top:10px">
+      <div><span class="tag before">Before</span><div style="margin-top:8px"><div class="shot" style="width:150px;height:325px"><div class="scr" style="border-radius:20px"><img src="img/before-home.jpg" alt="Home before"></div></div></div></div>
+      <div><span class="tag after">After</span><div style="margin-top:8px"><div class="shot" style="width:150px;height:325px"><div class="scr" style="border-radius:20px"><img src="img/home.jpg" alt="Home after"></div></div></div></div>
     </div>
+    <div style="display:grid; gap:6px; margin-top:12px; color:var(--brand)"><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,12H3.5L6,9.5L3.5,7H11V3L12,2L13,3V7H18L20.5,9.5L18,12H13V20A2,2 0 0,1 15,22H9A2,2 0 0,1 11,20V12Z"/></svg><span class="small" style="color:var(--ink2)">Block, side and zone</span></div><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 16.82L19.94 18.23L19.19 19.53L16 17.69V14H17.5V16.82M24 17C24 20.87 20.87 24 17 24S10 20.87 10 17C10 16.66 10.03 16.33 10.08 16H2V4H20V10.68C22.36 11.81 24 14.21 24 17M10.68 14C10.86 13.64 11.05 13.3 11.28 12.97C11.19 13 11.1 13 11 13C9.34 13 8 11.66 8 10S9.34 7 11 7 14 8.34 14 10C14 10.25 13.96 10.5 13.9 10.73C14.84 10.27 15.89 10 17 10C17.34 10 17.67 10.03 18 10.08V8C16.9 8 16 7.11 16 6H6C6 7.11 5.11 8 4 8V12C5.11 12 6 12.9 6 14H10.68M22 17C22 14.24 19.76 12 17 12S12 14.24 12 17 14.24 22 17 22 22 19.76 22 17Z"/></svg><span class="small" style="color:var(--ink2)">Rate now, not FREE</span></div><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5,19.85L6.41,5.76L2.41,1.76L1.11,3L4.57,6.46L3,11V19A1,1 0 0,0 4,20H5A1,1 0 0,0 6,19V18H16.11L20.84,22.73L22.11,21.46L20.5,19.85M6.5,15A1.5,1.5 0 0,1 5,13.5A1.5,1.5 0 0,1 6.5,12A1.5,1.5 0 0,1 8,13.5A1.5,1.5 0 0,1 6.5,15M5,10L5.78,7.67L8.11,10H5M17.5,5.5L19,10H13.2L16.12,12.92C16.5,12.17 17.37,11.86 18.12,12.21C18.87,12.57 19.18,13.47 18.83,14.21C18.68,14.5 18.43,14.77 18.12,14.92L21,17.8V11L18.92,5C18.71,4.4 18.14,4 17.5,4H7.2L8.7,5.5H17.5Z"/></svg><span class="small" style="color:var(--ink2)">Rush-hour warning</span></div></div>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 8</span></div>
-</section>
-
-<!-- 9 React Native build -->
-<section class="page">
-  <div class="kicker">09 · React Native implementation</div>
-  <h2>One codebase, three platforms, two map engines</h2>
-  <div style="display:grid; grid-template-columns: 330px 1fr 380px; gap:28px; margin-top:24px">
-    <div class="arch">
-      <div class="node"><h3>City of Calgary open data</h3><p>Parking zones, rates by time of day, restrictions</p></div>
-      <div class="arrow">↓</div>
-      <div class="node"><h3>Import script (Node)</h3><p>Four datasets into one table; safe to re-run</p></div>
-      <div class="arrow">↓</div>
-      <div class="node"><h3>Postgres + PostGIS on Supabase</h3><p>Nearby search runs in the database, with an index</p></div>
-      <div class="arrow">↓</div>
-      <div class="node"><h3>Express API on Render</h3><p>Merges a block’s segments, formats rows</p></div>
-      <div class="arrow">↓</div>
-      <div class="split">
-        <div class="node app"><h3>iOS and Android</h3><p>react-native-maps (Google)</p></div>
-        <div class="node app"><h3>Web</h3><p>react-native-web, MapLibre GL JS, OpenStreetMap tiles</p></div>
-      </div>
+  <div>
+    <div class="h3">Map</div>
+    <div style="display:grid; grid-template-columns:150px 150px; gap:14px; margin-top:10px">
+      <div><span class="tag before">Before</span><div style="margin-top:8px"><div class="shot" style="width:150px;height:325px"><div class="scr" style="border-radius:20px"><img src="img/before-map.jpg" alt="Map before"></div></div></div></div>
+      <div><span class="tag after">After</span><div style="margin-top:8px"><div class="shot" style="width:150px;height:325px"><div class="scr" style="border-radius:20px"><img src="img/map.jpg" alt="Map after"></div></div></div></div>
     </div>
-    <div>
-      <h3>My front-end responsibilities</h3>
-      <ul style="margin-top:10px; font-size:14px">
-        <li><b>Screens and navigation:</b> Welcome, Home, Map, Details, Park and the session, with React Navigation.</li>
-        <li><b>Shared components:</b> spot rows, the meta line that wraps by part, map pins and group pins, ParkPlus actions.</li>
-        <li><b>Rules kept out of the UI:</b> rates, rush hour, ranking and grouping live in plain functions with Jest tests.</li>
-        <li><b>Platform files:</b> <span class="num">index.web.js</span> for the web map; a compact badge for Android’s marker limit.</li>
-        <li><b>State:</b> a session context for the timer, hooks for location and nearby spots, and cached responses for bad connections.</li>
-        <li><b>Access and layout:</b> screen-reader labels, Reduce Motion, keyboard order on web, a 520 px column on wide screens.</li>
-      </ul>
-      <p class="small muted" style="margin-top:14px">Expo SDK 54 · React Native 0.81 · React Navigation · react-native-maps · MapLibre GL JS · Jest</p>
+    <div style="display:grid; gap:6px; margin-top:12px; color:var(--brand)"><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5,3L20.34,3.03L15,5.1L9,3L3.36,4.9C3.15,4.97 3,5.15 3,5.38V20.5A0.5,0.5 0 0,0 3.5,21L3.66,20.97L9,18.9L15,21L20.64,19.1C20.85,19.03 21,18.85 21,18.62V3.5A0.5,0.5 0 0,0 20.5,3M10,5.47L14,6.87V18.53L10,17.13V5.47M5,6.46L8,5.45V17.15L5,18.31V6.46M19,17.54L16,18.55V6.86L19,5.7V17.54Z"/></svg><span class="small" style="color:var(--ink2)">Real map on the web</span></div><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 9C11.5 7.62 12.62 6.5 14 6.5C15.1 6.5 16.03 7.21 16.37 8.19C16.45 8.45 16.5 8.72 16.5 9C16.5 10.38 15.38 11.5 14 11.5C12.91 11.5 12 10.81 11.64 9.84C11.55 9.58 11.5 9.29 11.5 9M5 9C5 13.5 10.08 19.66 11 20.81L10 22C10 22 3 14.25 3 9C3 5.83 5.11 3.15 8 2.29C6.16 3.94 5 6.33 5 9M14 2C17.86 2 21 5.13 21 9C21 14.25 14 22 14 22C14 22 7 14.25 7 9C7 5.13 10.14 2 14 2M14 4C11.24 4 9 6.24 9 9C9 10 9 12 14 18.71C19 12 19 10 19 9C19 6.24 16.76 4 14 4Z"/></svg><span class="small" style="color:var(--ink2)">Grouped pins</span></div><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z"/></svg><span class="small" style="color:var(--ink2)">Rates on the pins</span></div></div>
+  </div>
+  <div>
+    <div class="h3">Park</div>
+    <div style="display:grid; grid-template-columns:150px 150px; gap:14px; margin-top:10px">
+      <div><span class="tag before">Before</span><div style="margin-top:8px"><div class="shot" style="width:150px;height:325px"><div class="scr" style="border-radius:20px"><img src="img/before-session.jpg" alt="Park before"></div></div></div></div>
+      <div><span class="tag after">After</span><div style="margin-top:8px"><div class="shot" style="width:150px;height:325px"><div class="scr" style="border-radius:20px"><img src="img/park.jpg" alt="Park after"></div></div></div></div>
     </div>
-    <div>
-      <pre><span class="c">// mobile/src/utils/mapGroups.js (simplified)</span>
-<span class="k">export function</span> groupPins(spots, worldSize) {
-  <span class="k">const</span> groups = [];
-  <span class="k">for</span> (<span class="k">const</span> spot <span class="k">of</span> spots) { <span class="c">// best first</span>
-    <span class="k">const</span> { x, y } = worldPoint(
-      getCoordinates(spot), worldSize);
-    <span class="k">const</span> near = groups.find((g) =>
-      Math.abs(g.x - x) &lt; PIN_WIDTH &amp;&amp;
-      Math.abs(g.y - y) &lt; PIN_HEIGHT);
-    <span class="k">if</span> (near) near.spots.push(spot);
-    <span class="k">else</span> groups.push(
-      { x, y, lead: spot, spots: [spot] });
-  }
-  <span class="k">return</span> groups;
+    <div style="display:grid; gap:6px; margin-top:12px; color:var(--brand)"><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 16.82L19.94 18.23L19.19 19.53L16 17.69V14H17.5V16.82M24 17C24 20.87 20.87 24 17 24S10 20.87 10 17C10 16.66 10.03 16.33 10.08 16H2V4H20V10.68C22.36 11.81 24 14.21 24 17M10.68 14C10.86 13.64 11.05 13.3 11.28 12.97C11.19 13 11.1 13 11 13C9.34 13 8 11.66 8 10S9.34 7 11 7 14 8.34 14 10C14 10.25 13.96 10.5 13.9 10.73C14.84 10.27 15.89 10 17 10C17.34 10 17.67 10.03 18 10.08V8C16.9 8 16 7.11 16 6H6C6 7.11 5.11 8 4 8V12C5.11 12 6 12.9 6 14H10.68M22 17C22 14.24 19.76 12 17 12S12 14.24 12 17 14.24 22 17 22 22 19.76 22 17Z"/></svg><span class="small" style="color:var(--ink2)">City rate, not picked</span></div><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20A7,7 0 0,1 5,13A7,7 0 0,1 12,6A7,7 0 0,1 19,13A7,7 0 0,1 12,20M19.03,7.39L20.45,5.97C20,5.46 19.55,5 19.04,4.56L17.62,6C16.07,4.74 14.12,4 12,4A9,9 0 0,0 3,13A9,9 0 0,0 12,22C17,22 21,17.97 21,13C21,10.88 20.26,8.93 19.03,7.39M11,14H13V8H11M15,1H9V3H15V1Z"/></svg><span class="small" style="color:var(--ink2)">End time and cost first</span></div><div class="row" style="gap:8px"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M17,19V5H7V19H17M17,1A2,2 0 0,1 19,3V21A2,2 0 0,1 17,23H7C5.89,23 5,22.1 5,21V3C5,1.89 5.89,1 7,1H17M9,7H15V9H9V7M9,11H13V13H9V11Z"/></svg><span class="small" style="color:var(--ink2)">Pay in ParkPlus by zone</span></div></div>
+  </div></div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop past"><i></i>Process</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Design</span><span class="seg"></span><span class="stop "><i></i>Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">06<em> / 10</em></span></div>
+<div class="eyebrow">Design · 2 of 3</div><h2 class="title">Five decisions, shown in the app</h2>
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 236px; gap:14px; margin-top:16px">
+  <div class="card" style="padding:16px 18px; display:flex; flex-direction:column">
+    <div class="row" style="gap:10px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 16.82L19.94 18.23L19.19 19.53L16 17.69V14H17.5V16.82M24 17C24 20.87 20.87 24 17 24S10 20.87 10 17C10 16.66 10.03 16.33 10.08 16H2V4H20V10.68C22.36 11.81 24 14.21 24 17M10.68 14C10.86 13.64 11.05 13.3 11.28 12.97C11.19 13 11.1 13 11 13C9.34 13 8 11.66 8 10S9.34 7 11 7 14 8.34 14 10C14 10.25 13.96 10.5 13.9 10.73C14.84 10.27 15.89 10 17 10C17.34 10 17.67 10.03 18 10.08V8C16.9 8 16 7.11 16 6H6C6 7.11 5.11 8 4 8V12C5.11 12 6 12.9 6 14H10.68M22 17C22 14.24 19.76 12 17 12S12 14.24 12 17 14.24 22 17 22 22 19.76 22 17Z"/></svg></span><div><div class="mono label" style="color:var(--brand)">Decision 1</div><div class="h3" style="margin-top:1px">Show the rate for now, and for later</div></div></div>
+    <div class="crop" style="margin-top:12px"><img src="img/crop-rates.jpg" alt=""></div>
+    <p class="small muted" style="margin-top:auto; padding-top:8px">One price is wrong most of the day. Here: $1.00, then $2.00, then $1.75.</p>
+  </div>
+  <div class="card" style="padding:16px 18px; display:flex; flex-direction:column">
+    <div class="row" style="gap:10px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5,19.85L6.41,5.76L2.41,1.76L1.11,3L4.57,6.46L3,11V19A1,1 0 0,0 4,20H5A1,1 0 0,0 6,19V18H16.11L20.84,22.73L22.11,21.46L20.5,19.85M6.5,15A1.5,1.5 0 0,1 5,13.5A1.5,1.5 0 0,1 6.5,12A1.5,1.5 0 0,1 8,13.5A1.5,1.5 0 0,1 6.5,15M5,10L5.78,7.67L8.11,10H5M17.5,5.5L19,10H13.2L16.12,12.92C16.5,12.17 17.37,11.86 18.12,12.21C18.87,12.57 19.18,13.47 18.83,14.21C18.68,14.5 18.43,14.77 18.12,14.92L21,17.8V11L18.92,5C18.71,4.4 18.14,4 17.5,4H7.2L8.7,5.5H17.5Z"/></svg></span><div><div class="mono label" style="color:var(--brand)">Decision 2</div><div class="h3" style="margin-top:1px">Treat rush hour as a rule</div></div></div>
+    <div class="crop" style="margin-top:12px"><img src="img/crop-rush.jpg" alt=""></div>
+    <p class="small muted" style="margin-top:auto; padding-top:8px">Lengths stop before the tow-away window. No Start inside it.</p>
+  </div>
+  <div class="card" style="padding:16px 18px; display:flex; flex-direction:column">
+    <div class="row" style="gap:10px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,3C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V16.72C21.59,16.37 22,15.74 22,15V9C22,8.26 21.59,7.63 21,7.28V5A2,2 0 0,0 19,3H5M5,5H19V7H13A2,2 0 0,0 11,9V15A2,2 0 0,0 13,17H19V19H5V5M13,9H20V15H13V9M16,10.5A1.5,1.5 0 0,0 14.5,12A1.5,1.5 0 0,0 16,13.5A1.5,1.5 0 0,0 17.5,12A1.5,1.5 0 0,0 16,10.5Z"/></svg></span><div><div class="mono label" style="color:var(--brand)">Decision 3</div><div class="h3" style="margin-top:1px">Be plain about money</div></div></div>
+    <div class="crop" style="margin-top:12px"><img src="img/crop-pay.jpg" alt=""></div>
+    <p class="small muted" style="margin-top:auto; padding-top:8px">ParkAid times the stay. MyParking, the City’s app, takes the payment.</p>
+  </div>
+  <div class="card" style="padding:16px 18px; display:flex; flex-direction:column">
+    <div class="row" style="gap:10px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,12H3.5L6,9.5L3.5,7H11V3L12,2L13,3V7H18L20.5,9.5L18,12H13V20A2,2 0 0,1 15,22H9A2,2 0 0,1 11,20V12Z"/></svg></span><div><div class="mono label" style="color:var(--brand)">Decision 4</div><div class="h3" style="margin-top:1px">Name blocks the way signs do</div></div></div>
+    <div class="crop" style="margin-top:12px"><img src="img/crop-names.jpg" alt=""></div>
+    <p class="small muted" style="margin-top:auto; padding-top:8px">Block, side and zone, as a driver reads them at the curb.</p>
+  </div>
+  <div class="card" style="padding:16px 18px; display:flex; flex-direction:column">
+    <div class="row" style="gap:10px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 9C11.5 7.62 12.62 6.5 14 6.5C15.1 6.5 16.03 7.21 16.37 8.19C16.45 8.45 16.5 8.72 16.5 9C16.5 10.38 15.38 11.5 14 11.5C12.91 11.5 12 10.81 11.64 9.84C11.55 9.58 11.5 9.29 11.5 9M5 9C5 13.5 10.08 19.66 11 20.81L10 22C10 22 3 14.25 3 9C3 5.83 5.11 3.15 8 2.29C6.16 3.94 5 6.33 5 9M14 2C17.86 2 21 5.13 21 9C21 14.25 14 22 14 22C14 22 7 14.25 7 9C7 5.13 10.14 2 14 2M14 4C11.24 4 9 6.24 9 9C9 10 9 12 14 18.71C19 12 19 10 19 9C19 6.24 16.76 4 14 4Z"/></svg></span><div><div class="mono label" style="color:var(--brand)">Decision 5</div><div class="h3" style="margin-top:1px">Group pins that would overlap</div></div></div>
+    <div class="crop" style="margin-top:12px"><img src="img/crop-groups.jpg" alt=""></div>
+    <p class="small muted" style="margin-top:auto; padding-top:8px">Count and lowest rate on one pin. A tap zooms in.</p>
+  </div>
+  <div class="card" style="padding:22px 24px; background:var(--ink); border-color:var(--ink); color:#fff; display:flex; flex-direction:column; justify-content:space-between">
+    <div class="label" style="color:#8FA3B5">The rule under all five</div>
+    <p style="font-size:24px; line-height:1.3; font-weight:500; letter-spacing:-.01em">“The signs at the curb have the final say.”</p>
+    <p class="small" style="color:#A3B1BF">ParkAid’s own words, on every spot. The app shows the City’s data and says where it stops.</p>
+  </div></div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop past"><i></i>Process</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Design</span><span class="seg"></span><span class="stop "><i></i>Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">07<em> / 10</em></span></div>
+<div class="eyebrow">Design · 3 of 3</div><h2 class="title">Compare spots without tapping every pin</h2>
+<div style="display:grid; grid-template-columns: 616px 1fr; gap:40px; margin-top:20px">
+  <div class="row" style="gap:20px; align-items:flex-start">
+    <div><div class="shot" style="width:192px;height:416px"><div class="scr" style="border-radius:26px"><img src="img/map-groups.jpg" alt="Map, opening view"></div><span class="mk " style="left:48.21%;top:31.52%">1</span></div><div class="label" style="margin-top:10px">Opening view</div></div>
+    <div><div class="shot" style="width:192px;height:416px"><div class="scr" style="border-radius:26px"><img src="img/map-parted.jpg" alt="Map after a tap on a group"></div><span class="mk " style="left:49.49%;top:30.33%">2</span><span class="mk " style="left:25.64%;top:70.14%">3</span></div><div class="label" style="margin-top:10px">After a tap</div></div>
+    <div><div class="shot" style="width:192px;height:416px"><div class="scr" style="border-radius:26px"><img src="img/filters.jpg" alt="Filters"></div><span class="mk " style="left:35.38%;top:18.60%">4</span><span class="mk " style="left:28.72%;top:34.36%">5</span><span class="mk " style="left:60.00%;top:47.16%">6</span></div><div class="label" style="margin-top:10px">Filters</div></div>
+  </div>
+  <div>
+    <div style="display:grid; gap:10px"><div class="row" style="gap:10px; align-items:flex-start"><span class="mk inline">1</span><div><span class="h3" style="font-size:14.5px">Group pin</span><span class="small muted"> · Count and lowest rate</span></div></div><div class="row" style="gap:10px; align-items:flex-start"><span class="mk inline">2</span><div><span class="h3" style="font-size:14.5px">Tap a group</span><span class="small muted"> · Zooms until spots part; the chosen pin turns dark</span></div></div><div class="row" style="gap:10px; align-items:flex-start"><span class="mk inline">3</span><div><span class="h3" style="font-size:14.5px">Sheet</span><span class="small muted"> · Follows the selected spot</span></div></div><div class="row" style="gap:10px; align-items:flex-start"><span class="mk inline">4</span><div><span class="h3" style="font-size:14.5px">Type</span><span class="small muted"> · Street, lot, parkade, permit</span></div></div><div class="row" style="gap:10px; align-items:flex-start"><span class="mk inline">5</span><div><span class="h3" style="font-size:14.5px">Distance</span><span class="small muted"> · 150 m to 1 km</span></div></div><div class="row" style="gap:10px; align-items:flex-start"><span class="mk inline">6</span><div><span class="h3" style="font-size:14.5px">Sort</span><span class="small muted"> · Near me by walk, Best value by rate now</span></div></div></div>
+    <div class="label" style="margin-top:22px">The grouping rule</div>
+    <p class="small muted" style="margin-top:4px">Pins closer than a group pill (70 × 34 px at the current zoom) share one, led by the best-ranked spot. The same code runs on Google Maps and MapLibre.</p>
+    <pre style="margin-top:12px"><span class="c">// utils/mapGroups.js, simplified</span>
+<span class="k">for</span> (<span class="k">const</span> spot <span class="k">of</span> spots) {   <span class="c">// best first</span>
+  <span class="k">const</span> p = worldPoint(spot, worldSize);
+  <span class="k">const</span> near = groups.find((g) =&gt;
+    Math.abs(g.x - p.x) &lt; PIN_WIDTH &amp;&amp;
+    Math.abs(g.y - p.y) &lt; PIN_HEIGHT);
+  <span class="k">if</span> (near) near.spots.push(spot);
+  <span class="k">else</span> groups.push({ ...p, lead: spot, spots: [spot] });
 }</pre>
-      <p class="cap">The same grouping runs on both map engines. Pin positions come from Web Mercator, so only the screen distance between pins matters.</p>
-    </div>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 9</span></div>
-</section>
-
-<!-- 10 Challenges -->
-<section class="page">
-  <div class="kicker">10 · Technical challenges</div>
-  <h2>What was hard, and how it was solved</h2>
-  <div class="challenges">
-    <div class="ch">
-      <h3>Prices that change by the hour</h3>
-      <div class="lab">Approach</div><p>Read the City’s zone-rate layer, turn its rate bands into time ranges, and count only the hours the City charges.</p>
-      <div class="res"><div class="lab">Result</div><p>Rows show the rate now, Details lists the day’s rates, and Park shows the cost before you start.</p></div>
-    </div>
-    <div class="ch">
-      <h3>Rush-hour restrictions</h3>
-      <div class="lab">Approach</div><p>Check each restriction’s days and hours against the current time and against the end of a planned stay.</p>
-      <div class="res"><div class="lab">Result</div><p>Amber warnings, capped lengths (“the longest here is 1 hour 50 min”), and no Start during the window.</p></div>
-    </div>
-    <div class="ch">
-      <h3>Repeated segments</h3>
-      <div class="lab">Approach</div><p>The City splits a stretch of a block into segments. The API merges rows with the same zone, address, side, type, hours, limit and restriction.</p>
-      <div class="res"><div class="lab">Result</div><p>277 of 1,178 street rows near downtown were repeats. Each block now comes back once, pinned at its midpoint.</p></div>
-    </div>
-    <div class="ch">
-      <h3>A crowded map</h3>
-      <div class="lab">Approach</div><p>Group pins by their distance on screen at the current zoom, on both map engines, and zoom in on tap.</p>
-      <div class="res"><div class="lab">Result</div><p>45 pins with 44 overlapping became 15 pins with 4 touching on the opening web view.</p></div>
-    </div>
-    <div class="ch">
-      <h3>Android map markers</h3>
-      <div class="lab">Approach</div><p>react-native-maps on Android draws a custom marker into a 100 × 100 px bitmap, which crops a price pill. Android gets a compact round badge instead.</p>
-      <div class="res"><div class="lab">Result</div><p>No cropped pins. The selected spot’s price shows in the sheet below the map.</p></div>
-    </div>
+</div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop past"><i></i>Process</span><span class="seg past"></span><span class="stop past"><i></i>Design</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Build</span><span class="seg"></span><span class="stop "><i></i>Results</span></div><span class="pg">08<em> / 10</em></span></div>
+<div class="eyebrow">Build</div><h2 class="title">One codebase, three platforms, two map engines</h2>
+<div class="row" style="gap:10px; align-items:stretch; margin-top:22px"><div class="card" style="padding:14px 16px; flex:1; display:flex; flex-direction:column; justify-content:center"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M19,15H17V13H19M19,19H17V17H19M13,7H11V5H13M13,11H11V9H13M13,15H11V13H13M13,19H11V17H13M7,11H5V9H7M7,15H5V13H7M7,19H5V17H7M15,11V5L12,2L9,5V7H3V21H21V11H15Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">City open data</div><p class="small muted">Zones, rates, restrictions</p></div><div style="display:flex; align-items:center"><svg class="ic arr" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div class="card" style="padding:14px 16px; flex:1; display:flex; flex-direction:column; justify-content:center"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.84 12L3.92 16.92L2.5 15.5L5 13H0V11H5L2.5 8.5L3.92 7.08L8.84 12M12 3C8.59 3 5.68 4.07 4.53 5.57L5 6L6.03 7.07C6 7.05 6 7 6 7C6 6.5 8.13 5 12 5S18 6.5 18 7 15.87 9 12 9C9.38 9 7.58 8.31 6.68 7.72L9.8 10.84C10.5 10.94 11.24 11 12 11C14.39 11 16.53 10.47 18 9.64V12.45C16.7 13.4 14.42 14 12 14C11.04 14 10.1 13.9 9.24 13.73L7.59 15.37C8.91 15.77 10.41 16 12 16C14.28 16 16.39 15.55 18 14.77V17C18 17.5 15.87 19 12 19S6 17.5 6 17V16.96L5 18L4.54 18.43C5.69 19.93 8.6 21 12 21C16.41 21 20 19.21 20 17V7C20 4.79 16.42 3 12 3Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Import script</div><p class="small muted">Four datasets, one table</p></div><div style="display:flex; align-items:center"><svg class="ic arr" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div class="card" style="padding:14px 16px; flex:1; display:flex; flex-direction:column; justify-content:center"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Postgres + PostGIS</div><p class="small muted">Supabase; search in SQL</p></div><div style="display:flex; align-items:center"><svg class="ic arr" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div class="card" style="padding:14px 16px; flex:1; display:flex; flex-direction:column; justify-content:center"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,1H20A1,1 0 0,1 21,2V6A1,1 0 0,1 20,7H4A1,1 0 0,1 3,6V2A1,1 0 0,1 4,1M4,9H20A1,1 0 0,1 21,10V14A1,1 0 0,1 20,15H4A1,1 0 0,1 3,14V10A1,1 0 0,1 4,9M4,17H20A1,1 0 0,1 21,18V22A1,1 0 0,1 20,23H4A1,1 0 0,1 3,22V18A1,1 0 0,1 4,17M9,5H10V3H9V5M9,13H10V11H9V13M9,21H10V19H9V21M5,3V5H7V3H5M5,11V13H7V11H5M5,19V21H7V19H5Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:15px">Express API</div><p class="small muted">Render; merges segments</p></div><div style="display:flex; align-items:center"><svg class="ic arr" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg></div><div style="display:grid; gap:8px; flex:1.15">
+  <div class="card row" style="gap:12px; padding:10px 14px; background:var(--brand-50); border-color:var(--brand-100)"><span class="ib ink"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1Z"/></svg></span><div><div class="h3" style="font-size:14.5px">iOS and Android</div><p class="small muted">react-native-maps (Google)</p></div></div>
+  <div class="card row" style="gap:12px; padding:10px 14px; background:var(--brand-50); border-color:var(--brand-100)"><span class="ib ink"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.36,14C16.44,13.34 16.5,12.68 16.5,12C16.5,11.32 16.44,10.66 16.36,10H19.74C19.9,10.64 20,11.31 20,12C20,12.69 19.9,13.36 19.74,14M14.59,19.56C15.19,18.45 15.65,17.25 15.97,16H18.92C17.96,17.65 16.43,18.93 14.59,19.56M14.34,14H9.66C9.56,13.34 9.5,12.68 9.5,12C9.5,11.32 9.56,10.65 9.66,10H14.34C14.43,10.65 14.5,11.32 14.5,12C14.5,12.68 14.43,13.34 14.34,14M12,19.96C11.17,18.76 10.5,17.43 10.09,16H13.91C13.5,17.43 12.83,18.76 12,19.96M8,8H5.08C6.03,6.34 7.57,5.06 9.4,4.44C8.8,5.55 8.35,6.75 8,8M5.08,16H8C8.35,17.25 8.8,18.45 9.4,19.56C7.57,18.93 6.03,17.65 5.08,16M4.26,14C4.1,13.36 4,12.69 4,12C4,11.31 4.1,10.64 4.26,10H7.64C7.56,10.66 7.5,11.32 7.5,12C7.5,12.68 7.56,13.34 7.64,14M12,4.03C12.83,5.23 13.5,6.57 13.91,8H10.09C10.5,6.57 11.17,5.23 12,4.03M18.92,8H15.97C15.65,6.75 15.19,5.55 14.59,4.44C16.43,5.07 17.96,6.34 18.92,8M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg></span><div><div class="h3" style="font-size:14.5px">Web</div><p class="small muted">MapLibre GL JS, OpenStreetMap</p></div></div>
+</div></div>
+<div class="label" style="margin-top:22px">My front-end responsibilities</div>
+<div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; margin-top:10px"><div class="card" style="padding:14px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M19,5V7H15V5H19M9,5V11H5V5H9M19,13V19H15V13H19M9,17V19H5V17H9M21,3H13V9H21V3M11,3H3V13H11V3M21,11H13V21H21V11M11,15H3V21H11V15Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:14.5px">Screens</div><p class="small muted">Six, with React Navigation</p></div><div class="card" style="padding:14px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M22,13.5C22,15.26 20.7,16.72 19,16.96V20A2,2 0 0,1 17,22H13.2V21.7A2.7,2.7 0 0,0 10.5,19C9,19 7.8,20.21 7.8,21.7V22H4A2,2 0 0,1 2,20V16.2H2.3C3.79,16.2 5,15 5,13.5C5,12 3.79,10.8 2.3,10.8H2V7A2,2 0 0,1 4,5H7.04C7.28,3.3 8.74,2 10.5,2C12.26,2 13.72,3.3 13.96,5H17A2,2 0 0,1 19,7V10.04C20.7,10.28 22,11.74 22,13.5M17,15H18.5A1.5,1.5 0 0,0 20,13.5A1.5,1.5 0 0,0 18.5,12H17V7H12V5.5A1.5,1.5 0 0,0 10.5,4A1.5,1.5 0 0,0 9,5.5V7H4V9.12C5.76,9.8 7,11.5 7,13.5C7,15.5 5.75,17.2 4,17.88V20H6.12C6.8,18.25 8.5,17 10.5,17C12.5,17 14.2,18.25 14.88,20H17V15Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:14.5px">Components</div><p class="small muted">Rows, pins, meta line, actions</p></div><div class="card" style="padding:14px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.42,5.29C11.32,5.19 10.35,6 10.25,7.11L10,10H12.82V12H9.82L9.38,17.07C9.18,19.27 7.24,20.9 5.04,20.7C3.79,20.59 2.66,19.9 2,18.83L3.5,17.33C3.83,18.38 4.96,18.97 6,18.63C6.78,18.39 7.33,17.7 7.4,16.89L7.82,12H4.82V10H8L8.27,6.93C8.46,4.73 10.39,3.1 12.6,3.28C13.86,3.39 15,4.09 15.66,5.17L14.16,6.67C13.91,5.9 13.23,5.36 12.42,5.29M22,13.65L20.59,12.24L17.76,15.07L14.93,12.24L13.5,13.65L16.35,16.5L13.5,19.31L14.93,20.72L17.76,17.89L20.59,20.72L22,19.31L19.17,16.5L22,13.65Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:14.5px">Rules</div><p class="small muted">Rates, rush hour, ranking: tested functions</p></div><div class="card" style="padding:14px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6H21V4H3C1.9 4 1 4.9 1 6V18C1 19.1 1.9 20 3 20H7V18H3V6M13 12H9V13.78C8.39 14.33 8 15.11 8 16C8 16.89 8.39 17.67 9 18.22V20H13V18.22C13.61 17.67 14 16.88 14 16S13.61 14.33 13 13.78V12M11 17.5C10.17 17.5 9.5 16.83 9.5 16S10.17 14.5 11 14.5 12.5 15.17 12.5 16 11.83 17.5 11 17.5M22 8H16C15.5 8 15 8.5 15 9V19C15 19.5 15.5 20 16 20H22C22.5 20 23 19.5 23 19V9C23 8.5 22.5 8 22 8M21 18H17V10H21V18Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:14.5px">Platforms</div><p class="small muted">A web map file, an Android badge</p></div><div class="card" style="padding:14px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:14.5px">State</div><p class="small muted">Session context, hooks, offline cache</p></div><div class="card" style="padding:14px 14px"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,1C5,3.7 6.56,6.16 9,7.32V22H11V15H13V22H15V7.31C17.44,6.16 19,3.7 19,1H17A5,5 0 0,1 12,6A5,5 0 0,1 7,1M12,1C10.89,1 10,1.89 10,3C10,4.11 10.89,5 12,5C13.11,5 14,4.11 14,3C14,1.89 13.11,1 12,1Z"/></svg></span><div class="h3" style="margin-top:10px; font-size:14.5px">Access</div><p class="small muted">Labels, Reduce Motion, keyboard</p></div></div>
+<div class="label" style="margin-top:22px">The hard parts</div>
+<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:18px; margin-top:10px"><div class="row" style="gap:12px; align-items:flex-start"><span class="ib amber"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 16.82L19.94 18.23L19.19 19.53L16 17.69V14H17.5V16.82M24 17C24 20.87 20.87 24 17 24S10 20.87 10 17C10 16.66 10.03 16.33 10.08 16H2V4H20V10.68C22.36 11.81 24 14.21 24 17M10.68 14C10.86 13.64 11.05 13.3 11.28 12.97C11.19 13 11.1 13 11 13C9.34 13 8 11.66 8 10S9.34 7 11 7 14 8.34 14 10C14 10.25 13.96 10.5 13.9 10.73C14.84 10.27 15.89 10 17 10C17.34 10 17.67 10.03 18 10.08V8C16.9 8 16 7.11 16 6H6C6 7.11 5.11 8 4 8V12C5.11 12 6 12.9 6 14H10.68M22 17C22 14.24 19.76 12 17 12S12 14.24 12 17 14.24 22 17 22 22 19.76 22 17Z"/></svg></span><div><div class="h3" style="font-size:14.5px">Rates change by the hour</div><p class="small muted">Rate bands parsed into time ranges; cost counts charged hours only</p></div></div><div class="row" style="gap:12px; align-items:flex-start"><span class="ib amber"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5,19.85L6.41,5.76L2.41,1.76L1.11,3L4.57,6.46L3,11V19A1,1 0 0,0 4,20H5A1,1 0 0,0 6,19V18H16.11L20.84,22.73L22.11,21.46L20.5,19.85M6.5,15A1.5,1.5 0 0,1 5,13.5A1.5,1.5 0 0,1 6.5,12A1.5,1.5 0 0,1 8,13.5A1.5,1.5 0 0,1 6.5,15M5,10L5.78,7.67L8.11,10H5M17.5,5.5L19,10H13.2L16.12,12.92C16.5,12.17 17.37,11.86 18.12,12.21C18.87,12.57 19.18,13.47 18.83,14.21C18.68,14.5 18.43,14.77 18.12,14.92L21,17.8V11L18.92,5C18.71,4.4 18.14,4 17.5,4H7.2L8.7,5.5H17.5Z"/></svg></span><div><div class="h3" style="font-size:14.5px">Rush-hour windows</div><p class="small muted">Checked against now and against the end of a planned stay</p></div></div><div class="row" style="gap:12px; align-items:flex-start"><span class="ib amber"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,18.54L19.37,12.8L21,14.07L12,21.07L3,14.07L4.62,12.81L12,18.54M12,16L3,9L12,2L21,9L12,16M12,4.53L6.26,9L12,13.47L17.74,9L12,4.53Z"/></svg></span><div><div class="h3" style="font-size:14.5px">Repeated segments</div><p class="small muted">277 of 1,178 street rows merged in the API</p></div></div><div class="row" style="gap:12px; align-items:flex-start"><span class="ib amber"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1Z"/></svg></span><div><div class="h3" style="font-size:14.5px">Android marker limit</div><p class="small muted">Markers draw into 100 × 100 px; Android gets a compact badge</p></div></div></div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop past"><i></i>Process</span><span class="seg past"></span><span class="stop past"><i></i>Design</span><span class="seg past"></span><span class="stop past"><i></i>Build</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Results</span></div><span class="pg">09<em> / 10</em></span></div>
+<div class="eyebrow">Results · 1 of 2</div><h2 class="title">What was checked, what improved, what’s still open</h2>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:48px; margin-top:22px">
+  <div>
+    <div class="label">Checked</div>
+    <div style="margin-top:4px"><div class="row" style="gap:12px; padding:9px 0; border-bottom:1px solid var(--line)"><span style="color:var(--green)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg></span><span class="h3" style="font-size:14.5px; width:130px">Unit tests</span><span class="small muted">152 app, 18 backend: all pass</span></div><div class="row" style="gap:12px; padding:9px 0; border-bottom:1px solid var(--line)"><span style="color:var(--green)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg></span><span class="h3" style="font-size:14.5px; width:130px">Real data</span><span class="small muted">1,672 City records near 11 Ave SW</span></div><div class="row" style="gap:12px; padding:9px 0; border-bottom:1px solid var(--line)"><span style="color:var(--green)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg></span><span class="h3" style="font-size:14.5px; width:130px">Contrast</span><span class="small muted">4.23 to 4.74 : 1 on selected rows</span></div><div class="row" style="gap:12px; padding:9px 0; border-bottom:1px solid var(--line)"><span style="color:var(--green)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg></span><span class="h3" style="font-size:14.5px; width:130px">Keyboard (web)</span><span class="small muted">Pins skipped; search is first</span></div><div class="row" style="gap:12px; padding:9px 0; border-bottom:1px solid var(--line)"><span style="color:var(--green)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg></span><span class="h3" style="font-size:14.5px; width:130px">Small phone</span><span class="small muted">360 × 640: actions now on screen</span></div><div class="row" style="gap:12px; padding:9px 0; border-bottom:1px solid var(--line)"><span style="color:var(--green)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg></span><span class="h3" style="font-size:14.5px; width:130px">Builds</span><span class="small muted">Web at 360, 390, 1280 px; Android</span></div></div>
+    <div class="label" style="margin-top:18px; color:var(--amber)">Not done yet</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px; margin-top:4px"><div class="row" style="gap:12px; padding:7px 0"><span style="color:var(--amber)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg></span><span class="small" style="color:var(--ink2)">Usability sessions with drivers</span></div><div class="row" style="gap:12px; padding:7px 0"><span style="color:var(--amber)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg></span><span class="small" style="color:var(--ink2)">Testing on a physical phone</span></div><div class="row" style="gap:12px; padding:7px 0"><span style="color:var(--amber)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg></span><span class="small" style="color:var(--ink2)">Database test suites and query timing</span></div><div class="row" style="gap:12px; padding:7px 0"><span style="color:var(--amber)"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg></span><span class="small" style="color:var(--ink2)">The new import on the live database</span></div></div>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 10</span></div>
-</section>
-
-<!-- 11 Testing -->
-<section class="page">
-  <div class="kicker">11 · Testing and results</div>
-  <h2>What was checked, and what wasn’t</h2>
-  <div style="display:grid; grid-template-columns: 1fr 300px; gap:32px; margin-top:22px">
-    <table>
-      <tr><th>Check</th><th>How</th><th>Result</th></tr>
-      <tr><td>Logic</td><td>Jest unit tests: rates, rush hour, ranking, grouping and wording in the app; row merging, geometry and zone rates in the backend</td><td>152 app and 18 backend tests pass (run November 2, 2026)</td></tr>
-      <tr><td>Real data</td><td>1,672 City records within 1.5 km of 11 Ave SW and 5 St SW, served through the backend’s own row code</td><td>Used for every screen and recording here</td></tr>
-      <tr><td>Map density</td><td>Count pins and overlaps on the opening web view</td><td>45 → 15 pins; 44 overlapping → 4 touching</td></tr>
-      <tr><td>Contrast</td><td>WCAG ratios for text on selected rows</td><td>Grey 4.23 → 4.74 : 1; amber warning 4.63 : 1</td></tr>
-      <tr><td>Keyboard</td><td>Tab through the web map screen</td><td>Pins skipped (the list has the same places); search is the first stop</td></tr>
-      <tr><td>Small phone</td><td>Web build at 360 × 640</td><td>Add time and End session moved from 676 and 771 px (off screen) to 263 and 358 px</td></tr>
-      <tr><td>Builds</td><td>Web build checked at 360, 390 and 1280 px wide; Android bundle exported</td><td>Both build without errors</td></tr>
-    </table>
-    <div class="gap-box">
-      <h3>Not done yet</h3>
-      <ul style="margin-top:10px; font-size:13px; line-height:1.45">
-        <li>No usability sessions with drivers.</li>
-        <li>No testing on a physical phone in this round. Android was bundled, not run on a device.</li>
-        <li>The database-backed suites (API contract, data quality, performance) need a database connection and weren’t run here.</li>
-        <li>Query speed wasn’t measured. The README’s “about 30 ms” is an older figure.</li>
-      </ul>
-    </div>
+  <div>
+    <div class="label">What improved</div>
+    <div style="display:grid; gap:10px; margin-top:10px"><div class="imp"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 16.82L19.94 18.23L19.19 19.53L16 17.69V14H17.5V16.82M24 17C24 20.87 20.87 24 17 24S10 20.87 10 17C10 16.66 10.03 16.33 10.08 16H2V4H20V10.68C22.36 11.81 24 14.21 24 17M10.68 14C10.86 13.64 11.05 13.3 11.28 12.97C11.19 13 11.1 13 11 13C9.34 13 8 11.66 8 10S9.34 7 11 7 14 8.34 14 10C14 10.25 13.96 10.5 13.9 10.73C14.84 10.27 15.89 10 17 10C17.34 10 17.67 10.03 18 10.08V8C16.9 8 16 7.11 16 6H6C6 7.11 5.11 8 4 8V12C5.11 12 6 12.9 6 14H10.68M22 17C22 14.24 19.76 12 17 12S12 14.24 12 17 14.24 22 17 22 22 19.76 22 17Z"/></svg></span><span class="h3" style="font-size:14.5px">Price</span><span class="was">Zone-code guess</span><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg><span class="now">The City’s rate for the hour</span></div><div class="imp"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5,19.85L6.41,5.76L2.41,1.76L1.11,3L4.57,6.46L3,11V19A1,1 0 0,0 4,20H5A1,1 0 0,0 6,19V18H16.11L20.84,22.73L22.11,21.46L20.5,19.85M6.5,15A1.5,1.5 0 0,1 5,13.5A1.5,1.5 0 0,1 6.5,12A1.5,1.5 0 0,1 8,13.5A1.5,1.5 0 0,1 6.5,15M5,10L5.78,7.67L8.11,10H5M17.5,5.5L19,10H13.2L16.12,12.92C16.5,12.17 17.37,11.86 18.12,12.21C18.87,12.57 19.18,13.47 18.83,14.21C18.68,14.5 18.43,14.77 18.12,14.92L21,17.8V11L18.92,5C18.71,4.4 18.14,4 17.5,4H7.2L8.7,5.5H17.5Z"/></svg></span><span class="h3" style="font-size:14.5px">Rush hour</span><span class="was">Not shown</span><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg><span class="now">Warned, capped, no Start</span></div><div class="imp"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,12H3.5L6,9.5L3.5,7H11V3L12,2L13,3V7H18L20.5,9.5L18,12H13V20A2,2 0 0,1 15,22H9A2,2 0 0,1 11,20V12Z"/></svg></span><span class="h3" style="font-size:14.5px">Rows</span><span class="was">Raw address, repeats</span><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg><span class="now">Block, side, zone, once</span></div><div class="imp"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5,3L20.34,3.03L15,5.1L9,3L3.36,4.9C3.15,4.97 3,5.15 3,5.38V20.5A0.5,0.5 0 0,0 3.5,21L3.66,20.97L9,18.9L15,21L20.64,19.1C20.85,19.03 21,18.85 21,18.62V3.5A0.5,0.5 0 0,0 20.5,3M10,5.47L14,6.87V18.53L10,17.13V5.47M5,6.46L8,5.45V17.15L5,18.31V6.46M19,17.54L16,18.55V6.86L19,5.7V17.54Z"/></svg></span><span class="h3" style="font-size:14.5px">Map on web</span><span class="was">Static image</span><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg><span class="now">Real map, grouped pins</span></div><div class="imp"><span class="ib "><svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,1H20A1,1 0 0,1 21,2V6A1,1 0 0,1 20,7H4A1,1 0 0,1 3,6V2A1,1 0 0,1 4,1M4,9H20A1,1 0 0,1 21,10V14A1,1 0 0,1 20,15H4A1,1 0 0,1 3,14V10A1,1 0 0,1 4,9M4,17H20A1,1 0 0,1 21,18V22A1,1 0 0,1 20,23H4A1,1 0 0,1 3,22V18A1,1 0 0,1 4,17M9,5H10V3H9V5M9,13H10V11H9V13M9,21H10V19H9V21M5,3V5H7V3H5M5,11V13H7V11H5M5,19V21H7V19H5Z"/></svg></span><span class="h3" style="font-size:14.5px">Backend</span><span class="was">Ran on a laptop</span><svg class="ic arr" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg><span class="now">Deployed on Render</span></div></div>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 11</span></div>
-</section>
-
-<!-- 12 Walkthrough -->
-<section class="page">
-  <div class="kicker">12 · App walkthrough</div>
-  <h2>Seven recordings of the real build</h2>
-  <div style="display:grid; grid-template-columns: repeat(4, 170px) 1fr; gap:22px; margin-top:22px; align-items:start">
-    <div><div class="shot"><img src="img/details.jpg" alt="Spot details"></div><p class="cap"><b>3 · Details.</b> Rate now, rush hour, the day’s rates, the zone to pay.</p></div>
-    <div><div class="shot"><img src="img/session.jpg" alt="Parking session"></div><p class="cap"><b>4 · Parking.</b> Time left, add time, end, and where to pay.</p></div>
-    <div><div class="shot"><img src="img/rush-capped.jpg" alt="Rush hour capped lengths"></div><p class="cap"><b>5 · Rush hour.</b> At 2:40 PM the longest stay is 50 min.</p></div>
-    <div><div class="shot"><img src="img/parked-here.jpg" alt="Details while parked"></div><p class="cap"><b>6 · Parked here.</b> Details shows the time left on your own spot.</p></div>
-    <div>
-      <div class="shot" style="border-radius:12px"><img src="img/laptop.jpg" alt="Laptop layout with the list beside the map"></div>
-      <p class="cap"><b>7 · Laptop.</b> The map opens with its list beside it.</p>
-      <div class="panel" style="margin-top:18px">
-        <p class="small"><b>1 · Finding parking</b> and <b>2 · The map</b> are on page 8.</p>
-        <p class="small muted" style="margin-top:8px">Recorded with Playwright from the web build, at a fixed time, with the City’s records. A blue circle marks each tap. MP4 and GIF:</p>
-        <p class="small" style="margin-top:6px"><a href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough">github.com/ginesbal/parkaid/tree/main/docs/walkthrough</a></p>
-      </div>
-    </div>
+</div></section><section class="page "><div class="nav"><span class="nb">ParkAid case study</span><div class="route"><span class="stop past"><i></i>Overview</span><span class="seg past"></span><span class="stop past"><i></i>Problem</span><span class="seg past"></span><span class="stop past"><i></i>Process</span><span class="seg past"></span><span class="stop past"><i></i>Design</span><span class="seg past"></span><span class="stop past"><i></i>Build</span><span class="seg past"></span><span class="stop now"><img class="here" src="img/pin.png" alt="">Results</span></div><span class="pg">10<em> / 10</em></span></div>
+<div class="eyebrow">Results · 2 of 2</div><h2 class="title">See it working</h2>
+<div class="row" style="gap:14px; align-items:flex-start; margin-top:18px">
+  <div><div class="shot" style="width:124px;height:268px"><div class="scr" style="border-radius:17px"><img src="img/filters.jpg" alt="Finding parking"></div></div><div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">01</span><span class="small" style="font-size:12px">Finding parking</span></div></div><div><div class="shot" style="width:124px;height:268px"><div class="scr" style="border-radius:17px"><img src="img/map-parted.jpg" alt="The map"></div></div><div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">02</span><span class="small" style="font-size:12px">The map</span></div></div><div><div class="shot" style="width:124px;height:268px"><div class="scr" style="border-radius:17px"><img src="img/details.jpg" alt="Spot details"></div></div><div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">03</span><span class="small" style="font-size:12px">Spot details</span></div></div><div><div class="shot" style="width:124px;height:268px"><div class="scr" style="border-radius:17px"><img src="img/session.jpg" alt="Parking"></div></div><div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">04</span><span class="small" style="font-size:12px">Parking</span></div></div><div><div class="shot" style="width:124px;height:268px"><div class="scr" style="border-radius:17px"><img src="img/rush-capped.jpg" alt="Rush hour"></div></div><div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">05</span><span class="small" style="font-size:12px">Rush hour</span></div></div><div><div class="shot" style="width:124px;height:268px"><div class="scr" style="border-radius:17px"><img src="img/parked-here.jpg" alt="Parked here"></div></div><div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">06</span><span class="small" style="font-size:12px">Parked here</span></div></div>
+  <div style="margin-left:6px">
+    <div class="scr" style="width:292px; height:183px; border-radius:14px"><img src="img/laptop.jpg" alt="Laptop layout"></div>
+    <div class="row" style="gap:6px; margin-top:8px"><span class="mono" style="font-size:11px; font-weight:600; color:var(--brand)">07</span><span class="small" style="font-size:12px">On a laptop</span></div>
+    <p class="small muted" style="margin-top:10px; font-size:12px">Recorded from the web build with the City’s records, at a fixed time. A blue circle marks each tap.</p>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 12</span></div>
-</section>
-
-<!-- 13 Figma -->
-<section class="page">
-  <div class="kicker">13 · Figma file</div>
-  <h2>The shipped interface, rebuilt as a design library</h2>
-  <div style="display:grid; grid-template-columns: 300px 190px 190px 1fr; gap:22px; margin-top:22px; align-items:start">
-    <div>
-      <p class="muted">Made in November 2026 from the code, after the app was built, so the design can be inspected and reused. It isn’t the original design source.</p>
-      <ul style="margin-top:14px; font-size:14px">
-        <li>61 variables (colour, spacing, radius) and 14 text styles, matching the app’s tokens.</li>
-        <li>26 icons imported from the icon sets the app uses, not redrawn.</li>
-        <li>11 components with variants and properties: buttons, chips, spot rows, map pins, tab bar and more.</li>
-        <li>Screens so far: Welcome, Home, Map, Details, Park. The session screens and click-through links are still to add.</li>
-      </ul>
-      <p class="small" style="margin-top:14px; word-break:break-all"><a href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid">figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid</a></p>
-    </div>
-    <div><div class="shot"><img src="img/figma-home.png" alt="Home screen in Figma"></div><p class="cap"><b>Home,</b> built from component instances: search, chips, spot rows, tab bar.</p></div>
-    <div><div class="shot"><img src="img/figma-details.png" alt="Details screen in Figma"></div><p class="cap"><b>Details,</b> with the map preview from OpenStreetMap tiles.</p></div>
-    <div>
-      <div class="shot" style="border-radius:12px; padding:6px 10px"><img src="img/figma-tabbar.png" alt="Tab bar component with its three variants"></div>
-      <p class="cap"><b>Tab bar,</b> one variant per active tab.</p>
-      <div class="shot" style="border-radius:12px; margin-top:14px"><img src="img/figma-icons.png" alt="Icon components"></div>
-      <p class="cap"><b>Icons,</b> with colour bound to a variable.</p>
-    </div>
+</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr 1.15fr 1fr; gap:14px; position:absolute; left:64px; right:64px; bottom:40px">
+  <a class="card row" href="https://github.com/ginesbal/parkaid" style="gap:16px; padding:16px 18px"><svg class="qr" width="84" height="84" viewBox="0 0 29 29" shape-rendering="crispEdges" aria-hidden="true"><path d="M0,0h1v1h-1zM1,0h1v1h-1zM2,0h1v1h-1zM3,0h1v1h-1zM4,0h1v1h-1zM5,0h1v1h-1zM6,0h1v1h-1zM10,0h1v1h-1zM14,0h1v1h-1zM18,0h1v1h-1zM19,0h1v1h-1zM22,0h1v1h-1zM23,0h1v1h-1zM24,0h1v1h-1zM25,0h1v1h-1zM26,0h1v1h-1zM27,0h1v1h-1zM28,0h1v1h-1zM0,1h1v1h-1zM6,1h1v1h-1zM8,1h1v1h-1zM9,1h1v1h-1zM12,1h1v1h-1zM13,1h1v1h-1zM17,1h1v1h-1zM18,1h1v1h-1zM19,1h1v1h-1zM22,1h1v1h-1zM28,1h1v1h-1zM0,2h1v1h-1zM2,2h1v1h-1zM3,2h1v1h-1zM4,2h1v1h-1zM6,2h1v1h-1zM9,2h1v1h-1zM10,2h1v1h-1zM12,2h1v1h-1zM15,2h1v1h-1zM19,2h1v1h-1zM22,2h1v1h-1zM24,2h1v1h-1zM25,2h1v1h-1zM26,2h1v1h-1zM28,2h1v1h-1zM0,3h1v1h-1zM2,3h1v1h-1zM3,3h1v1h-1zM4,3h1v1h-1zM6,3h1v1h-1zM11,3h1v1h-1zM12,3h1v1h-1zM13,3h1v1h-1zM18,3h1v1h-1zM22,3h1v1h-1zM24,3h1v1h-1zM25,3h1v1h-1zM26,3h1v1h-1zM28,3h1v1h-1zM0,4h1v1h-1zM2,4h1v1h-1zM3,4h1v1h-1zM4,4h1v1h-1zM6,4h1v1h-1zM8,4h1v1h-1zM11,4h1v1h-1zM12,4h1v1h-1zM13,4h1v1h-1zM16,4h1v1h-1zM19,4h1v1h-1zM22,4h1v1h-1zM24,4h1v1h-1zM25,4h1v1h-1zM26,4h1v1h-1zM28,4h1v1h-1zM0,5h1v1h-1zM6,5h1v1h-1zM9,5h1v1h-1zM10,5h1v1h-1zM14,5h1v1h-1zM15,5h1v1h-1zM19,5h1v1h-1zM20,5h1v1h-1zM22,5h1v1h-1zM28,5h1v1h-1zM0,6h1v1h-1zM1,6h1v1h-1zM2,6h1v1h-1zM3,6h1v1h-1zM4,6h1v1h-1zM5,6h1v1h-1zM6,6h1v1h-1zM8,6h1v1h-1zM10,6h1v1h-1zM12,6h1v1h-1zM14,6h1v1h-1zM16,6h1v1h-1zM18,6h1v1h-1zM20,6h1v1h-1zM22,6h1v1h-1zM23,6h1v1h-1zM24,6h1v1h-1zM25,6h1v1h-1zM26,6h1v1h-1zM27,6h1v1h-1zM28,6h1v1h-1zM15,7h1v1h-1zM16,7h1v1h-1zM17,7h1v1h-1zM18,7h1v1h-1zM19,7h1v1h-1zM0,8h1v1h-1zM2,8h1v1h-1zM4,8h1v1h-1zM6,8h1v1h-1zM9,8h1v1h-1zM10,8h1v1h-1zM11,8h1v1h-1zM16,8h1v1h-1zM17,8h1v1h-1zM19,8h1v1h-1zM20,8h1v1h-1zM24,8h1v1h-1zM27,8h1v1h-1zM1,9h1v1h-1zM2,9h1v1h-1zM3,9h1v1h-1zM4,9h1v1h-1zM8,9h1v1h-1zM10,9h1v1h-1zM11,9h1v1h-1zM12,9h1v1h-1zM13,9h1v1h-1zM16,9h1v1h-1zM17,9h1v1h-1zM20,9h1v1h-1zM22,9h1v1h-1zM25,9h1v1h-1zM28,9h1v1h-1zM0,10h1v1h-1zM3,10h1v1h-1zM4,10h1v1h-1zM6,10h1v1h-1zM9,10h1v1h-1zM11,10h1v1h-1zM12,10h1v1h-1zM14,10h1v1h-1zM17,10h1v1h-1zM18,10h1v1h-1zM21,10h1v1h-1zM22,10h1v1h-1zM24,10h1v1h-1zM26,10h1v1h-1zM27,10h1v1h-1zM28,10h1v1h-1zM0,11h1v1h-1zM1,11h1v1h-1zM2,11h1v1h-1zM3,11h1v1h-1zM4,11h1v1h-1zM7,11h1v1h-1zM12,11h1v1h-1zM13,11h1v1h-1zM14,11h1v1h-1zM15,11h1v1h-1zM17,11h1v1h-1zM20,11h1v1h-1zM23,11h1v1h-1zM24,11h1v1h-1zM27,11h1v1h-1zM0,12h1v1h-1zM1,12h1v1h-1zM3,12h1v1h-1zM5,12h1v1h-1zM6,12h1v1h-1zM7,12h1v1h-1zM9,12h1v1h-1zM12,12h1v1h-1zM14,12h1v1h-1zM15,12h1v1h-1zM16,12h1v1h-1zM17,12h1v1h-1zM20,12h1v1h-1zM21,12h1v1h-1zM22,12h1v1h-1zM25,12h1v1h-1zM27,12h1v1h-1zM28,12h1v1h-1zM2,13h1v1h-1zM4,13h1v1h-1zM7,13h1v1h-1zM8,13h1v1h-1zM9,13h1v1h-1zM10,13h1v1h-1zM11,13h1v1h-1zM12,13h1v1h-1zM14,13h1v1h-1zM16,13h1v1h-1zM17,13h1v1h-1zM20,13h1v1h-1zM21,13h1v1h-1zM22,13h1v1h-1zM25,13h1v1h-1zM28,13h1v1h-1zM3,14h1v1h-1zM5,14h1v1h-1zM6,14h1v1h-1zM8,14h1v1h-1zM10,14h1v1h-1zM12,14h1v1h-1zM13,14h1v1h-1zM18,14h1v1h-1zM22,14h1v1h-1zM24,14h1v1h-1zM25,14h1v1h-1zM27,14h1v1h-1zM28,14h1v1h-1zM1,15h1v1h-1zM3,15h1v1h-1zM4,15h1v1h-1zM5,15h1v1h-1zM7,15h1v1h-1zM8,15h1v1h-1zM9,15h1v1h-1zM10,15h1v1h-1zM15,15h1v1h-1zM17,15h1v1h-1zM18,15h1v1h-1zM20,15h1v1h-1zM21,15h1v1h-1zM22,15h1v1h-1zM25,15h1v1h-1zM27,15h1v1h-1zM6,16h1v1h-1zM8,16h1v1h-1zM10,16h1v1h-1zM11,16h1v1h-1zM12,16h1v1h-1zM16,16h1v1h-1zM17,16h1v1h-1zM19,16h1v1h-1zM20,16h1v1h-1zM22,16h1v1h-1zM23,16h1v1h-1zM25,16h1v1h-1zM27,16h1v1h-1zM28,16h1v1h-1zM1,17h1v1h-1zM2,17h1v1h-1zM4,17h1v1h-1zM9,17h1v1h-1zM10,17h1v1h-1zM13,17h1v1h-1zM16,17h1v1h-1zM21,17h1v1h-1zM22,17h1v1h-1zM25,17h1v1h-1zM26,17h1v1h-1zM28,17h1v1h-1zM0,18h1v1h-1zM5,18h1v1h-1zM6,18h1v1h-1zM8,18h1v1h-1zM10,18h1v1h-1zM12,18h1v1h-1zM14,18h1v1h-1zM21,18h1v1h-1zM23,18h1v1h-1zM24,18h1v1h-1zM27,18h1v1h-1zM28,18h1v1h-1zM1,19h1v1h-1zM2,19h1v1h-1zM4,19h1v1h-1zM13,19h1v1h-1zM14,19h1v1h-1zM17,19h1v1h-1zM19,19h1v1h-1zM20,19h1v1h-1zM21,19h1v1h-1zM22,19h1v1h-1zM23,19h1v1h-1zM24,19h1v1h-1zM25,19h1v1h-1zM27,19h1v1h-1zM0,20h1v1h-1zM2,20h1v1h-1zM5,20h1v1h-1zM6,20h1v1h-1zM8,20h1v1h-1zM9,20h1v1h-1zM10,20h1v1h-1zM12,20h1v1h-1zM14,20h1v1h-1zM15,20h1v1h-1zM16,20h1v1h-1zM17,20h1v1h-1zM18,20h1v1h-1zM19,20h1v1h-1zM20,20h1v1h-1zM21,20h1v1h-1zM22,20h1v1h-1zM23,20h1v1h-1zM24,20h1v1h-1zM8,21h1v1h-1zM9,21h1v1h-1zM10,21h1v1h-1zM12,21h1v1h-1zM14,21h1v1h-1zM16,21h1v1h-1zM19,21h1v1h-1zM20,21h1v1h-1zM24,21h1v1h-1zM26,21h1v1h-1zM27,21h1v1h-1zM28,21h1v1h-1zM0,22h1v1h-1zM1,22h1v1h-1zM2,22h1v1h-1zM3,22h1v1h-1zM4,22h1v1h-1zM5,22h1v1h-1zM6,22h1v1h-1zM9,22h1v1h-1zM11,22h1v1h-1zM12,22h1v1h-1zM13,22h1v1h-1zM16,22h1v1h-1zM17,22h1v1h-1zM19,22h1v1h-1zM20,22h1v1h-1zM22,22h1v1h-1zM24,22h1v1h-1zM25,22h1v1h-1zM27,22h1v1h-1zM28,22h1v1h-1zM0,23h1v1h-1zM6,23h1v1h-1zM11,23h1v1h-1zM12,23h1v1h-1zM17,23h1v1h-1zM18,23h1v1h-1zM20,23h1v1h-1zM24,23h1v1h-1zM25,23h1v1h-1zM28,23h1v1h-1zM0,24h1v1h-1zM2,24h1v1h-1zM3,24h1v1h-1zM4,24h1v1h-1zM6,24h1v1h-1zM8,24h1v1h-1zM11,24h1v1h-1zM17,24h1v1h-1zM20,24h1v1h-1zM21,24h1v1h-1zM22,24h1v1h-1zM23,24h1v1h-1zM24,24h1v1h-1zM28,24h1v1h-1zM0,25h1v1h-1zM2,25h1v1h-1zM3,25h1v1h-1zM4,25h1v1h-1zM6,25h1v1h-1zM9,25h1v1h-1zM10,25h1v1h-1zM11,25h1v1h-1zM12,25h1v1h-1zM16,25h1v1h-1zM17,25h1v1h-1zM18,25h1v1h-1zM20,25h1v1h-1zM23,25h1v1h-1zM24,25h1v1h-1zM26,25h1v1h-1zM27,25h1v1h-1zM28,25h1v1h-1zM0,26h1v1h-1zM2,26h1v1h-1zM3,26h1v1h-1zM4,26h1v1h-1zM6,26h1v1h-1zM8,26h1v1h-1zM9,26h1v1h-1zM12,26h1v1h-1zM18,26h1v1h-1zM19,26h1v1h-1zM23,26h1v1h-1zM24,26h1v1h-1zM25,26h1v1h-1zM28,26h1v1h-1zM0,27h1v1h-1zM6,27h1v1h-1zM12,27h1v1h-1zM14,27h1v1h-1zM15,27h1v1h-1zM17,27h1v1h-1zM19,27h1v1h-1zM20,27h1v1h-1zM21,27h1v1h-1zM24,27h1v1h-1zM27,27h1v1h-1zM0,28h1v1h-1zM1,28h1v1h-1zM2,28h1v1h-1zM3,28h1v1h-1zM4,28h1v1h-1zM5,28h1v1h-1zM6,28h1v1h-1zM8,28h1v1h-1zM9,28h1v1h-1zM10,28h1v1h-1zM11,28h1v1h-1zM12,28h1v1h-1zM13,28h1v1h-1zM16,28h1v1h-1zM17,28h1v1h-1zM19,28h1v1h-1zM20,28h1v1h-1zM21,28h1v1h-1zM23,28h1v1h-1zM24,28h1v1h-1zM27,28h1v1h-1zM28,28h1v1h-1z"/></svg><div><div class="row" style="gap:8px; color:var(--brand)"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"/></svg><span class="h3" style="color:var(--ink)">Source code</span></div><p class="small muted" style="margin-top:4px">github.com/ginesbal/parkaid</p></div></a><a class="card row" href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough" style="gap:16px; padding:16px 18px"><svg class="qr" width="84" height="84" viewBox="0 0 33 33" shape-rendering="crispEdges" aria-hidden="true"><path d="M0,0h1v1h-1zM1,0h1v1h-1zM2,0h1v1h-1zM3,0h1v1h-1zM4,0h1v1h-1zM5,0h1v1h-1zM6,0h1v1h-1zM8,0h1v1h-1zM9,0h1v1h-1zM11,0h1v1h-1zM16,0h1v1h-1zM18,0h1v1h-1zM19,0h1v1h-1zM20,0h1v1h-1zM23,0h1v1h-1zM26,0h1v1h-1zM27,0h1v1h-1zM28,0h1v1h-1zM29,0h1v1h-1zM30,0h1v1h-1zM31,0h1v1h-1zM32,0h1v1h-1zM0,1h1v1h-1zM6,1h1v1h-1zM8,1h1v1h-1zM10,1h1v1h-1zM12,1h1v1h-1zM13,1h1v1h-1zM17,1h1v1h-1zM21,1h1v1h-1zM22,1h1v1h-1zM23,1h1v1h-1zM24,1h1v1h-1zM26,1h1v1h-1zM32,1h1v1h-1zM0,2h1v1h-1zM2,2h1v1h-1zM3,2h1v1h-1zM4,2h1v1h-1zM6,2h1v1h-1zM10,2h1v1h-1zM13,2h1v1h-1zM14,2h1v1h-1zM16,2h1v1h-1zM18,2h1v1h-1zM19,2h1v1h-1zM22,2h1v1h-1zM24,2h1v1h-1zM26,2h1v1h-1zM28,2h1v1h-1zM29,2h1v1h-1zM30,2h1v1h-1zM32,2h1v1h-1zM0,3h1v1h-1zM2,3h1v1h-1zM3,3h1v1h-1zM4,3h1v1h-1zM6,3h1v1h-1zM8,3h1v1h-1zM9,3h1v1h-1zM12,3h1v1h-1zM13,3h1v1h-1zM14,3h1v1h-1zM15,3h1v1h-1zM17,3h1v1h-1zM19,3h1v1h-1zM24,3h1v1h-1zM26,3h1v1h-1zM28,3h1v1h-1zM29,3h1v1h-1zM30,3h1v1h-1zM32,3h1v1h-1zM0,4h1v1h-1zM2,4h1v1h-1zM3,4h1v1h-1zM4,4h1v1h-1zM6,4h1v1h-1zM9,4h1v1h-1zM11,4h1v1h-1zM14,4h1v1h-1zM15,4h1v1h-1zM16,4h1v1h-1zM19,4h1v1h-1zM24,4h1v1h-1zM26,4h1v1h-1zM28,4h1v1h-1zM29,4h1v1h-1zM30,4h1v1h-1zM32,4h1v1h-1zM0,5h1v1h-1zM6,5h1v1h-1zM9,5h1v1h-1zM12,5h1v1h-1zM13,5h1v1h-1zM17,5h1v1h-1zM18,5h1v1h-1zM19,5h1v1h-1zM20,5h1v1h-1zM21,5h1v1h-1zM22,5h1v1h-1zM24,5h1v1h-1zM26,5h1v1h-1zM32,5h1v1h-1zM0,6h1v1h-1zM1,6h1v1h-1zM2,6h1v1h-1zM3,6h1v1h-1zM4,6h1v1h-1zM5,6h1v1h-1zM6,6h1v1h-1zM8,6h1v1h-1zM10,6h1v1h-1zM12,6h1v1h-1zM14,6h1v1h-1zM16,6h1v1h-1zM18,6h1v1h-1zM20,6h1v1h-1zM22,6h1v1h-1zM24,6h1v1h-1zM26,6h1v1h-1zM27,6h1v1h-1zM28,6h1v1h-1zM29,6h1v1h-1zM30,6h1v1h-1zM31,6h1v1h-1zM32,6h1v1h-1zM8,7h1v1h-1zM9,7h1v1h-1zM10,7h1v1h-1zM11,7h1v1h-1zM12,7h1v1h-1zM16,7h1v1h-1zM17,7h1v1h-1zM19,7h1v1h-1zM23,7h1v1h-1zM0,8h1v1h-1zM2,8h1v1h-1zM3,8h1v1h-1zM5,8h1v1h-1zM6,8h1v1h-1zM7,8h1v1h-1zM9,8h1v1h-1zM10,8h1v1h-1zM11,8h1v1h-1zM12,8h1v1h-1zM14,8h1v1h-1zM17,8h1v1h-1zM18,8h1v1h-1zM19,8h1v1h-1zM21,8h1v1h-1zM22,8h1v1h-1zM23,8h1v1h-1zM24,8h1v1h-1zM26,8h1v1h-1zM29,8h1v1h-1zM31,8h1v1h-1zM32,8h1v1h-1zM0,9h1v1h-1zM1,9h1v1h-1zM2,9h1v1h-1zM3,9h1v1h-1zM4,9h1v1h-1zM7,9h1v1h-1zM10,9h1v1h-1zM11,9h1v1h-1zM13,9h1v1h-1zM14,9h1v1h-1zM16,9h1v1h-1zM17,9h1v1h-1zM18,9h1v1h-1zM19,9h1v1h-1zM20,9h1v1h-1zM23,9h1v1h-1zM26,9h1v1h-1zM27,9h1v1h-1zM29,9h1v1h-1zM30,9h1v1h-1zM32,9h1v1h-1zM0,10h1v1h-1zM4,10h1v1h-1zM6,10h1v1h-1zM7,10h1v1h-1zM9,10h1v1h-1zM12,10h1v1h-1zM14,10h1v1h-1zM16,10h1v1h-1zM17,10h1v1h-1zM18,10h1v1h-1zM21,10h1v1h-1zM22,10h1v1h-1zM23,10h1v1h-1zM25,10h1v1h-1zM26,10h1v1h-1zM27,10h1v1h-1zM28,10h1v1h-1zM29,10h1v1h-1zM31,10h1v1h-1zM32,10h1v1h-1zM2,11h1v1h-1zM7,11h1v1h-1zM10,11h1v1h-1zM12,11h1v1h-1zM13,11h1v1h-1zM15,11h1v1h-1zM20,11h1v1h-1zM27,11h1v1h-1zM29,11h1v1h-1zM1,12h1v1h-1zM4,12h1v1h-1zM5,12h1v1h-1zM6,12h1v1h-1zM7,12h1v1h-1zM8,12h1v1h-1zM11,12h1v1h-1zM16,12h1v1h-1zM17,12h1v1h-1zM20,12h1v1h-1zM22,12h1v1h-1zM23,12h1v1h-1zM24,12h1v1h-1zM25,12h1v1h-1zM27,12h1v1h-1zM28,12h1v1h-1zM29,12h1v1h-1zM0,13h1v1h-1zM1,13h1v1h-1zM2,13h1v1h-1zM5,13h1v1h-1zM7,13h1v1h-1zM8,13h1v1h-1zM9,13h1v1h-1zM13,13h1v1h-1zM14,13h1v1h-1zM15,13h1v1h-1zM16,13h1v1h-1zM17,13h1v1h-1zM19,13h1v1h-1zM21,13h1v1h-1zM24,13h1v1h-1zM27,13h1v1h-1zM29,13h1v1h-1zM30,13h1v1h-1zM31,13h1v1h-1zM0,14h1v1h-1zM1,14h1v1h-1zM2,14h1v1h-1zM3,14h1v1h-1zM5,14h1v1h-1zM6,14h1v1h-1zM10,14h1v1h-1zM11,14h1v1h-1zM14,14h1v1h-1zM18,14h1v1h-1zM19,14h1v1h-1zM20,14h1v1h-1zM21,14h1v1h-1zM24,14h1v1h-1zM26,14h1v1h-1zM29,14h1v1h-1zM2,15h1v1h-1zM4,15h1v1h-1zM7,15h1v1h-1zM8,15h1v1h-1zM9,15h1v1h-1zM11,15h1v1h-1zM14,15h1v1h-1zM16,15h1v1h-1zM19,15h1v1h-1zM20,15h1v1h-1zM21,15h1v1h-1zM24,15h1v1h-1zM25,15h1v1h-1zM26,15h1v1h-1zM27,15h1v1h-1zM29,15h1v1h-1zM30,15h1v1h-1zM0,16h1v1h-1zM2,16h1v1h-1zM4,16h1v1h-1zM6,16h1v1h-1zM8,16h1v1h-1zM9,16h1v1h-1zM11,16h1v1h-1zM15,16h1v1h-1zM18,16h1v1h-1zM19,16h1v1h-1zM20,16h1v1h-1zM21,16h1v1h-1zM22,16h1v1h-1zM23,16h1v1h-1zM25,16h1v1h-1zM26,16h1v1h-1zM28,16h1v1h-1zM29,16h1v1h-1zM30,16h1v1h-1zM0,17h1v1h-1zM2,17h1v1h-1zM5,17h1v1h-1zM10,17h1v1h-1zM12,17h1v1h-1zM15,17h1v1h-1zM16,17h1v1h-1zM17,17h1v1h-1zM18,17h1v1h-1zM20,17h1v1h-1zM22,17h1v1h-1zM23,17h1v1h-1zM24,17h1v1h-1zM25,17h1v1h-1zM26,17h1v1h-1zM28,17h1v1h-1zM29,17h1v1h-1zM31,17h1v1h-1zM32,17h1v1h-1zM0,18h1v1h-1zM1,18h1v1h-1zM5,18h1v1h-1zM6,18h1v1h-1zM7,18h1v1h-1zM8,18h1v1h-1zM9,18h1v1h-1zM11,18h1v1h-1zM12,18h1v1h-1zM13,18h1v1h-1zM14,18h1v1h-1zM15,18h1v1h-1zM17,18h1v1h-1zM18,18h1v1h-1zM20,18h1v1h-1zM21,18h1v1h-1zM22,18h1v1h-1zM24,18h1v1h-1zM25,18h1v1h-1zM27,18h1v1h-1zM28,18h1v1h-1zM30,18h1v1h-1zM31,18h1v1h-1zM0,19h1v1h-1zM1,19h1v1h-1zM3,19h1v1h-1zM9,19h1v1h-1zM11,19h1v1h-1zM13,19h1v1h-1zM16,19h1v1h-1zM17,19h1v1h-1zM18,19h1v1h-1zM19,19h1v1h-1zM23,19h1v1h-1zM24,19h1v1h-1zM25,19h1v1h-1zM26,19h1v1h-1zM28,19h1v1h-1zM31,19h1v1h-1zM1,20h1v1h-1zM3,20h1v1h-1zM5,20h1v1h-1zM6,20h1v1h-1zM7,20h1v1h-1zM9,20h1v1h-1zM13,20h1v1h-1zM14,20h1v1h-1zM15,20h1v1h-1zM16,20h1v1h-1zM17,20h1v1h-1zM18,20h1v1h-1zM21,20h1v1h-1zM25,20h1v1h-1zM27,20h1v1h-1zM29,20h1v1h-1zM30,20h1v1h-1zM31,20h1v1h-1zM32,20h1v1h-1zM0,21h1v1h-1zM1,21h1v1h-1zM2,21h1v1h-1zM8,21h1v1h-1zM9,21h1v1h-1zM10,21h1v1h-1zM11,21h1v1h-1zM12,21h1v1h-1zM14,21h1v1h-1zM16,21h1v1h-1zM19,21h1v1h-1zM21,21h1v1h-1zM23,21h1v1h-1zM26,21h1v1h-1zM29,21h1v1h-1zM30,21h1v1h-1zM32,21h1v1h-1zM2,22h1v1h-1zM6,22h1v1h-1zM10,22h1v1h-1zM11,22h1v1h-1zM12,22h1v1h-1zM14,22h1v1h-1zM21,22h1v1h-1zM23,22h1v1h-1zM24,22h1v1h-1zM25,22h1v1h-1zM26,22h1v1h-1zM29,22h1v1h-1zM31,22h1v1h-1zM32,22h1v1h-1zM1,23h1v1h-1zM3,23h1v1h-1zM10,23h1v1h-1zM11,23h1v1h-1zM14,23h1v1h-1zM15,23h1v1h-1zM16,23h1v1h-1zM18,23h1v1h-1zM24,23h1v1h-1zM26,23h1v1h-1zM27,23h1v1h-1zM28,23h1v1h-1zM31,23h1v1h-1zM32,23h1v1h-1zM0,24h1v1h-1zM2,24h1v1h-1zM4,24h1v1h-1zM6,24h1v1h-1zM7,24h1v1h-1zM9,24h1v1h-1zM10,24h1v1h-1zM11,24h1v1h-1zM12,24h1v1h-1zM14,24h1v1h-1zM15,24h1v1h-1zM17,24h1v1h-1zM22,24h1v1h-1zM23,24h1v1h-1zM24,24h1v1h-1zM25,24h1v1h-1zM26,24h1v1h-1zM27,24h1v1h-1zM28,24h1v1h-1zM31,24h1v1h-1zM32,24h1v1h-1zM8,25h1v1h-1zM9,25h1v1h-1zM10,25h1v1h-1zM12,25h1v1h-1zM14,25h1v1h-1zM15,25h1v1h-1zM16,25h1v1h-1zM17,25h1v1h-1zM19,25h1v1h-1zM20,25h1v1h-1zM21,25h1v1h-1zM24,25h1v1h-1zM28,25h1v1h-1zM29,25h1v1h-1zM0,26h1v1h-1zM1,26h1v1h-1zM2,26h1v1h-1zM3,26h1v1h-1zM4,26h1v1h-1zM5,26h1v1h-1zM6,26h1v1h-1zM8,26h1v1h-1zM10,26h1v1h-1zM14,26h1v1h-1zM18,26h1v1h-1zM19,26h1v1h-1zM20,26h1v1h-1zM21,26h1v1h-1zM23,26h1v1h-1zM24,26h1v1h-1zM26,26h1v1h-1zM28,26h1v1h-1zM0,27h1v1h-1zM6,27h1v1h-1zM8,27h1v1h-1zM9,27h1v1h-1zM10,27h1v1h-1zM11,27h1v1h-1zM14,27h1v1h-1zM15,27h1v1h-1zM18,27h1v1h-1zM20,27h1v1h-1zM21,27h1v1h-1zM22,27h1v1h-1zM23,27h1v1h-1zM24,27h1v1h-1zM28,27h1v1h-1zM29,27h1v1h-1zM30,27h1v1h-1zM32,27h1v1h-1zM0,28h1v1h-1zM2,28h1v1h-1zM3,28h1v1h-1zM4,28h1v1h-1zM6,28h1v1h-1zM10,28h1v1h-1zM13,28h1v1h-1zM14,28h1v1h-1zM16,28h1v1h-1zM18,28h1v1h-1zM19,28h1v1h-1zM21,28h1v1h-1zM22,28h1v1h-1zM23,28h1v1h-1zM24,28h1v1h-1zM25,28h1v1h-1zM26,28h1v1h-1zM27,28h1v1h-1zM28,28h1v1h-1zM30,28h1v1h-1zM32,28h1v1h-1zM0,29h1v1h-1zM2,29h1v1h-1zM3,29h1v1h-1zM4,29h1v1h-1zM6,29h1v1h-1zM8,29h1v1h-1zM9,29h1v1h-1zM10,29h1v1h-1zM11,29h1v1h-1zM12,29h1v1h-1zM14,29h1v1h-1zM15,29h1v1h-1zM20,29h1v1h-1zM21,29h1v1h-1zM22,29h1v1h-1zM23,29h1v1h-1zM27,29h1v1h-1zM29,29h1v1h-1zM30,29h1v1h-1zM32,29h1v1h-1zM0,30h1v1h-1zM2,30h1v1h-1zM3,30h1v1h-1zM4,30h1v1h-1zM6,30h1v1h-1zM8,30h1v1h-1zM10,30h1v1h-1zM11,30h1v1h-1zM15,30h1v1h-1zM17,30h1v1h-1zM18,30h1v1h-1zM20,30h1v1h-1zM22,30h1v1h-1zM26,30h1v1h-1zM27,30h1v1h-1zM29,30h1v1h-1zM0,31h1v1h-1zM6,31h1v1h-1zM9,31h1v1h-1zM10,31h1v1h-1zM11,31h1v1h-1zM12,31h1v1h-1zM14,31h1v1h-1zM17,31h1v1h-1zM19,31h1v1h-1zM20,31h1v1h-1zM22,31h1v1h-1zM23,31h1v1h-1zM24,31h1v1h-1zM25,31h1v1h-1zM27,31h1v1h-1zM28,31h1v1h-1zM32,31h1v1h-1zM0,32h1v1h-1zM1,32h1v1h-1zM2,32h1v1h-1zM3,32h1v1h-1zM4,32h1v1h-1zM5,32h1v1h-1zM6,32h1v1h-1zM8,32h1v1h-1zM11,32h1v1h-1zM13,32h1v1h-1zM15,32h1v1h-1zM16,32h1v1h-1zM17,32h1v1h-1zM18,32h1v1h-1zM19,32h1v1h-1zM21,32h1v1h-1zM23,32h1v1h-1zM26,32h1v1h-1zM28,32h1v1h-1zM29,32h1v1h-1zM30,32h1v1h-1z"/></svg><div><div class="row" style="gap:8px; color:var(--brand)"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,16.5L16,12L10,7.5V16.5Z"/></svg><span class="h3" style="color:var(--ink)">Demo</span></div><p class="small muted" style="margin-top:4px">Seven recordings, MP4 and GIF</p></div></a>
+  <a class="card row" href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid" style="gap:14px; padding:14px 16px">
+    <div class="scr" style="width:52px; height:113px; border-radius:8px; flex:none"><img src="img/figma-home.png" alt=""></div>
+    <div><div class="row" style="gap:8px; color:var(--brand)"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2C17.5,2 22,6 22,11A6,6 0 0,1 16,17H14.2C13.9,17 13.7,17.2 13.7,17.5C13.7,17.6 13.8,17.7 13.8,17.8C14.2,18.3 14.4,18.9 14.4,19.5C14.5,20.9 13.4,22 12,22M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C12.3,20 12.5,19.8 12.5,19.5C12.5,19.3 12.4,19.2 12.4,19.1C12,18.6 11.8,18.1 11.8,17.5C11.8,16.1 12.9,15 14.3,15H16A4,4 0 0,0 20,11C20,7.1 16.4,4 12,4M6.5,10C7.3,10 8,10.7 8,11.5C8,12.3 7.3,13 6.5,13C5.7,13 5,12.3 5,11.5C5,10.7 5.7,10 6.5,10M9.5,6C10.3,6 11,6.7 11,7.5C11,8.3 10.3,9 9.5,9C8.7,9 8,8.3 8,7.5C8,6.7 8.7,6 9.5,6M14.5,6C15.3,6 16,6.7 16,7.5C16,8.3 15.3,9 14.5,9C13.7,9 13,8.3 13,7.5C13,6.7 13.7,6 14.5,6M17.5,10C18.3,10 19,10.7 19,11.5C19,12.3 18.3,13 17.5,13C16.7,13 16,12.3 16,11.5C16,10.7 16.7,10 17.5,10Z"/></svg><span class="h3" style="color:var(--ink)">Figma file</span></div>
+    <p class="small muted" style="margin-top:4px">Rebuilt from the code: 61 variables, 26 icons, 11 components, 5 screens. Session screens and links still to add.</p></div>
+  </a>
+  <div class="card" style="padding:16px 18px; background:var(--panel); border-color:var(--panel)">
+    <div class="row" style="gap:8px; color:var(--brand)"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 15.5C17.5 16.61 16.61 17.5 15.5 17.5S13.5 16.61 13.5 15.5 14.4 13.5 15.5 13.5 17.5 14.4 17.5 15.5M8.5 13.5C7.4 13.5 6.5 14.4 6.5 15.5S7.4 17.5 8.5 17.5 10.5 16.61 10.5 15.5 9.61 13.5 8.5 13.5M23 15V18C23 18.55 22.55 19 22 19H21V20C21 21.11 20.11 22 19 22H5C3.9 22 3 21.11 3 20V19H2C1.45 19 1 18.55 1 18V15C1 14.45 1.45 14 2 14H3C3 10.13 6.13 7 10 7H11V5.73C10.4 5.39 10 4.74 10 4C10 2.9 10.9 2 12 2S14 2.9 14 4C14 4.74 13.6 5.39 13 5.73V7H14C17.87 7 21 10.13 21 14H22C22.55 14 23 14.45 23 15M21 16H19V14C19 11.24 16.76 9 14 9H10C7.24 9 5 11.24 5 14V16H3V17H5V20H19V17H21V16Z"/></svg><span class="h3" style="color:var(--ink)">Made with AI help</span></div>
+    <p class="small muted" style="margin-top:4px">Claude Code wrote most of the code from March 2026, plus the recordings, the Figma file and this document’s draft. I set the direction and made the calls.</p>
   </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 13</span></div>
-</section>
-
-<!-- 14 Outcome, gaps, links -->
-<section class="page">
-  <div class="kicker">14 · Outcome</div>
-  <h2>What improved, what’s still open</h2>
-  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:24px; margin-top:24px">
-    <div>
-      <h3>What improved</h3>
-      <ul style="margin-top:10px; font-size:13.5px">
-        <li>Prices match the City’s rate for the hour, not a guess from the zone code.</li>
-        <li>Rush-hour windows warn, cap the stay and block Start, so a tow-away hour is never shown as free.</li>
-        <li>Rows read like the curb: block, side, zone, walk.</li>
-        <li>The map opens readable: 15 pins instead of 45 piled up.</li>
-        <li>The backend deploys on its own and returns each block once.</li>
-        <li>Fixed for small phones, laptops, keyboard use and contrast.</li>
-      </ul>
-    </div>
-    <div class="gap-box">
-      <h3>Honest gaps</h3>
-      <ul style="margin-top:10px; font-size:13px; line-height:1.45">
-        <li>No usability testing with drivers yet.</li>
-        <li>Not run on a physical phone in this round.</li>
-        <li>The live database still needs the new import. The recordings used a local copy of the API with the same code.</li>
-        <li>The Figma file is partial: session screens and click-through links are still to add.</li>
-        <li>The City’s data drives the app, but the signs at the curb have the final say. The app says so.</li>
-      </ul>
-    </div>
-    <div class="panel">
-      <h3>AI assistance</h3>
-      <p class="small" style="margin-top:8px">Claude Code wrote most of the code from March 2026 (101 of 128 commits), and helped make the walkthrough recordings, the Figma file and the first draft of this case study. An early branch came from OpenAI Codex (April 2026).</p>
-      <p class="small" style="margin-top:8px">I directed the work: what to fix, in what order, and what the app should promise drivers.</p>
-    </div>
-  </div>
-  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:26px">
-    <a class="card" href="https://github.com/ginesbal/parkaid" style="display:block"><div class="kicker" style="font-size:11px">Source code</div><div style="margin-top:4px; font-size:14px">github.com/ginesbal/parkaid</div></a>
-    <a class="card" href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough" style="display:block"><div class="kicker" style="font-size:11px">Demo recordings</div><div style="margin-top:4px; font-size:14px">github.com/ginesbal/parkaid/tree/main/docs/walkthrough</div></a>
-    <a class="card" href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid" style="display:block"><div class="kicker" style="font-size:11px">Figma file</div><div style="margin-top:4px; font-size:14px">figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid</div></a>
-  </div>
-  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 14</span></div>
-</section>
-
+</div></section>
 </body>
 </html>
