@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ParkAid case study</title>
+<style>
+  :root {
+    --ink: #0F1A26;
+    --muted: #5B6B7C;
+    --brand: #1D6D8B;
+    --brand-ink: #15495D;
+    --soft: #EDF6F9;
+    --line: #E6EAF0;
+    --bg: #F7F8FA;
+    --amber: #8F6216;
+    --amber-soft: #FBF5EA;
+  }
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body {
+    font-family: Inter, sans-serif;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  .page {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    padding: 52px 72px 64px;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+    background: #fff;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  .kicker {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brand);
+  }
+  h1, h2, h3 { font-family: 'Inter Display', Inter, sans-serif; margin: 0; }
+  h1 { font-size: 76px; line-height: 1; font-weight: 700; letter-spacing: -0.025em; }
+  h2 { font-size: 34px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em; margin-top: 8px; max-width: 900px; }
+  h3 { font-size: 17px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; line-height: 1.45; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { position: relative; padding-left: 16px; }
+  li + li { margin-top: 7px; }
+  li::before { content: ''; position: absolute; left: 0; top: 0.62em; width: 6px; height: 6px; border-radius: 3px; background: var(--brand); opacity: 0.55; }
+  a { color: var(--brand-ink); text-decoration: none; }
+  .num { font-variant-numeric: tabular-nums; }
+  .footer {
+    position: absolute; left: 72px; right: 72px; bottom: 26px;
+    display: flex; justify-content: space-between;
+    font-size: 11.5px; color: var(--muted);
+    border-top: 1px solid var(--line); padding-top: 10px;
+  }
+  .shot {
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(15, 26, 38, 0.06), 0 10px 28px rgba(15, 26, 38, 0.08);
+    overflow: hidden;
+    background: #fff;
+  }
+  .shot img { display: block; width: 100%; height: auto; }
+  .cap { margin-top: 10px; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+  .cap b { color: var(--ink); font-weight: 600; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line);
+  }
+  .tag.after { background: var(--soft); color: var(--brand-ink); border-color: #CFE3EC; }
+  .card { border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; background: #fff; }
+  .panel { background: var(--bg); border-radius: 16px; padding: 18px 20px; }
+
+  /* Cover */
+  .cover { padding: 0; display: grid; grid-template-columns: 600px 1fr; }
+  .cover-left { padding: 64px 0 0 72px; }
+  .cover .lede { font-size: 21px; line-height: 1.4; margin-top: 18px; max-width: 470px; color: var(--ink); }
+  .meta { margin: 30px 0 0; display: grid; gap: 12px; max-width: 480px; }
+  .meta div { display: grid; grid-template-columns: 86px 1fr; gap: 12px; }
+  .meta dt { font-size: 12.5px; font-weight: 600; color: var(--muted); padding-top: 1px; }
+  .meta dd { margin: 0; font-size: 14px; line-height: 1.45; }
+  .links { margin-top: 30px; display: grid; gap: 8px; max-width: 480px; }
+  .links a {
+    display: grid; grid-template-columns: 130px 1fr; align-items: center;
+    padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; color: var(--brand-ink);
+  }
+  .links a span { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  .byline { position: absolute; left: 72px; bottom: 34px; font-size: 13px; color: var(--muted); }
+  .cover-right { position: relative; background: var(--bg); }
+  .cover-right .shot { position: absolute; width: 196px; }
+
+  /* Grids */
+  .cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stat { border-top: 2px solid var(--brand); padding-top: 12px; }
+  .stat .big { font-family: 'Inter Display', Inter, sans-serif; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .stat p { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+  .toc { display: grid; grid-template-columns: repeat(4, auto); gap: 6px 28px; font-size: 12.5px; color: var(--muted); }
+  .toc b { color: var(--brand); font-weight: 600; margin-right: 6px; font-variant-numeric: tabular-nums; }
+
+  .q { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: baseline; }
+  .q .n { font-weight: 600; color: var(--brand); font-variant-numeric: tabular-nums; }
+  .issue { padding: 12px 14px; border-radius: 12px; background: var(--amber-soft); border: 1px solid #F0E3C8; }
+  .issue + .issue { margin-top: 8px; }
+  .issue b { color: var(--amber); font-weight: 600; }
+
+  .timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; margin-top: 34px; }
+  .timeline::before { content: ''; position: absolute; left: 6px; right: 6px; top: 6px; height: 2px; background: var(--line); }
+  .tl { position: relative; padding-right: 22px; }
+  .tl .dot { width: 14px; height: 14px; border-radius: 7px; background: #fff; border: 3px solid var(--brand); position: relative; }
+  .tl .when { margin-top: 14px; font-size: 12.5px; font-weight: 600; color: var(--brand); }
+  .tl h3 { margin-top: 4px; font-size: 15.5px; }
+  .tl p { margin-top: 4px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+  .loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .step { background: var(--bg); border-radius: 14px; padding: 16px 16px 18px; }
+  .step .n { font-size: 12px; font-weight: 600; color: var(--brand); }
+  .step h3 { margin-top: 4px; font-size: 15.5px; }
+  .step p { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+
+  .pairs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 26px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pair .tag { margin-bottom: 8px; }
+  .pair-cap { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+  .pair-cap b { color: var(--ink); }
+
+  .decisions { margin-top: 26px; display: grid; gap: 12px; }
+  .decision { display: grid; grid-template-columns: 40px 340px 1fr 180px; gap: 20px; align-items: start; padding: 18px 22px; border: 1px solid var(--line); border-radius: 14px; }
+  .decision .n { font-family: 'Inter Display', Inter, sans-serif; font-size: 24px; font-weight: 600; color: var(--brand); line-height: 1.1; }
+  .decision h3 { font-size: 17px; }
+  .decision p { font-size: 14.5px; line-height: 1.5; color: var(--muted); }
+  .decision .where { font-size: 13px; color: var(--muted); }
+  .decision .where b { display: block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+
+  .arch { display: grid; gap: 8px; }
+  .node { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; background: #fff; }
+  .node h3 { font-size: 14px; }
+  .node p { font-size: 12.5px; line-height: 1.4; color: var(--muted); margin-top: 2px; }
+  .node.app { border-color: #CFE3EC; background: var(--soft); }
+  .arrow { text-align: center; color: var(--muted); font-size: 13px; line-height: 1; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  pre {
+    margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--ink); color: #E6EEF4;
+    font-family: 'DejaVu Sans Mono', monospace; font-size: 11.5px; line-height: 1.55; white-space: pre; overflow: hidden;
+  }
+  pre .c { color: #8FA3B5; }
+  pre .k { color: #9FD0E3; }
+
+  .challenges { margin-top: 22px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .ch { border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; min-height: 400px; }
+  .ch h3 { font-size: 16.5px; }
+  .ch .lab { margin-top: 12px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .ch p { margin-top: 4px; font-size: 13.6px; line-height: 1.5; }
+  .ch .res { margin-top: auto; padding-top: 12px; }
+  .ch .res p { color: var(--brand-ink); font-weight: 500; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.4; }
+  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; width: 120px; }
+  td:last-child { color: var(--brand-ink); font-weight: 500; }
+
+  .gap-box { border-radius: 14px; padding: 16px 18px; background: var(--amber-soft); border: 1px solid #F0E3C8; }
+  .gap-box h3 { color: var(--amber); font-size: 15px; }
+  .gap-box li::before { background: var(--amber); }
+</style>
+</head>
+<body>
+
+<!-- 1 Cover -->
+<section class="page cover">
+  <div class="cover-left">
+    <div class="kicker">Case study · Mobile app</div>
+    <h1 style="margin-top:14px">ParkAid</h1>
+    <p class="lede">Street parking in downtown Calgary, with the City’s real rates, time limits and rush-hour rules.</p>
+    <dl class="meta">
+      <div><dt>Role</dt><dd>Capstone team member (team of five), then the follow-up work on my own, with AI coding help</dd></div>
+      <div><dt>Build</dt><dd>React Native (Expo SDK 54) for iOS, Android and web. Node and Express API, Postgres with PostGIS.</dd></div>
+      <div><dt>Timeline</dt><dd>SAIT capstone, then September 2025 to November 2026</dd></div>
+    </dl>
+    <div class="links">
+      <a href="https://github.com/ginesbal/parkaid"><span>Source code</span>github.com/ginesbal/parkaid</a>
+      <a href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough"><span>Demo</span>Seven recordings of the real build</a>
+      <a href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid"><span>Figma</span>Design file: components and screens</a>
+    </div>
+    <div class="byline">Ehrl Balquin · <a href="https://www.linkedin.com/in/ehrlbalquin/">linkedin.com/in/ehrlbalquin</a></div>
+  </div>
+  <div class="cover-right">
+    <div class="shot" style="left:44px; top:118px"><img src="img/home.jpg" alt="Home screen"></div>
+    <div class="shot" style="left:262px; top:64px"><img src="img/map.jpg" alt="Map screen"></div>
+    <div class="shot" style="left:480px; top:150px"><img src="img/details.jpg" alt="Spot details screen"></div>
+  </div>
+</section>
+
+<!-- 2 At a glance -->
+<section class="page">
+  <div class="kicker">02 · At a glance</div>
+  <h2>Real rates and rules, in the order a driver needs them</h2>
+  <div class="cols-3" style="margin-top:28px">
+    <div>
+      <h3>The problem</h3>
+      <p class="muted" style="margin-top:8px">Calgary publishes each block’s zone, rates by time of day and rush-hour rules as open data. The capstone version guessed prices from zone codes, showed raw City addresses and listed the same block several times.</p>
+    </div>
+    <div>
+      <h3>What I did</h3>
+      <p class="muted" style="margin-top:8px">Rebuilt the data path and the interface around four questions: can I park here now, what does it cost right now, until when, and which zone do I pay? Then three rounds of critique, each followed by small, tested fixes.</p>
+    </div>
+    <div>
+      <h3>The result</h3>
+      <p class="muted" style="margin-top:8px">Rates and rush-hour rules come straight from the City’s data. A busy downtown map reads at a glance. Payment is plain: ParkAid keeps time, and MyParking, the City’s app, takes the money.</p>
+    </div>
+  </div>
+  <div class="stats" style="margin-top:40px">
+    <div class="stat"><div class="big">23.5%</div><p>of downtown street rows were repeats of the same stretch (277 of 1,178). Each now comes back once.</p></div>
+    <div class="stat"><div class="big">45 → 15</div><p>pins on the opening map view. 44 overlapped before; 4 touch now.</p></div>
+    <div class="stat"><div class="big">170</div><p>automated tests passing: 152 in the app, 18 in the backend.</p></div>
+    <div class="stat"><div class="big">4.23 → 4.74</div><p>contrast ratio for grey text on a selected row, now above the 4.5 : 1 AA minimum.</p></div>
+  </div>
+  <div class="panel" style="margin-top:40px; padding:16px 20px">
+    <div class="toc">
+      <span><b>03</b>The problem</span><span><b>06</b>Before and after</span><span><b>09</b>React Native build</span><span><b>12</b>Walkthrough</span>
+      <span><b>04</b>My contribution</span><span><b>07</b>Key decisions</span><span><b>10</b>Technical challenges</span><span><b>13</b>Figma file</span>
+      <span><b>05</b>Process</span><span><b>08</b>Map and filters</span><span><b>11</b>Testing and results</span><span><b>14</b>Outcome, gaps, links</span>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 2</span></div>
+</section>
+
+<!-- 3 Problem -->
+<section class="page">
+  <div style="display:grid; grid-template-columns: 1fr 236px; gap:56px">
+    <div>
+      <div class="kicker">03 · The problem</div>
+      <h2>The City’s data was right. The capstone app read it loosely.</h2>
+      <p style="margin-top:20px; max-width:640px">Downtown parking changes by block, by side of the street and by the hour. Before leaving the car, a driver needs four answers:</p>
+      <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; max-width:640px">
+        <div class="q"><span class="n">1</span><span>Can I park here now?</span></div>
+        <div class="q"><span class="n">2</span><span>What does it cost right now?</span></div>
+        <div class="q"><span class="n">3</span><span>Until when? Time limits, rush-hour tow-away.</span></div>
+        <div class="q"><span class="n">4</span><span>Which zone do I pay in MyParking?</span></div>
+      </div>
+      <p style="margin-top:22px; max-width:640px">The City publishes all of this as open data. The capstone code, as of October 2025:</p>
+      <div style="margin-top:12px; max-width:700px">
+        <div class="issue"><b>Guessed prices.</b> The price came from a lookup on the zone’s code, not the City’s rates. Zone 1684 showed $6.00 an hour; the City charges $2.00 to $2.25.</div>
+        <div class="issue"><b>Wrong “FREE”.</b> Blocks on 11 Ave SW, which the City charges for on weekdays, showed FREE.</div>
+        <div class="issue"><b>Hard to read.</b> Rows used raw City addresses (“11 Av SW , Fr 5 St SW To 6 St SW”), and the same block appeared several times.</div>
+        <div class="issue"><b>Not real yet.</b> The web build showed a static map image, and the session screen was a demo with rates you picked yourself.</div>
+      </div>
+    </div>
+    <div style="padding-top:8px">
+      <div class="shot"><img src="img/before-home.jpg" alt="Capstone home list with raw addresses and FREE labels"></div>
+      <p class="cap"><b>Capstone code, October 2025,</b> run with the City’s current records. Its pricing logic was re-created from the old backend.</p>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 3</span></div>
+</section>
+
+<!-- 4 My contribution -->
+<section class="page">
+  <div class="kicker">04 · My contribution</div>
+  <h2>From a team capstone to a product I kept improving</h2>
+  <div style="display:grid; grid-template-columns: 380px 1fr; gap:28px; margin-top:26px">
+    <div class="panel" style="padding:20px 22px">
+      <span class="tag">Capstone · team of five</span>
+      <h3 style="margin-top:12px">SAIT, Year 2, Semester 2</h3>
+      <p class="muted" style="margin-top:8px">We built the base app together: an Expo app with a home list, a map and a parking session, a Node and Express API, and an import of the City’s parking data.</p>
+      <p class="muted" style="margin-top:10px">This repo starts from that finished code (first commit September 29, 2025), so the team’s own commit history isn’t in it.</p>
+    </div>
+    <div class="card" style="padding:20px 24px; border-color:#CFE3EC">
+      <span class="tag after">After the capstone · September 2025 to November 2026</span>
+      <h3 style="margin-top:12px">My own work, with AI coding help</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:12px">
+        <ul>
+          <li>Made the backend deployable: Render with push-to-deploy, Supabase Postgres with PostGIS, one required setting.</li>
+          <li>Replaced guessed prices with the City’s rates by time of day, and added rush-hour restrictions.</li>
+          <li>Merged repeated segments and placed each block’s pin at its midpoint.</li>
+        </ul>
+        <ul>
+          <li>Redesigned the app: a calmer palette and type scale, block names that match the signs, and a plain payment flow.</li>
+          <li>Put a real map on the web and grouped pins that overlap.</li>
+          <li>Ran three rounds of design critique and shipped the fixes in small, tested steps.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top:22px">
+    <div class="stat"><div class="big">101 of 128</div><p>commits were written by Claude Code, an AI coding agent, from March 2026 on, working from my instructions.</p></div>
+    <div class="stat"><div class="big">27</div><p>commits are under my own accounts. A few came from an OpenAI Codex branch merged in April 2026.</p></div>
+    <div class="stat"><div class="big">Every round</div><p>I set the priorities and made the product calls: what to fix, in what order, and what the app should promise.</p></div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 4</span></div>
+</section>
+
+<!-- 5 Process -->
+<section class="page">
+  <div class="kicker">05 · Design and development process</div>
+  <h2>Look at the running app, decide, fix, check</h2>
+  <div class="timeline">
+    <div class="tl"><div class="dot"></div><div class="when">Year 2 · capstone</div><h3>Base app</h3><p>Team of five builds the app, API and data import.</p></div>
+    <div class="tl"><div class="dot"></div><div class="when">September 2025</div><h3>New repo</h3><p>The finished capstone code moves to this repo.</p></div>
+    <div class="tl"><div class="dot"></div><div class="when">March to May 2026</div><h3>Redesign and deploy</h3><p>New interface; backend live on Render; renamed ParkAid.</p></div>
+    <div class="tl"><div class="dot"></div><div class="when">October 2026</div><h3>Critique and fix</h3><p>Three critique rounds. The last one became ten fix steps.</p></div>
+    <div class="tl"><div class="dot"></div><div class="when">November 2026</div><h3>Show the work</h3><p>Real-data recordings, the Figma file and this case study.</p></div>
+  </div>
+  <h3 style="margin-top:40px">How each round worked</h3>
+  <div class="loop" style="margin-top:12px">
+    <div class="step"><div class="n">1 · Capture</div><h3>Run the real build</h3><p>The web build with the City’s records for the blocks around 11 Ave SW and 5 St SW, at a fixed time (a Tuesday, 1:40 PM). Screenshot every screen.</p></div>
+    <div class="step"><div class="n">2 · Critique</div><h3>Review it</h3><p>Usability heuristics, wording, and accessibility: contrast, keyboard order, screen-reader labels, small and wide screens.</p></div>
+    <div class="step"><div class="n">3 · Decide</div><h3>Choose the order</h3><p>My call for the last round: money facts first (rates, rush hour, cost), load the City’s real rates, and fix the backend too.</p></div>
+    <div class="step"><div class="n">4 · Fix and check</div><h3>One step at a time</h3><p>Each fix in its own commit, with Jest tests, the web build checked at 360, 390 and 1280 px, and an Android bundle build.</p></div>
+  </div>
+  <p class="small muted" style="margin-top:16px">The critiques were AI-assisted reviews of the running build, not sessions with drivers.</p>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 5</span></div>
+</section>
+
+<!-- 6 Before and after -->
+<section class="page">
+  <div class="kicker">06 · Initial and refined screens</div>
+  <h2>Same City data, clearer answers</h2>
+  <div class="pairs">
+    <div class="pair">
+      <div><span class="tag">Before</span><div class="shot"><img src="img/before-home.jpg" alt="Capstone home"></div></div>
+      <div><span class="tag after">After</span><div class="shot"><img src="img/home.jpg" alt="Refined home"></div></div>
+      <p class="pair-cap"><b>Home.</b> Raw addresses and FREE on charged blocks became block, side and zone in plain words, the rate now, and the rush-hour warning in amber.</p>
+    </div>
+    <div class="pair">
+      <div><span class="tag">Before</span><div class="shot"><img src="img/before-map.jpg" alt="Capstone map"></div></div>
+      <div><span class="tag after">After</span><div class="shot"><img src="img/map.jpg" alt="Refined map"></div></div>
+      <p class="pair-cap"><b>Map.</b> A static image on the web build with pins that show no price became a real map, with overlapping pins grouped by count and lowest rate.</p>
+    </div>
+    <div class="pair">
+      <div><span class="tag">Before</span><div class="shot"><img src="img/before-session.jpg" alt="Capstone session demo"></div></div>
+      <div><span class="tag after">After</span><div class="shot"><img src="img/park.jpg" alt="Refined park setup"></div></div>
+      <p class="pair-cap"><b>Park.</b> A demo where you chose the hourly rate became the City’s rate, the end time and the cost before you start, and a pointer to pay in ParkPlus.</p>
+    </div>
+  </div>
+  <p class="small muted" style="margin-top:14px">Before: the capstone code from October 2025, run locally. After: the current web build. Both use the City’s records for the same downtown blocks.</p>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 6</span></div>
+</section>
+
+<!-- 7 Key decisions -->
+<section class="page">
+  <div class="kicker">07 · Key decisions</div>
+  <h2>Five calls that shaped the app</h2>
+  <div class="decisions">
+    <div class="decision"><div class="n">1</div><h3>Show the City’s rate for right now, and the rest of the day</h3><p>One price is wrong for most of the day. On 11 Ave SW the rate is $1.00 until 11 AM, $2.00 until 1:30 PM, then $1.75.</p><div class="where"><b>Where</b>Rows, map pins, Details</div></div>
+    <div class="decision"><div class="n">2</div><h3>Treat rush hour as a rule, not a note</h3><p>A car left in a tow-away window gets ticketed or towed. So the list warns, lengths stop before the window, and Start isn’t offered during it.</p><div class="where"><b>Where</b>Home, Details, Park</div></div>
+    <div class="decision"><div class="n">3</div><h3>Be plain about money</h3><p>ParkAid doesn’t take payment. It times the stay, shows the cost, copies the zone, opens MyParking, and reminds you to end that session too.</p><div class="where"><b>Where</b>Park, session, summary</div></div>
+    <div class="decision"><div class="n">4</div><h3>Name blocks the way the signs do</h3><p>“5–6 St, north side · Zone 3100” matches what a driver sees at the curb. Two zones on one block are told apart by side.</p><div class="where"><b>Where</b>Rows and cards</div></div>
+    <div class="decision"><div class="n">5</div><h3>Group pins that would overlap</h3><p>Downtown, 45 blocks fit within 250 m. One pin shows the count and the lowest rate; a tap zooms in until the spots part.</p><div class="where"><b>Where</b>Map, on phones and web</div></div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 7</span></div>
+</section>
+
+<!-- 8 Map and filters -->
+<section class="page">
+  <div class="kicker">08 · Map interactions and filtering</div>
+  <h2>Compare spots without tapping every pin</h2>
+  <div style="display:grid; grid-template-columns: 196px 196px 196px 1fr; gap:22px; margin-top:24px">
+    <div><div class="shot"><img src="img/map-groups.jpg" alt="Map opening view with grouped pins"></div><p class="cap"><b>Opening view.</b> A group shows its count and its lowest rate.</p></div>
+    <div><div class="shot"><img src="img/map-parted.jpg" alt="Map zoomed into a group with a selected pin"></div><p class="cap"><b>After a tap on a group.</b> The map zooms until the spots part; the chosen pin turns dark.</p></div>
+    <div><div class="shot"><img src="img/filters.jpg" alt="Home with filters open"></div><p class="cap"><b>Filters.</b> Best value, street only, within 500 m.</p></div>
+    <div style="padding-left:6px">
+      <h3>Sort</h3>
+      <p class="muted" style="margin-top:6px"><b style="color:var(--ink)">Near me</b> ranks by walk, then price. <b style="color:var(--ink)">Best value</b> ranks by the rate now, then distance. In both, short stays, blocks with no parking right now, and permit-only blocks go lower.</p>
+      <h3 style="margin-top:18px">Filter</h3>
+      <p class="muted" style="margin-top:6px">Parking type (street, lot, parkade, permit) and distance (150 m to 1 km). The list and the map share the same filters.</p>
+      <h3 style="margin-top:18px">Move around</h3>
+      <p class="muted" style="margin-top:6px">Search an address, drop a pin, or drag the map and search that area.</p>
+      <h3 style="margin-top:18px">Grouping rule</h3>
+      <p class="muted" style="margin-top:6px">Pins closer than a group pill (70 × 34 px at the current zoom) share one pin, led by the best-ranked spot. If every spot in a group is within 12 m, a tap selects the lead instead of zooming.</p>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 8</span></div>
+</section>
+
+<!-- 9 React Native build -->
+<section class="page">
+  <div class="kicker">09 · React Native implementation</div>
+  <h2>One codebase, three platforms, two map engines</h2>
+  <div style="display:grid; grid-template-columns: 330px 1fr 380px; gap:28px; margin-top:24px">
+    <div class="arch">
+      <div class="node"><h3>City of Calgary open data</h3><p>Parking zones, rates by time of day, restrictions</p></div>
+      <div class="arrow">↓</div>
+      <div class="node"><h3>Import script (Node)</h3><p>Four datasets into one table; safe to re-run</p></div>
+      <div class="arrow">↓</div>
+      <div class="node"><h3>Postgres + PostGIS on Supabase</h3><p>Nearby search runs in the database, with an index</p></div>
+      <div class="arrow">↓</div>
+      <div class="node"><h3>Express API on Render</h3><p>Merges a block’s segments, formats rows</p></div>
+      <div class="arrow">↓</div>
+      <div class="split">
+        <div class="node app"><h3>iOS and Android</h3><p>react-native-maps (Google)</p></div>
+        <div class="node app"><h3>Web</h3><p>react-native-web, MapLibre GL JS, OpenStreetMap tiles</p></div>
+      </div>
+    </div>
+    <div>
+      <h3>My front-end responsibilities</h3>
+      <ul style="margin-top:10px; font-size:14px">
+        <li><b>Screens and navigation:</b> Welcome, Home, Map, Details, Park and the session, with React Navigation.</li>
+        <li><b>Shared components:</b> spot rows, the meta line that wraps by part, map pins and group pins, ParkPlus actions.</li>
+        <li><b>Rules kept out of the UI:</b> rates, rush hour, ranking and grouping live in plain functions with Jest tests.</li>
+        <li><b>Platform files:</b> <span class="num">index.web.js</span> for the web map; a compact badge for Android’s marker limit.</li>
+        <li><b>State:</b> a session context for the timer, hooks for location and nearby spots, and cached responses for bad connections.</li>
+        <li><b>Access and layout:</b> screen-reader labels, Reduce Motion, keyboard order on web, a 520 px column on wide screens.</li>
+      </ul>
+      <p class="small muted" style="margin-top:14px">Expo SDK 54 · React Native 0.81 · React Navigation · react-native-maps · MapLibre GL JS · Jest</p>
+    </div>
+    <div>
+      <pre><span class="c">// mobile/src/utils/mapGroups.js (simplified)</span>
+<span class="k">export function</span> groupPins(spots, worldSize) {
+  <span class="k">const</span> groups = [];
+  <span class="k">for</span> (<span class="k">const</span> spot <span class="k">of</span> spots) { <span class="c">// best first</span>
+    <span class="k">const</span> { x, y } = worldPoint(
+      getCoordinates(spot), worldSize);
+    <span class="k">const</span> near = groups.find((g) =>
+      Math.abs(g.x - x) &lt; PIN_WIDTH &amp;&amp;
+      Math.abs(g.y - y) &lt; PIN_HEIGHT);
+    <span class="k">if</span> (near) near.spots.push(spot);
+    <span class="k">else</span> groups.push(
+      { x, y, lead: spot, spots: [spot] });
+  }
+  <span class="k">return</span> groups;
+}</pre>
+      <p class="cap">The same grouping runs on both map engines. Pin positions come from Web Mercator, so only the screen distance between pins matters.</p>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 9</span></div>
+</section>
+
+<!-- 10 Challenges -->
+<section class="page">
+  <div class="kicker">10 · Technical challenges</div>
+  <h2>What was hard, and how it was solved</h2>
+  <div class="challenges">
+    <div class="ch">
+      <h3>Prices that change by the hour</h3>
+      <div class="lab">Approach</div><p>Read the City’s zone-rate layer, turn its rate bands into time ranges, and count only the hours the City charges.</p>
+      <div class="res"><div class="lab">Result</div><p>Rows show the rate now, Details lists the day’s rates, and Park shows the cost before you start.</p></div>
+    </div>
+    <div class="ch">
+      <h3>Rush-hour restrictions</h3>
+      <div class="lab">Approach</div><p>Check each restriction’s days and hours against the current time and against the end of a planned stay.</p>
+      <div class="res"><div class="lab">Result</div><p>Amber warnings, capped lengths (“the longest here is 1 hour 50 min”), and no Start during the window.</p></div>
+    </div>
+    <div class="ch">
+      <h3>Repeated segments</h3>
+      <div class="lab">Approach</div><p>The City splits a stretch of a block into segments. The API merges rows with the same zone, address, side, type, hours, limit and restriction.</p>
+      <div class="res"><div class="lab">Result</div><p>277 of 1,178 street rows near downtown were repeats. Each block now comes back once, pinned at its midpoint.</p></div>
+    </div>
+    <div class="ch">
+      <h3>A crowded map</h3>
+      <div class="lab">Approach</div><p>Group pins by their distance on screen at the current zoom, on both map engines, and zoom in on tap.</p>
+      <div class="res"><div class="lab">Result</div><p>45 pins with 44 overlapping became 15 pins with 4 touching on the opening web view.</p></div>
+    </div>
+    <div class="ch">
+      <h3>Android map markers</h3>
+      <div class="lab">Approach</div><p>react-native-maps on Android draws a custom marker into a 100 × 100 px bitmap, which crops a price pill. Android gets a compact round badge instead.</p>
+      <div class="res"><div class="lab">Result</div><p>No cropped pins. The selected spot’s price shows in the sheet below the map.</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 10</span></div>
+</section>
+
+<!-- 11 Testing -->
+<section class="page">
+  <div class="kicker">11 · Testing and results</div>
+  <h2>What was checked, and what wasn’t</h2>
+  <div style="display:grid; grid-template-columns: 1fr 300px; gap:32px; margin-top:22px">
+    <table>
+      <tr><th>Check</th><th>How</th><th>Result</th></tr>
+      <tr><td>Logic</td><td>Jest unit tests: rates, rush hour, ranking, grouping and wording in the app; row merging, geometry and zone rates in the backend</td><td>152 app and 18 backend tests pass (run November 2, 2026)</td></tr>
+      <tr><td>Real data</td><td>1,672 City records within 1.5 km of 11 Ave SW and 5 St SW, served through the backend’s own row code</td><td>Used for every screen and recording here</td></tr>
+      <tr><td>Map density</td><td>Count pins and overlaps on the opening web view</td><td>45 → 15 pins; 44 overlapping → 4 touching</td></tr>
+      <tr><td>Contrast</td><td>WCAG ratios for text on selected rows</td><td>Grey 4.23 → 4.74 : 1; amber warning 4.63 : 1</td></tr>
+      <tr><td>Keyboard</td><td>Tab through the web map screen</td><td>Pins skipped (the list has the same places); search is the first stop</td></tr>
+      <tr><td>Small phone</td><td>Web build at 360 × 640</td><td>Add time and End session moved from 676 and 771 px (off screen) to 263 and 358 px</td></tr>
+      <tr><td>Builds</td><td>Web build checked at 360, 390 and 1280 px wide; Android bundle exported</td><td>Both build without errors</td></tr>
+    </table>
+    <div class="gap-box">
+      <h3>Not done yet</h3>
+      <ul style="margin-top:10px; font-size:13px; line-height:1.45">
+        <li>No usability sessions with drivers.</li>
+        <li>No testing on a physical phone in this round. Android was bundled, not run on a device.</li>
+        <li>The database-backed suites (API contract, data quality, performance) need a database connection and weren’t run here.</li>
+        <li>Query speed wasn’t measured. The README’s “about 30 ms” is an older figure.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 11</span></div>
+</section>
+
+<!-- 12 Walkthrough -->
+<section class="page">
+  <div class="kicker">12 · App walkthrough</div>
+  <h2>Seven recordings of the real build</h2>
+  <div style="display:grid; grid-template-columns: repeat(4, 170px) 1fr; gap:22px; margin-top:22px; align-items:start">
+    <div><div class="shot"><img src="img/details.jpg" alt="Spot details"></div><p class="cap"><b>3 · Details.</b> Rate now, rush hour, the day’s rates, the zone to pay.</p></div>
+    <div><div class="shot"><img src="img/session.jpg" alt="Parking session"></div><p class="cap"><b>4 · Parking.</b> Time left, add time, end, and where to pay.</p></div>
+    <div><div class="shot"><img src="img/rush-capped.jpg" alt="Rush hour capped lengths"></div><p class="cap"><b>5 · Rush hour.</b> At 2:40 PM the longest stay is 50 min.</p></div>
+    <div><div class="shot"><img src="img/parked-here.jpg" alt="Details while parked"></div><p class="cap"><b>6 · Parked here.</b> Details shows the time left on your own spot.</p></div>
+    <div>
+      <div class="shot" style="border-radius:12px"><img src="img/laptop.jpg" alt="Laptop layout with the list beside the map"></div>
+      <p class="cap"><b>7 · Laptop.</b> The map opens with its list beside it.</p>
+      <div class="panel" style="margin-top:18px">
+        <p class="small"><b>1 · Finding parking</b> and <b>2 · The map</b> are on page 8.</p>
+        <p class="small muted" style="margin-top:8px">Recorded with Playwright from the web build, at a fixed time, with the City’s records. A blue circle marks each tap. MP4 and GIF:</p>
+        <p class="small" style="margin-top:6px"><a href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough">github.com/ginesbal/parkaid/tree/main/docs/walkthrough</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 12</span></div>
+</section>
+
+<!-- 13 Figma -->
+<section class="page">
+  <div class="kicker">13 · Figma file</div>
+  <h2>The shipped interface, rebuilt as a design library</h2>
+  <div style="display:grid; grid-template-columns: 300px 190px 190px 1fr; gap:22px; margin-top:22px; align-items:start">
+    <div>
+      <p class="muted">Made in November 2026 from the code, after the app was built, so the design can be inspected and reused. It isn’t the original design source.</p>
+      <ul style="margin-top:14px; font-size:14px">
+        <li>61 variables (colour, spacing, radius) and 14 text styles, matching the app’s tokens.</li>
+        <li>26 icons imported from the icon sets the app uses, not redrawn.</li>
+        <li>11 components with variants and properties: buttons, chips, spot rows, map pins, tab bar and more.</li>
+        <li>Screens so far: Welcome, Home, Map, Details, Park. The session screens and click-through links are still to add.</li>
+      </ul>
+      <p class="small" style="margin-top:14px; word-break:break-all"><a href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid">figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid</a></p>
+    </div>
+    <div><div class="shot"><img src="img/figma-home.png" alt="Home screen in Figma"></div><p class="cap"><b>Home,</b> built from component instances: search, chips, spot rows, tab bar.</p></div>
+    <div><div class="shot"><img src="img/figma-details.png" alt="Details screen in Figma"></div><p class="cap"><b>Details,</b> with the map preview from OpenStreetMap tiles.</p></div>
+    <div>
+      <div class="shot" style="border-radius:12px; padding:6px 10px"><img src="img/figma-tabbar.png" alt="Tab bar component with its three variants"></div>
+      <p class="cap"><b>Tab bar,</b> one variant per active tab.</p>
+      <div class="shot" style="border-radius:12px; margin-top:14px"><img src="img/figma-icons.png" alt="Icon components"></div>
+      <p class="cap"><b>Icons,</b> with colour bound to a variable.</p>
+    </div>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 13</span></div>
+</section>
+
+<!-- 14 Outcome, gaps, links -->
+<section class="page">
+  <div class="kicker">14 · Outcome</div>
+  <h2>What improved, what’s still open</h2>
+  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:24px; margin-top:24px">
+    <div>
+      <h3>What improved</h3>
+      <ul style="margin-top:10px; font-size:13.5px">
+        <li>Prices match the City’s rate for the hour, not a guess from the zone code.</li>
+        <li>Rush-hour windows warn, cap the stay and block Start, so a tow-away hour is never shown as free.</li>
+        <li>Rows read like the curb: block, side, zone, walk.</li>
+        <li>The map opens readable: 15 pins instead of 45 piled up.</li>
+        <li>The backend deploys on its own and returns each block once.</li>
+        <li>Fixed for small phones, laptops, keyboard use and contrast.</li>
+      </ul>
+    </div>
+    <div class="gap-box">
+      <h3>Honest gaps</h3>
+      <ul style="margin-top:10px; font-size:13px; line-height:1.45">
+        <li>No usability testing with drivers yet.</li>
+        <li>Not run on a physical phone in this round.</li>
+        <li>The live database still needs the new import. The recordings used a local copy of the API with the same code.</li>
+        <li>The Figma file is partial: session screens and click-through links are still to add.</li>
+        <li>The City’s data drives the app, but the signs at the curb have the final say. The app says so.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>AI assistance</h3>
+      <p class="small" style="margin-top:8px">Claude Code wrote most of the code from March 2026 (101 of 128 commits), and helped make the walkthrough recordings, the Figma file and the first draft of this case study. An early branch came from OpenAI Codex (April 2026).</p>
+      <p class="small" style="margin-top:8px">I directed the work: what to fix, in what order, and what the app should promise drivers.</p>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:26px">
+    <a class="card" href="https://github.com/ginesbal/parkaid" style="display:block"><div class="kicker" style="font-size:11px">Source code</div><div style="margin-top:4px; font-size:14px">github.com/ginesbal/parkaid</div></a>
+    <a class="card" href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough" style="display:block"><div class="kicker" style="font-size:11px">Demo recordings</div><div style="margin-top:4px; font-size:14px">github.com/ginesbal/parkaid/tree/main/docs/walkthrough</div></a>
+    <a class="card" href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid" style="display:block"><div class="kicker" style="font-size:11px">Figma file</div><div style="margin-top:4px; font-size:14px">figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid</div></a>
+  </div>
+  <div class="footer"><span>ParkAid · Case study</span><span>Ehrl Balquin · 14</span></div>
+</section>
+
+</body>
+</html>
