@@ -90,7 +90,7 @@ function MainTabs() {
 function Tabs() {
     const insets = useSafeAreaInsets();
     const sessionStatus = useSessionStatus();
-    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
+    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10, default: 0 }));
     const tabBarHeight = 66 + tabBarBottomPadding;
     // On a wide window the tabs sit under the content's column, not spread
     // across the window.
