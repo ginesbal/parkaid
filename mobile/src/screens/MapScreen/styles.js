@@ -1,6 +1,9 @@
 import { StyleSheet } from 'react-native';
-import { TOKENS } from '../../constants/theme';
+import { RADIUS, SELECTED, SELECTED_BORDER, TOKENS, alpha } from '../../constants/theme';
 import { SHEET_MIN_HEIGHT } from './constants';
+
+// What the selected border adds over the hairline, taken out of the padding.
+const SELECTED_INSET = SELECTED_BORDER - StyleSheet.hairlineWidth;
 
 export const styles = StyleSheet.create({
     container: {
@@ -12,7 +15,7 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // ===== Floating header — search, then type chips =====
+    // ===== Floating header — single compact bar =====
     topNavigation: {
         position: 'absolute',
         top: 0,
@@ -22,58 +25,157 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingBottom: 8,
         zIndex: 1000,
-        // Android: without elevation, taps on the header (search + chips)
-        // can fall through to the underlying MapView SurfaceView.
+        // Android: without elevation, taps on the header (search + quick
+        // actions) can fall through to the underlying MapView SurfaceView.
         // Must be >= any child's elevation so the whole header is a single
         // touch target from Android's compositor perspective.
         elevation: 10,
     },
 
-    // No containing slab — the search pill and the chips each float
-    // directly over the map with their own quiet surface.
     headerBar: {
+        backgroundColor: TOKENS.surfaceOverlay,
+        borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         gap: 8,
+        shadowColor: TOKENS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 3,
     },
 
     searchContainer: {
         width: '100%',
     },
 
-    // Parking-type chips: always in view, left-aligned under the search
-    // text so the two read as one column.
-    typeFilters: {
+    quickActions: {
         flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 6,
     },
 
-    // Faded, not removed, so the header never reflows.
-    typeFiltersMuted: {
-        opacity: 0,
-    },
-
-    // ===== Markers =====
-    marker: {
-        width: 20,
-        height: 20,
+    // Used to fade out the quick actions while keeping them mounted, so we
+    // never reflow the header layout mid-animation.
+    quickAction: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
         justifyContent: 'center',
         alignItems: 'center',
     },
 
-    markerDot: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
+    quickActionActive: SELECTED.surface,
+
+    quickActionPressed: {
+        opacity: 0.6,
+    },
+
+    // Small count badge on the filter button
+    filterBadge: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        minWidth: 18,
+        height: 18,
+        paddingHorizontal: 4,
+        borderRadius: 9,
         backgroundColor: TOKENS.primary,
-        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
         borderColor: TOKENS.surface,
     },
 
-    markerDotSelected: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: TOKENS.primary,
-        borderWidth: 2,
-        borderColor: TOKENS.surface,
+    filterBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#fff',
+        letterSpacing: -0.2,
+    },
+
+    // Inline filter chips row (expandable)
+    filtersInline: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        columnGap: 6,
+        rowGap: 8,
+        flexWrap: 'wrap',
+        paddingTop: 8,
+        marginTop: 2,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: TOKENS.hairline,
+    },
+
+    // 36 pt to the eye; CHIP_SLOP (MapHeader) makes it 44 pt to the finger.
+    miniChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        minHeight: 36,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 10,
+        backgroundColor: TOKENS.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: TOKENS.hairline,
+    },
+
+    miniChipActive: {
+        ...SELECTED.surface,
+        paddingHorizontal: 12 - SELECTED_INSET,
+    },
+
+    miniChipText: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: TOKENS.text,
+    },
+
+    miniChipTextActive: SELECTED.text,
+
+    chipDivider: {
+        width: 3,
+        height: 3,
+        borderRadius: 2,
+        backgroundColor: TOKENS.hairline,
+    },
+
+    filterChipPressed: {
+        opacity: 0.6,
+    },
+
+    // ===== Tooltip =====
+    tooltip: {
+        position: 'absolute',
+        left: 16,
+        backgroundColor: alpha(TOKENS.text, 0.96),
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        zIndex: 999,
+    },
+
+    tooltipArrow: {
+        position: 'absolute',
+        top: -6,
+        left: 20,
+        width: 12,
+        height: 12,
+        backgroundColor: alpha(TOKENS.text, 0.96),
+        transform: [{ rotate: '45deg' }],
+    },
+
+    tooltipText: {
+        fontSize: 12,
+        color: '#fff',
+        lineHeight: 16,
     },
 
     // ===== Pin marker =====
@@ -89,7 +191,7 @@ export const styles = StyleSheet.create({
         borderRadius: 16,
         backgroundColor: TOKENS.primary,
         borderWidth: 2,
-        borderColor: TOKENS.surface,
+        borderColor: '#fff',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -98,7 +200,7 @@ export const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: TOKENS.surface,
+        backgroundColor: '#fff',
     },
 
     pinStem: {
@@ -108,38 +210,42 @@ export const styles = StyleSheet.create({
         marginTop: -2,
     },
 
-    // ===== Floating controls — bottom-right, in thumb reach =====
-    fabContainer: {
+    // ===== FABs =====
+    searchArea: {
         position: 'absolute',
-        right: 16,
-        bottom: SHEET_MIN_HEIGHT + 16,
-        alignItems: 'flex-end',
-        gap: 10,
-        zIndex: 500,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        zIndex: 600,
     },
-
-    // "Drop pin": a labeled pill, quieter than the solid recenter button.
-    pinPill: {
+    searchAreaButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
         minHeight: 44,
         paddingHorizontal: 16,
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         backgroundColor: TOKENS.surface,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        borderColor: TOKENS.hairlineStrong,
         shadowColor: TOKENS.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
         elevation: 3,
     },
-
-    pinPillText: {
-        fontSize: 14,
+    searchAreaText: {
+        fontSize: 16,
         fontWeight: '600',
-        color: TOKENS.primary,
+        color: TOKENS.primaryInk,
+    },
+
+    fabContainer: {
+        position: 'absolute',
+        right: 16,
+        bottom: SHEET_MIN_HEIGHT + 16,
+        gap: 10,
+        zIndex: 500,
     },
 
     fab: {
@@ -151,6 +257,7 @@ export const styles = StyleSheet.create({
         borderColor: TOKENS.hairline,
         justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 8,
     },
 
     fabPrimary: {
@@ -164,90 +271,143 @@ export const styles = StyleSheet.create({
     },
 
     fabPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
+        opacity: 0.6,
     },
 
-    // ===== Placement controls — shown while setting the search pin =====
-    // No containing panel: a floating hint capsule and two pill buttons that
-    // hug their content, centered over the map.
-    placementDock: {
+    // ===== Bottom sheet =====
+    bottomSheet: {
         position: 'absolute',
-        left: 14,
-        right: 14,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: TOKENS.surface,
+        borderTopLeftRadius: 10,
+        borderTopRightRadius: 10,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: TOKENS.hairline,
+        zIndex: 100,
+    },
+
+    sheetHandle: {
         alignItems: 'center',
-        gap: 12,
-        zIndex: 700,
+        paddingTop: 10,
+        paddingBottom: 6,
     },
 
-    placementHintPill: {
-        backgroundColor: TOKENS.surfaceOverlay,
-        borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 3,
+    handleBar: {
+        width: 36,
+        height: 3,
+        backgroundColor: alpha(TOKENS.text, 0.12),
+        borderRadius: 2,
     },
 
-    placementHintText: {
-        fontSize: 13,
-        fontWeight: '500',
+    sheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingBottom: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: TOKENS.hairline,
+    },
+
+    sheetStats: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
+    },
+
+    sheetTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        letterSpacing: -0.3,
+        color: TOKENS.text,
+    },
+
+    sheetSubtitle: {
+        fontSize: 14,
         color: TOKENS.textMuted,
     },
 
-    placementActions: {
+    modeBadge: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 8,
-    },
-
-    // minHeight, not height — the label must be free to grow with the
-    // user's text size instead of clipping inside a fixed 48pt pill.
-    placementBtn: {
-        minHeight: 48,
-        paddingVertical: 12,
-        borderRadius: 999,
         alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: 6,
-        paddingHorizontal: 24,
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 3,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        gap: 4,
+        borderRadius: 999,
+        backgroundColor: TOKENS.surfaceMuted,
     },
 
-    placementBtnGhost: {
+    modeBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: TOKENS.textMuted,
+    },
+
+    // ===== Map/List toggle =====
+    topToggleBar: {
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: TOKENS.hairline,
         backgroundColor: TOKENS.surface,
+        zIndex: 1,
+    },
+
+    topToggleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 10,
+        backgroundColor: TOKENS.surfaceMuted,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
     },
 
-    placementBtnPrimary: {
-        backgroundColor: TOKENS.primary,
+    topToggleActive: SELECTED.surface,
+
+    topTogglePressed: {
+        opacity: 0.6,
     },
 
-    placementBtnPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
-    },
-
-    placementBtnGhostText: {
-        fontSize: 15,
+    topToggleText: {
+        fontSize: 12,
         fontWeight: '500',
         color: TOKENS.text,
     },
 
-    placementBtnPrimaryText: {
-        fontSize: 15,
+    topToggleTextActive: SELECTED.text,
+
+    sheetContent: {
+        flex: 1,
+    },
+
+    listView: {
+        paddingBottom: 20,
+    },
+
+    emptyState: {
+        alignItems: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 40,
+    },
+
+    emptyTitle: {
+        fontSize: 16,
         fontWeight: '600',
-        color: TOKENS.onPrimary,
+        color: TOKENS.text,
+        marginTop: 12,
+    },
+
+    emptyText: {
+        fontSize: 14,
+        color: TOKENS.textMuted,
+        textAlign: 'center',
+        marginTop: 4,
     },
 });

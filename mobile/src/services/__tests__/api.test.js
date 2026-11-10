@@ -1,121 +1,54 @@
-import { parkingAPI } from '../api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ApiError, parkingAPI } from '../api';
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
-    getItem: jest.fn(async () => null),
-    setItem: jest.fn(async () => {}),
-    getAllKeys: jest.fn(async () => []),
-    multiRemove: jest.fn(async () => {}),
-}));
+jest.mock('../../constants/config', () => ({ API_URL: 'https://api.test' }));
 
-jest.mock('expo-constants', () => ({
-    __esModule: true,
-    default: { expoConfig: { extra: {} } },
-}), { virtual: true });
+const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+const SPOTS = { success: true, data: [{ id: 1 }] };
+const find = (fresh = true) => parkingAPI.findNearbySpots(51, -114, 250, {}, { fresh });
 
-// Make the next request fail the given way, and return the error it throws.
-async function failureFrom(fetchImpl) {
-    global.fetch = jest.fn(fetchImpl);
-    try {
-        await parkingAPI.findNearbySpots(51.04, -114.07, 500, {}, { force: true });
-    } catch (error) {
-        return error;
-    }
-    throw new Error('expected the request to fail');
-}
+describe('parkingAPI', () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+        parkingAPI.isOnline = true;
+        global.fetch = jest.fn();
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+    afterEach(() => jest.restoreAllMocks());
 
-beforeAll(() => {
-    global.__DEV__ = false; // no mock-data fallback
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-});
-
-afterAll(() => {
-    console.error.mockRestore();
-});
-
-// Screens word their advice by kind: "check your connection" only fits the
-// first one.
-describe('parkingAPI — what kind of failure', () => {
-    it('no response at all is "offline"', async () => {
-        const error = await failureFrom(async () => {
-            throw new TypeError('Network request failed');
-        });
-        expect(error.kind).toBe('offline');
+    it('says when fresh data was saved', async () => {
+        fetch.mockReturnValue(ok(SPOTS));
+        const before = Date.now();
+        const response = await find();
+        expect(response.data).toEqual(SPOTS.data);
+        expect(response.savedAt).toBeGreaterThanOrEqual(before);
+        expect(response.staleBecause).toBeNull();
     });
 
-    it('no answer before the timeout is "slow"', async () => {
-        const error = await failureFrom(async () => {
-            const aborted = new Error('Aborted');
-            aborted.name = 'AbortError';
-            throw aborted;
-        });
-        expect(error.kind).toBe('slow');
+    it('tells no connection, timeouts and server errors apart', async () => {
+        fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        await expect(find()).rejects.toMatchObject({ kind: 'offline' });
+
+        fetch.mockRejectedValueOnce(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+        await expect(find()).rejects.toMatchObject({ kind: 'timeout' });
+
+        fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
+        const error = await find().catch((e) => e);
+        expect(error).toBeInstanceOf(ApiError);
+        expect(error).toMatchObject({ kind: 'server', status: 500 });
+
+        fetch.mockReturnValueOnce(ok({ success: false, error: 'boom' }));
+        await expect(find()).rejects.toMatchObject({ kind: 'server' });
     });
 
-    it('an error status from the server is "server"', async () => {
-        const error = await failureFrom(async () => ({ ok: false, status: 503, json: async () => ({}) }));
-        expect(error.kind).toBe('server');
-    });
-
-    it('an answer that reports a failure is "server"', async () => {
-        const error = await failureFrom(async () => ({
-            ok: true,
-            json: async () => ({ success: false, error: 'database unavailable' }),
-        }));
-        expect(error.kind).toBe('server');
-    });
-});
-
-// A free Render server sleeps when idle and takes about a minute to wake.
-describe('parkingAPI — waiting out a sleeping server', () => {
-    // A fresh client each time: "has the server answered yet" is per session.
-    const freshAPI = () => {
-        let api;
-        jest.isolateModules(() => {
-            ({ parkingAPI: api } = require('../api'));
-        });
-        return api;
-    };
-    // A request that never answers, until it's given up on.
-    const hangingFetch = () => jest.fn((url, { signal }) => new Promise((resolve, reject) => {
-        signal.addEventListener('abort', () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' })));
-    }));
-    const ok = async () => ({ ok: true, json: async () => ({ success: true, data: [] }) });
-
-    beforeEach(() => jest.useFakeTimers());
-    afterEach(() => jest.useRealTimers());
-
-    it('gives the first request up to 75 seconds, not 8', async () => {
-        const api = freshAPI();
-        global.fetch = hangingFetch();
-        let outcome = null;
-        api.findNearbySpots(51.04, -114.07, 500, {}, { force: true })
-            .then(() => { outcome = 'answered'; }, (error) => { outcome = error.kind; });
-
-        await jest.advanceTimersByTimeAsync(30000);
-        expect(outcome).toBeNull(); // still waiting while the server wakes
-
-        await jest.advanceTimersByTimeAsync(45000);
-        expect(outcome).toBe('slow');
-    });
-
-    it('goes back to 8 seconds once the server has answered', async () => {
-        const api = freshAPI();
-        global.fetch = jest.fn(ok);
-        await api.findNearbySpots(51.04, -114.07, 500, {}, { force: true });
-        expect(api.serverAwake).toBe(true);
-
-        global.fetch = hangingFetch();
-        let outcome = null;
-        api.findNearbySpots(51.05, -114.07, 500, {}, { force: true })
-            .then(() => { outcome = 'answered'; }, (error) => { outcome = error.kind; });
-        await jest.advanceTimersByTimeAsync(8000);
-        expect(outcome).toBe('slow');
-    });
-
-    it('counts an error status as the server being awake', async () => {
-        const api = freshAPI();
-        global.fetch = jest.fn(async () => ({ ok: false, status: 503, json: async () => ({}) }));
-        await expect(api.findNearbySpots(51.04, -114.07, 500, {}, { force: true })).rejects.toMatchObject({ kind: 'server' });
-        expect(api.serverAwake).toBe(true);
+    it('falls back to the saved copy, saying how old and why', async () => {
+        fetch.mockReturnValueOnce(ok(SPOTS));
+        const first = await find();
+        fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        const fallback = await find();
+        expect(fallback.data).toEqual(SPOTS.data);
+        expect(fallback.savedAt).toBe(first.savedAt);
+        expect(fallback.staleBecause).toBe('offline');
     });
 });

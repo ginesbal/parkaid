@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, TOKENS } from '../../../../constants/theme';
+import { RADIUS, SPACING, TOKENS } from '../../../../constants/theme';
 
 export const styles = StyleSheet.create({
     // Loading State
@@ -13,88 +13,18 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
     },
-    loadingIcon: {
-        width: 64,
-        height: 64,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    loadingText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: TOKENS.text,
-        marginBottom: 4,
-        letterSpacing: -0.1,
-    },
-    // Centered under the title; the starting-up notice runs to two lines.
-    loadingSubtext: {
-        fontSize: 14,
-        lineHeight: 20,
-        color: TOKENS.textMuted,
-        textAlign: 'center',
-        maxWidth: 300,
-        marginBottom: 24,
-    },
-    loadingSkeletonStack: {
-        width: '100%',
-        gap: 0,
-    },
-    loadingSkeletonCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-        width: '100%',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: TOKENS.hairline,
-    },
-    loadingSkeletonBadge: {
-        width: 44,
-        height: 44,
-        borderRadius: 6,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
-    loadingSkeletonContent: {
-        flex: 1,
-        gap: 8,
-    },
-    loadingSkeletonLineWide: {
-        width: '78%',
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
-    loadingSkeletonLine: {
-        width: '56%',
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
-    loadingSkeletonPrice: {
-        width: 50,
-        height: 16,
-        borderRadius: 4,
-        backgroundColor: TOKENS.surfaceMuted,
-    },
 
     // Empty State
+    // Left-aligned, like the list it stands in for.
     emptyContainer: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 60,
-        paddingHorizontal: 28,
+        paddingTop: 32,
+        paddingBottom: 60,
+        paddingHorizontal: 20,
     },
     emptyIcon: {
-        width: 80,
-        height: 80,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 20,
+        marginBottom: 12,
     },
-    emptyIconError: {},
     emptyText: {
         fontSize: 16,
         fontWeight: '600',
@@ -105,7 +35,6 @@ export const styles = StyleSheet.create({
     emptySubtext: {
         fontSize: 14,
         color: TOKENS.textMuted,
-        textAlign: 'center',
         marginBottom: 24,
         lineHeight: 21,
         fontWeight: '400',
@@ -114,33 +43,32 @@ export const styles = StyleSheet.create({
         width: '100%',
         gap: 10,
     },
+    // The app's primary and secondary buttons, as on Details and Park.
     emptyButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 48,
-        paddingHorizontal: 20,
-        paddingVertical: 12,
+        paddingHorizontal: SPACING.xl,
+        paddingVertical: SPACING.md,
         backgroundColor: TOKENS.primary,
-        borderRadius: RADIUS.pill,
-        gap: 8,
+        borderRadius: RADIUS.lg,
+        gap: SPACING.sm,
     },
     emptyButtonSecondary: {
         backgroundColor: 'transparent',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        borderWidth: 1,
+        borderColor: TOKENS.primaryBorder,
     },
     emptyButtonPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
+        opacity: 0.6,
     },
     emptyButtonText: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
-        color: TOKENS.onPrimary,
+        color: TOKENS.surface,
     },
     emptyButtonTextSecondary: {
-        color: TOKENS.text,
-        fontWeight: '500',
+        color: TOKENS.primaryInk,
     },
 });

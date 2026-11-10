@@ -1,134 +1,84 @@
-import { act, renderHook } from '@testing-library/react-hooks';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as Location from 'expo-location';
-import { AppState, Platform } from 'react-native';
+import { DEFAULT_LOCATION, LOCATION_STORAGE_KEY } from '../../constants/parking';
 import { useLocationManager } from '../useLocationManager';
 
-const mockStore = {};
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-    getItem: jest.fn(async (key) => (key in mockStore ? mockStore[key] : null)),
-    setItem: jest.fn(async (key, value) => {
-        mockStore[key] = value;
-    }),
-}));
-
-jest.mock('react-native', () => ({
-    AppState: { addEventListener: jest.fn(() => ({ remove: jest.fn() })) },
-    Platform: { OS: 'ios' },
-}));
-
 jest.mock('expo-location', () => ({
-    requestForegroundPermissionsAsync: jest.fn(),
-    getForegroundPermissionsAsync: jest.fn(),
-    getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 51.05, longitude: -114.06 } })),
-    reverseGeocodeAsync: jest.fn(async () => [{ district: 'Beltline' }]),
     Accuracy: { Balanced: 3 },
-}), { virtual: true });
+    getForegroundPermissionsAsync: jest.fn(),
+    requestForegroundPermissionsAsync: jest.fn(),
+    getCurrentPositionAsync: jest.fn(),
+}));
 
-beforeEach(() => {
-    Object.keys(mockStore).forEach((key) => delete mockStore[key]);
-    jest.clearAllMocks();
-    global.__DEV__ = false;
-});
+const BELTLINE = { latitude: 51.0386, longitude: -114.0719 };
+const fixAt = (point) => ({ coords: point });
+const granted = { granted: true, canAskAgain: true };
 
-async function renderLocation() {
-    const hook = renderHook(() => useLocationManager());
-    await act(async () => {});
-    return hook;
-}
+describe('useLocationManager', () => {
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        await AsyncStorage.clear();
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        Location.getForegroundPermissionsAsync.mockResolvedValue(granted);
+    });
+    afterEach(() => jest.restoreAllMocks());
 
-describe('useLocationManager — when location is refused', () => {
-    it('falls back to downtown, says so, and flags that Settings can fix it', async () => {
-        Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
-        const { result } = await renderLocation();
-
-        expect(result.current.locationDenied).toBe(true);
-        expect(result.current.location.name).toBe('Downtown Calgary');
-        expect(result.current.locationError).toBe('Showing downtown Calgary. Turn on location to see spots near you.');
+    it('starts from the saved fix, then uses a fresh one and saves it', async () => {
+        await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ latitude: 51.05, longitude: -114.08, savedAt: 1 }));
+        let answer;
+        Location.getCurrentPositionAsync.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+        const { result } = renderHook(() => useLocationManager());
+        await waitFor(() => expect(result.current.source).toBe('saved'));
+        expect(result.current.isLoadingLocation).toBe(false);
+        await act(async () => answer(fixAt(BELTLINE)));
+        await waitFor(() => expect(result.current.source).toBe('gps'));
+        expect(result.current.location).toEqual(BELTLINE);
+        expect(JSON.parse(await AsyncStorage.getItem(LOCATION_STORAGE_KEY))).toMatchObject(BELTLINE);
     });
 
-    it('uses your location once you turn it on in Settings and come back', async () => {
-        Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'denied' });
-        const { result } = await renderLocation();
-        const onAppStateChange = AppState.addEventListener.mock.calls.at(-1)[1];
-
-        Location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
-        Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
-        await act(async () => {
-            await onAppStateChange('active');
-        });
-
-        expect(result.current.locationDenied).toBe(false);
-        expect(result.current.locationError).toBeNull();
-        expect(result.current.location).toMatchObject({ latitude: 51.05, longitude: -114.06, name: 'Beltline' });
+    it('asks once on launch, and shows downtown when the answer is no', async () => {
+        Location.getForegroundPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+        Location.requestForegroundPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+        const { result } = renderHook(() => useLocationManager());
+        await waitFor(() => expect(result.current.source).toBe('default'));
+        expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
+        expect(result.current.location).toEqual(DEFAULT_LOCATION);
+        expect(result.current.permission).toBe('blocked');
     });
 
-    it("doesn't ask again when you come back with it still off", async () => {
-        Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
-        await renderLocation();
-        const onAppStateChange = AppState.addEventListener.mock.calls.at(-1)[1];
-
-        Location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
-        await act(async () => {
-            await onAppStateChange('active');
-        });
-
-        expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1); // only the first launch
-    });
-});
-
-describe('useLocationManager — a saved position', () => {
-    // The map and the app's launch save the phone's position with no name.
-    it("looks up the area's name instead of calling it downtown", async () => {
-        mockStore.userLocation = JSON.stringify({ latitude: 51.04, longitude: -114.08 });
-        const { result } = await renderLocation();
-
-        expect(result.current.location).toMatchObject({ latitude: 51.04, longitude: -114.08, name: 'Beltline' });
-        expect(result.current.locationName).toBe('Beltline');
-        expect(JSON.parse(mockStore.userLocation).name).toBe('Beltline');
+    it('can look without asking, for screens that only need a hint', async () => {
+        Location.getForegroundPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+        const { result } = renderHook(() => useLocationManager({ ask: false }));
+        await waitFor(() => expect(result.current.source).toBe('default'));
         expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+        expect(result.current.permission).toBe('denied');
     });
 
-    it('says "Your location" when the name lookup fails', async () => {
-        mockStore.userLocation = JSON.stringify({ latitude: 51.04, longitude: -114.08 });
-        Location.reverseGeocodeAsync.mockRejectedValueOnce(new Error('offline'));
-        const { result } = await renderLocation();
-
-        expect(result.current.locationName).toBe('Your location');
-        expect(result.current.location.name).toBeUndefined();
+    it('shows downtown when the phone is outside Calgary', async () => {
+        Location.getCurrentPositionAsync.mockResolvedValue(fixAt({ latitude: 53.5461, longitude: -113.4938 }));
+        const { result } = renderHook(() => useLocationManager());
+        await waitFor(() => expect(result.current.source).toBe('outside'));
+        expect(result.current.location).toEqual(DEFAULT_LOCATION);
     });
 
-    it('keeps a saved name as it is', async () => {
-        mockStore.userLocation = JSON.stringify({ latitude: 51.04, longitude: -114.08, name: 'Mission' });
-        const { result } = await renderLocation();
-
-        expect(result.current.locationName).toBe('Mission');
-        expect(Location.reverseGeocodeAsync).not.toHaveBeenCalled();
-    });
-});
-
-describe('useLocationManager — the web demo', () => {
-    afterEach(() => {
-        Platform.OS = 'ios';
+    it('keeps the saved fix, and says so, when no fresh one comes', async () => {
+        await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ ...BELTLINE, savedAt: 5 }));
+        Location.getCurrentPositionAsync.mockRejectedValue(new Error('Location unavailable'));
+        const { result } = renderHook(() => useLocationManager());
+        await waitFor(() => expect(result.current.locating).toBe(false));
+        await waitFor(() => expect(result.current.source).toBe('saved'));
+        expect(result.current.location).toEqual(BELTLINE);
+        expect(result.current.savedAt).toBe(5);
     });
 
-    it('starts downtown without asking where you are, and says nothing about it', async () => {
-        // The web check is made when the module loads, so load a fresh copy
-        // as the web, with test helpers that share its copy of React.
-        Platform.OS = 'web';
-        let hooks;
-        let useWebLocationManager;
-        jest.isolateModules(() => {
-            hooks = require('@testing-library/react-hooks/pure');
-            ({ useLocationManager: useWebLocationManager } = require('../useLocationManager'));
-        });
-        const { result, unmount } = hooks.renderHook(() => useWebLocationManager());
-        await hooks.act(async () => {});
-
-        expect(result.current.location.name).toBe('Downtown Calgary');
-        expect(result.current.locationError).toBeNull();
-        expect(result.current.locationDenied).toBe(false);
-        expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
-        unmount();
+    it('keeps the same point for a small move, so the list is not fetched again', async () => {
+        Location.getCurrentPositionAsync.mockResolvedValue(fixAt(BELTLINE));
+        const { result } = renderHook(() => useLocationManager());
+        await waitFor(() => expect(result.current.source).toBe('gps'));
+        const first = result.current.location;
+        Location.getCurrentPositionAsync.mockResolvedValue(fixAt({ latitude: 51.0388, longitude: -114.0719 }));
+        await act(async () => result.current.refreshLocation({ force: true }));
+        expect(result.current.location).toBe(first);
     });
 });

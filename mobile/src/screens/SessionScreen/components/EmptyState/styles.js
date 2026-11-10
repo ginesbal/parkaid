@@ -1,8 +1,15 @@
 import { StyleSheet } from 'react-native';
-import { RADIUS, TOKENS } from '../../../../constants/theme';
+import { LAYOUT, SELECTED, SELECTED_BORDER, TOKENS, alpha } from '../../../../constants/theme';
+
+// What the selected border adds over the 1 pt one, taken out of the padding.
+const SELECTED_INSET = SELECTED_BORDER - 1;
 
 export const styles = StyleSheet.create({
+    // A phone-width column, centred on wider screens.
     scrollContent: {
+        width: '100%',
+        maxWidth: LAYOUT.column,
+        alignSelf: 'center',
         paddingHorizontal: 20,
         paddingTop: 24,
         paddingBottom: 40,
@@ -12,23 +19,30 @@ export const styles = StyleSheet.create({
         marginBottom: 24,
     },
     title: {
-        fontSize: 26,
-        lineHeight: 32,
+        fontSize: 20,
         fontWeight: '600',
         color: TOKENS.text,
-        letterSpacing: -0.4,
+        letterSpacing: -0.3,
     },
     subtitle: {
-        fontSize: 15,
-        lineHeight: 21,
+        fontSize: 14,
+        lineHeight: 20,
         color: TOKENS.textMuted,
+        marginTop: 6,
+    },
+    headerLink: {
+        alignSelf: 'flex-start',
         marginTop: 4,
+        paddingVertical: 12,
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
     },
 
     setupCard: {
         backgroundColor: TOKENS.surface,
         borderRadius: 18,
-        padding: 20,
+        padding: 22,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: TOKENS.hairline,
         shadowColor: TOKENS.shadow,
@@ -38,71 +52,127 @@ export const styles = StyleSheet.create({
         elevation: 1,
     },
 
+    setupSection: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    setupContent: {
+        flex: 1,
+    },
     setupLabel: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: TOKENS.textMuted,
-        marginBottom: 10,
-    },
-    setupLabelSpaced: {
-        marginTop: 20,
+        marginBottom: 12,
+        letterSpacing: 0,
     },
 
-    // Where — the chosen spot, a suggestion, or a way to pick one.
-    spotRow: {
+    plateInput: {
+        minHeight: 50,
+        borderRadius: 12,
+        // White with an outline, not a grey box inside the white card.
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
+        paddingHorizontal: 16,
+        fontSize: 20,
+        fontWeight: '600',
+        color: TOKENS.text,
+        letterSpacing: 2,
+        textAlign: 'center',
+        textTransform: 'uppercase',
+        fontVariant: ['tabular-nums'],
+    },
+
+    places: {
+        gap: 8,
+    },
+    place: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
         minHeight: 56,
-        paddingHorizontal: 14,
         paddingVertical: 10,
-        borderRadius: RADIUS.lg,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-    },
-    suggestionRow: {
+        paddingHorizontal: 12,
+        borderRadius: 12,
         backgroundColor: TOKENS.surface,
-        borderColor: TOKENS.primaryBorder,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
     },
-    spotText: {
+    placeActive: {
+        ...SELECTED.surface,
+        paddingVertical: 10 - SELECTED_INSET,
+        paddingHorizontal: 12 - SELECTED_INSET,
+    },
+    placePressed: {
+        opacity: 0.8,
+    },
+    placeText: {
         flex: 1,
-        gap: 2,
+        minWidth: 0,
     },
-    spotAddress: {
-        fontSize: 15,
+    placeTitle: {
+        fontSize: 16,
+        lineHeight: 20,
         fontWeight: '600',
         color: TOKENS.text,
     },
-    spotMeta: {
-        fontSize: 13,
+    placeDetail: {
+        fontSize: 14,
+        lineHeight: 18,
         color: TOKENS.textMuted,
         fontVariant: ['tabular-nums'],
     },
-    spotClear: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
+    // On the selected fill: ink-blue, as on the durations. The grey would
+    // fall below 4.5:1 there.
+    placeTitleActive: SELECTED.text,
+    placeDetailActive: {
+        color: SELECTED.text.color,
     },
-    suggestionLabel: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: TOKENS.textMuted,
-    },
-    suggestionAction: {
+    // How far the place is from the phone now.
+    placeAway: {
         fontSize: 14,
-        fontWeight: '600',
-        color: TOKENS.primary,
-    },
-    findSpotText: {
-        fontSize: 15,
         fontWeight: '500',
         color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
+    },
+    // On the picked place, once the others fold away.
+    placeChange: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+    zoneField: {
+        gap: 8,
+    },
+    zoneLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: TOKENS.textMuted,
+    },
+    zoneOptional: {
+        fontWeight: '400',
+    },
+    zoneInput: {
+        minHeight: 50,
+        borderRadius: 12,
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        color: TOKENS.text,
+        fontVariant: ['tabular-nums'],
     },
 
-    // How long — single-line options are pills, like every other control.
+    // Until something is typed: a plain prompt, not a bold spaced "plate".
+    plateInputEmpty: {
+        fontSize: 16,
+        fontWeight: '400',
+        letterSpacing: 0,
+        textTransform: 'none',
+    },
+
     durationGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -111,49 +181,52 @@ export const styles = StyleSheet.create({
     },
     durationOption: {
         width: '48%',
-        minHeight: 44,
-        borderRadius: RADIUS.pill,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        minHeight: 60,
+        borderRadius: 12,
+        backgroundColor: TOKENS.surface,
+        borderWidth: 1,
+        borderColor: TOKENS.hairlineStrong,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 10,
     },
     durationOptionActive: {
-        backgroundColor: TOKENS.primary,
-        borderColor: TOKENS.primary,
+        ...SELECTED.surface,
+        paddingVertical: 10 - SELECTED_INSET,
+        paddingHorizontal: 10 - SELECTED_INSET,
     },
-    durationOptionDisabled: {
-        opacity: 0.45,
+    durationHead: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginBottom: 4,
     },
     durationTime: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
         color: TOKENS.text,
+        textAlign: 'center',
         fontVariant: ['tabular-nums'],
     },
-    durationTimeActive: {
-        color: TOKENS.onPrimary,
-    },
-    durationTimeDisabled: {
+    durationTimeActive: SELECTED.text,
+    durationCost: {
+        fontSize: 12,
         color: TOKENS.textMuted,
+        fontWeight: '500',
+        textAlign: 'center',
+        fontVariant: ['tabular-nums'],
     },
-    limitNote: {
-        fontSize: 13,
-        color: TOKENS.textMuted,
-        marginTop: 10,
+    durationCostActive: {
+        color: SELECTED.text.color,
     },
 
+    // Rows under a hairline, not a grey box inside the card.
     summaryBox: {
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        marginTop: 20,
+        paddingTop: 16,
         marginBottom: 16,
-        borderRadius: RADIUS.lg,
-        backgroundColor: TOKENS.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: TOKENS.hairline,
     },
     summaryRow: {
         flexDirection: 'row',
@@ -161,21 +234,27 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
     },
     summaryLabel: {
-        fontSize: 13,
+        fontSize: 14,
         color: TOKENS.textMuted,
         fontWeight: '500',
     },
     summaryValue: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '500',
         color: TOKENS.text,
         fontVariant: ['tabular-nums'],
     },
     summaryValueLarge: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: TOKENS.primary,
+        fontSize: 20,
+        fontWeight: '500',
+        color: TOKENS.text,
         fontVariant: ['tabular-nums'],
+    },
+    summaryNote: {
+        marginTop: 6,
+        fontSize: 14,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
     },
     summaryDivider: {
         height: StyleSheet.hairlineWidth,
@@ -183,13 +262,28 @@ export const styles = StyleSheet.create({
         marginVertical: 10,
     },
 
-    reminderNoteWrap: {
+    // Directly above Start: the timer pays for nothing.
+    // After a street session: end MyParking too, with the way to do it.
+    endNote: {
         marginBottom: 16,
+    },
+    payLine: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        marginBottom: 12,
+    },
+    payLineText: {
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
+        color: TOKENS.text,
     },
 
     primaryButton: {
         minHeight: 54,
-        borderRadius: RADIUS.pill, // primary actions are pills app-wide
+        borderRadius: 14,
         backgroundColor: TOKENS.primary,
         flexDirection: 'row',
         alignItems: 'center',
@@ -201,14 +295,66 @@ export const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 2,
     },
+    secondaryButton: {
+        minHeight: 50,
+        marginTop: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: TOKENS.primaryBorder,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    secondaryButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+    },
+    summaryRows: {
+        marginBottom: 20,
+    },
+    primaryButtonDisabled: {
+        backgroundColor: alpha(TOKENS.textMuted, 0.2),
+        shadowOpacity: 0,
+    },
     primaryButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: TOKENS.onPrimary,
+        color: '#fff',
     },
-
-    optionPressed: {
-        transform: [{ scale: 0.97 }],
-        opacity: 0.9,
+    primaryButtonTextDisabled: {
+        color: TOKENS.textMuted,
+    },
+    disabledHint: {
+        marginTop: 8,
+        fontSize: 14,
+        color: TOKENS.textMuted,
+        textAlign: 'center',
+    },
+    hintLink: {
+        fontWeight: '600',
+        color: TOKENS.primaryInk,
+        textDecorationLine: 'underline',
+    },
+    // Nobody may park here now: in place of the durations.
+    noParking: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        padding: 12,
+        borderRadius: 12,
+        backgroundColor: TOKENS.warningSoft,
+    },
+    noParkingText: {
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
+        color: TOKENS.warningInk,
+    },
+    setupHint: {
+        marginTop: 8,
+        fontSize: 14,
+        lineHeight: 18,
+        color: TOKENS.textMuted,
     },
 });

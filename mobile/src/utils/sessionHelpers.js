@@ -1,26 +1,114 @@
 /**
- * Helper functions for the parking timer
+ * Helper functions for session calculations and state management
  */
 
+import { nextRestriction, parseRestrictions, restrictionAt } from './restrictions';
+
 /**
- * calculate timer state based on remaining time
- * @param {number|null} remainingMinutes - mins remaining (rounded up), null if unknown
- * @returns {string} timer state: 'active', 'expiring', 'expired'
+ * How much longer a running session may be made, and why: { minutes, reason, at }.
+ * The posted maximum ('max'), or the next rush-hour restriction
+ * ('restriction', starting `at`), whichever comes first; minutes is null
+ * when neither limits it.
  */
-export const calculateSessionState = (remainingMinutes) => {
+export const getExtendLimit = (session) => {
+    if (!session) return { minutes: null, reason: null, at: null };
+    const byMax = session.maxDuration ? Math.max(0, session.maxDuration - session.duration) : null;
+    const windows = parseRestrictions(session.noParking);
+    const end = new Date(session.scheduledEnd);
+    const blocking = restrictionAt(windows, end) ?? nextRestriction(windows, end);
+    const byRestriction = blocking
+        ? Math.max(0, Math.floor((blocking.start.getTime() - end.getTime()) / 60000))
+        : null;
+    if (byRestriction !== null && (byMax === null || byRestriction < byMax)) {
+        return { minutes: byRestriction, reason: 'restriction', at: blocking.start };
+    }
+    return { minutes: byMax, reason: byMax === null ? null : 'max', at: null };
+};
+
+/**
+ * calculate session state based on remaining time
+ * @param {number|null} remainingMinutes - mins remaining, null if unknown
+ * @returns {string} session state: 'active', 'expiring', 'expired'
+ */
+export const calculateSessionState = (remainingMinutes, warnAtMinutes = 10) => {
     if (remainingMinutes === null || remainingMinutes === undefined) {
         return 'active';
     }
 
-    if (remainingMinutes <= 0) {
+    if (remainingMinutes === 0) {
         return 'expired';
     }
 
-    if (remainingMinutes <= 10) {
+    if (remainingMinutes <= warnAtMinutes) {
         return 'expiring';
     }
 
     return 'active';
+};
+
+/**
+ * minutes left at which to say "head back": the walk back plus a buffer, but
+ * never most of a short session (a 10 minute zone should not warn from the start)
+ * @param {number|null} walkMinutes - walk back to the car; null for unknown
+ * @param {number} durationMinutes - the session's total length
+ * @param {number} buffer - extra minutes on top of the walk
+ */
+export const getWarnAtMinutes = (walkMinutes, durationMinutes, buffer = 10) => {
+    const walk = Number.isFinite(walkMinutes) ? walkMinutes : 5;
+    const base = walk + buffer;
+    if (!durationMinutes) return base;
+    return Math.min(base, Math.max(walk + 1, Math.floor(durationMinutes / 2)));
+};
+
+/**
+ * time left, as people say it: "54 min", "1 hour 54 min", "Less than a minute"
+ * @param {number} ms - milliseconds remaining
+ */
+export const formatRemaining = (ms) => {
+    if (!ms || ms <= 0) return 'Time\u2019s up';
+    if (ms < 60000) return 'Less than a minute';
+    return formatDuration(Math.floor(ms / 60000));
+};
+
+/**
+ * a duration in minutes: "30 min", "1 hour", "2 hours", "1 hour 30 min"
+ */
+export const formatDuration = (minutes) => {
+    const m = Math.max(0, Math.round(minutes || 0));
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    const hours = `${h} ${h === 1 ? 'hour' : 'hours'}`;
+    return rest ? `${hours} ${rest} min` : hours;
+};
+
+/**
+ * clock time without a leading zero: "4:30 PM", with a no-break space so
+ * "PM" never wraps onto a line of its own
+ */
+export const formatClock = (date) => {
+    if (!date) return '';
+    try {
+        return new Date(date)
+            .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            .replace(/\s(?=[AP]M)/i, ' ');
+    } catch {
+        return '';
+    }
+};
+
+/**
+ * calculate progress percentage for session
+ * @param {number} elapsed - elapsed minutes
+ * @param {number} total - total duration in minutes
+ * @returns {number} progress from 0 to 1
+ */
+export const calculateProgress = (elapsed, total) => {
+    if (!total || total <= 0) return 0;
+    if (!elapsed || elapsed < 0) return 0;
+
+    const progress = elapsed / total;
+    return Math.min(1, Math.max(0, progress));
 };
 
 /**
@@ -34,4 +122,74 @@ export const calculateCost = (minutes, hourlyRate) => {
 
     const hours = minutes / 60;
     return Number((hours * hourlyRate).toFixed(2));
+};
+
+/**
+ * validate session data
+ * @param {object} session - session object
+ * @returns {boolean} session is valid or not
+ */
+export const isValidSession = (session) => {
+    if (!session) return false;
+
+    const required = [
+        'id',
+        'startedAt',
+        'scheduledEnd',
+        'vehiclePlate',
+        'hourlyRate',
+        'duration'
+    ];
+
+    return required.every(field => session[field] !== undefined);
+};
+
+/**
+ * check if session needs attention (expiring soon)
+ * @param {number} remainingMinutes - mins remaining
+ * @returns {boolean} session needs attention or not
+ */
+export const needsAttention = (remainingMinutes) => {
+    return remainingMinutes !== null && remainingMinutes <= 10 && remainingMinutes > 0;
+};
+
+/**
+ * get recommended extension duration based on current state
+ * @param {number} remainingMinutes - current remaining mins
+ * @returns {number[]} array of recommended extension durations in minutes
+ */
+export const getRecommendedExtensions = (remainingMinutes) => {
+    if (remainingMinutes <= 5) {
+        // urgent: offer shorter extensions first
+        return [15, 30, 60, 120];
+    }
+
+    if (remainingMinutes <= 15) {
+        // getting low: balanced options
+        return [30, 60, 120, 180];
+    }
+
+    // plenty of time: longer extensions
+    return [60, 120, 180, 240];
+};
+
+/**
+ * create session summary for notifications or history
+ * @param {object} session - session object
+ * @param {number} elapsedMinutes - elapsed time
+ * @returns {object} summary object
+ */
+export const createSessionSummary = (session, elapsedMinutes) => {
+    if (!session) return null;
+
+    // return formatted summary
+    return {
+        location: `${session.spotId} - ${session.locationName}`,
+        vehicle: session.vehiclePlate,
+        duration: session.duration,
+        elapsed: elapsedMinutes,
+        cost: session.totalCost,
+        startTime: new Date(session.startedAt),
+        endTime: new Date(session.scheduledEnd),
+    };
 };

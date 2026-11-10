@@ -13,33 +13,59 @@ needs one setting to reach it (`EXPO_PUBLIC_API_URL`).
 
 ## What it does
 
-- Search for parking near your current location, or drop a pin to search
-  somewhere else. A slider sets how far you'll walk, anywhere from 1 to 25
-  minutes (about 2km), and both screens remember it.
-- Search by address or place. Your last three picks show when you tap the
-  empty search box. They're kept only on your phone, and Clear removes them.
-- See spots on a map with markers you can tap for details (price, zone,
-  restrictions, capacity).
-- See a list of nearby spots sorted by distance, with a rough walking time and
-  a switch to show only street parking, lots or permit parking.
-- Start a parking timer for a spot ("Park here" on its card). It won't plan
-  past the spot's posted time limit, and it reminds you 10 minutes before
-  time's up, even with the app closed. It's a reminder only: paying still
-  happens at the pay station or in the City's parking app.
-- Keep working when the network drops. Responses are cached on the phone, so
-  the app shows the last data it had instead of an error.
+- Suggests a good spot near you, then lists the rest. Sort by
+  closest or by best value. Filters, shared by the list and the map, narrow
+  it to street, lot, parkade or permit parking within 150 m to 1 km.
+- Shows spots on a map as pins with their hourly rate, so you can compare
+  without tapping each one. Pins too close to tell apart share one, with a
+  count and the lowest rate, and a tap zooms in. Drop a pin, drag the map and
+  search that area, or search an address to look somewhere else. The web
+  build has a real map too, drawn from OpenStreetMap.
+- Opens a details page for each spot: the rate now and the City's rates
+  through the day, when it is charged, rush-hour times when nobody may park,
+  the side of the street, the ParkPlus zone to pay at, the maximum stay, the
+  walk, and directions.
+- Times your parking. Pick where you parked from your last search, or give
+  the zone from the sign. You see the end time and the cost before you start,
+  counting only the hours the City charges. Durations stay within the posted
+  maximum and end before a rush-hour restriction starts, added time can be
+  undone, and it tells you when it is time to walk back.
+- Says plainly that it does not pay the City. Copy the zone and open
+  MyParking, the City's ParkPlus app, to pay. When your time is up or you
+  end the session, it reminds you to end the MyParking session too, since
+  that one keeps charging until you do.
+- Keeps working when the network drops. Responses are cached on the phone, so
+  the app shows the last data it had and says when it was saved. When there
+  is nothing saved, it says plainly whether you are offline, the data is
+  slow to answer, or the service has a problem.
+- Respects the phone's Reduce Motion setting and screen reader labels.
+
+## Screens
+
+| Welcome | Home | Map |
+| --- | --- | --- |
+| <img src="docs/screens/01-welcome.png" width="240" alt="Welcome screen with the ParkAid pin and an Explore parking button"> | <img src="docs/screens/02-home.png" width="240" alt="Home suggesting a spot on 11 Ave SW with its block, zone and walk and a warning of no parking from 3:30 PM, then the rest of the list"> | <img src="docs/screens/03-map.png" width="240" alt="Map of the Beltline with pins grouped where they would overlap, each group showing its count and lowest rate, and a selected spot on 4 St SW in the bottom sheet"> |
+
+| Details | Park | Session |
+| --- | --- | --- |
+| <img src="docs/screens/04-details.png" width="240" alt="Details for 4 St SW: the rate now, no parking from 3:30 PM, the hours the City charges, the walk, the 2 hour maximum, the rush-hour restriction and the hourly rates for the day"> | <img src="docs/screens/05-park-setup.png" width="240" alt="Session setup with plate and durations up to 1 hour 50 min, since parking stops at 3:30 PM, with the end time, cost and where to pay"> | <img src="docs/screens/06-session.png" width="240" alt="Running session with time left, an Add 30 min button that says it only changes the timer and costs 1 dollar more in ParkPlus, End session, then where to pay"> |
+
+Captured from the web build on a Tuesday at 1:40 PM, with the City's real
+records for the blocks around 11 Ave SW and 5 St SW: their zones, hours, rates
+and rush-hour restrictions. On web the map is MapLibre with OpenStreetMap tiles
+from OpenFreeMap; iOS and Android use Google Maps.
 
 ## Tech stack
 
 Mobile app
 - React Native with Expo SDK 54 (one codebase for iOS, Android, and web)
 - React Navigation for moving between screens
-- React Native Maps for the map and markers on phones; on the web, MapLibre
-  with free OpenStreetMap tiles from OpenFreeMap (no key needed)
+- React Native Maps (Google Maps) for the map and markers on iOS and Android
+- MapLibre GL JS for the map on web, with free OpenStreetMap tiles from
+  OpenFreeMap (no API key). Map data © OpenStreetMap contributors.
 - Expo Location for GPS
-- Expo Notifications for the parking reminders (scheduled on the phone, no
-  push server)
 - AsyncStorage for caching data on the phone
+- Spline for the 3D pin, played live in a WebView (an iframe on web)
 
 Backend
 - Node.js and Express for the API
@@ -50,12 +76,14 @@ Backend
 Database and data
 - PostgreSQL, hosted on Supabase
 - Parking data from Calgary's Open Data (about 2,700 spots)
+- Street rates by zone and time of day from the City's on-street parking map
 - Address search: OpenStreetMap search (Photon) for free, or Google Places
   when a key is set
 
 Hosting and testing
 - Render hosts the backend and redeploys when you push to GitHub
 - Jest and Supertest for the backend tests
+- Jest (jest-expo) for the app's hooks and formatters: `cd mobile && npm test`
 
 There's no Redis and no ORM. The backend is small on purpose: just Express
 routes running SQL.
@@ -71,8 +99,9 @@ Mobile app          Express API              PostgreSQL + PostGIS
 
 When you search, the app sends your location to the backend. The backend runs a
 database query to find the closest spots and sends back a list. The address
-search and map also go through the backend. That way the Google API key stays on
-the server and is never shipped inside the app.
+search and map also go through the backend. Address search uses free
+OpenStreetMap search (Photon), or Google when `GOOGLE_PLACES_API_KEY` is set on
+the server, so no search key is shipped inside the app.
 
 ## Project structure
 
@@ -80,12 +109,12 @@ the server and is never shipped inside the app.
 parkaid/
   mobile/                  React Native (Expo) app
     src/
-      components/          reusable UI (cards, search bar, and so on)
-      screens/             HomeScreen, MapScreen, SessionScreen
-      hooks/               useParkingSpots, usePlacesAutocomplete, and so on
+      components/          reusable UI (brand pin and loader, list rows, search bar)
+      screens/             Welcome, Home, Map, Details, Session
+      hooks/               useParkingSpots, useSessionManager, useReduceMotion, and so on
       services/            api.js, the single API client
       constants/           config.js, the single place the API URL is set
-      utils/               helpers
+      utils/               helpers, including how a spot is named and priced
 
   backend/                 Node and Express API
     config/                env.js, sets up the DB connection and checks env vars
@@ -97,6 +126,7 @@ parkaid/
     utils/                 logger
     server.js              starts the app
 
+  docs/                    design plan, concept mockups and screenshots
   render.yaml              Render config for auto-deploy
   README.md
 ```
@@ -108,8 +138,7 @@ There are two parts to run: the backend (the API) and the mobile app.
 You'll need:
 - Node.js 18 or newer, and npm
 - A Supabase project (the free tier is fine). This is your database.
-- An iOS simulator or Android emulator, or a phone (see "Expo Go and SDK 54"
-  below before using Expo Go on an iPhone)
+- The Expo Go app on your phone, or an iOS/Android simulator
 
 ### 1. Backend
 
@@ -118,7 +147,7 @@ cd backend
 cp .env.example .env     # then put your DATABASE_URL in .env (see below)
 npm install
 npm run migrate          # creates the parking_spots table and indexes
-npm run setup            # loads about 2,700 spots from Calgary Open Data
+npm run setup            # loads about 2,700 spots from Calgary Open Data, with street rates
 npm start                # runs on http://localhost:3000
 ```
 
@@ -161,62 +190,6 @@ npx expo start -c        # press i for iOS, a for Android, or scan the QR code
 Once the backend is deployed, you can use the Render URL here instead of your
 local IP.
 
-#### Expo Go and SDK 54
-
-The app is on Expo SDK 54, and Expo Go can only open projects on the SDK it was
-built for. The App Store's Expo Go moved to SDK 57 in September 2026, so it
-can't run this project on an iPhone. It crashes on launch with
-"'PlatformConstants' could not be found". Use one of these instead:
-
-- **Simulator or emulator:** run `npx expo start -c`, then press `i` or `a`.
-  Expo installs the matching Expo Go for you.
-- **Android phone:** install Expo Go for SDK 54 from
-  [expo.dev/go](https://expo.dev/go), then scan the QR code.
-- **Any phone, iPhone included:** a development build, which is the app
-  compiled with its own native code, so Expo Go isn't involved. Plug the phone
-  in and run `npm run ios -- --device` (needs a Mac with Xcode; a free Apple ID
-  works) or `npm run android`.
-
-A build of your own draws the map with your Google key, `GOOGLE_MAPS_API_KEY`
-in `mobile/.env`, since Expo Go isn't there to supply one. Android needs it;
-without it the iPhone shows Apple Maps instead. Setup is in
-[mobile/GOOGLE_MAPS_SETUP.md](mobile/GOOGLE_MAPS_SETUP.md).
-
-Rebuild a development build after pulling changes that add a native module,
-such as `expo-notifications`.
-
-## The web demo
-
-The same app builds for the web, with a live map, real spots and working
-search, so people can try it without a phone. Point it at your deployed backend
-and export it as a static site:
-
-```bash
-cd mobile
-EXPO_PUBLIC_API_URL=https://<your-backend>.onrender.com npm run export:web
-```
-
-Then upload the `mobile/dist` folder to any static host (Netlify, Vercel,
-GitHub Pages, and so on).
-
-Shared links show a preview card (`mobile/public/og-image.png`). LinkedIn and
-some other sites only load it from a full address, so once the demo is
-hosted, put the site's address in front of `og-image.png` in
-`mobile/public/index.html`.
-
-How the web version differs:
-- It starts in downtown Calgary without asking for the visitor's location,
-  since most visitors won't be in Calgary, where the parking data is.
-- The map uses free OpenFreeMap tiles: no key or sign-up. OpenFreeMap is
-  donation-funded with no uptime guarantee; to use another provider or a
-  copy you host yourself, set `EXPO_PUBLIC_MAP_STYLE_URL` to its style. A
-  self-hosted style can give its tiles, sprite and fonts as relative paths.
-- Address search works with no setup (free OpenStreetMap search through the
-  backend). Set `GOOGLE_PLACES_API_KEY` on Render to use Google instead.
-- Reminders are phone-only, so the Park tab's timer doesn't notify on the web.
-- Render's free plan sleeps after about 15 minutes without visits, so the
-  first visitor after a quiet spell waits up to a minute for spots to load.
-
 ## Deploying the backend (Render)
 
 The repo has a `render.yaml` file, which tells Render how to build and run the
@@ -254,12 +227,6 @@ npm run migrate     # create the table
 npm run setup       # load the parking data
 ```
 
-Prices come from each street block's rate schedule, which `npm run setup`
-takes from the City's "On-Street Parking Zones with Rates" data. A database
-loaded before that was added has no schedules, so street spots read "Rate on
-signs": run `npm run setup` again to fill them in. It updates the rows it
-loaded before rather than adding copies.
-
 ### Step 4: check it's live
 
 Open these in a browser. On the free tier the first request can take 30 to 60
@@ -282,9 +249,9 @@ at `/api/test-db` instead.
 | ------ | -------- | ------------ |
 | GET | `/health` | Says the server is up. Used by Render. Always returns 200 when running. |
 | GET | `/api/test-db` | Checks the database connection and returns how many spots are stored. |
-| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. |
+| GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. Street spots include the City's rates by time of day (`rates`) and rush-hour restrictions. Taxi, valet and other zones the public can't use are left out. The City splits a zone's stretch of a block into segments; each stretch comes once, at its nearest segment. |
 | GET | `/api/places/autocomplete?input=` | Address search suggestions in Calgary. Uses free OpenStreetMap search (Photon), or Google Places when `GOOGLE_PLACES_API_KEY` is set. |
-| GET | `/api/places/details?place_id=` | Where one suggestion is, so the map can go there. |
+| GET | `/api/places/details?place_id=` | Coordinates (and, with Google, name and address) for one suggestion. |
 
 ## What I worked on
 
@@ -312,6 +279,13 @@ The main things I did:
   it stays fast (around 30ms for the closest 100 spots).
 - Wrote a script that pulls four datasets from Calgary's open data and loads
   them into one table. It's safe to run again without making duplicates.
+- Added the City's street rates by time of day and its rush-hour
+  restrictions, so the app never shows a guessed price or calls a restricted
+  hour free.
+- Made a busy downtown readable: each block's pin sits halfway along it
+  instead of at a corner, a zone's segments on one block come back as one
+  spot (about a quarter of the street rows were repeats), and pins that would
+  overlap share one pin with a count on both maps. A tap on it zooms in.
 - Cleaned up the old code: removed files nothing imported, dropped a dependency
   we didn't need, and stopped committing `node_modules` (about 1,900 files).
 - Kept the Google API key on the server by having the app call the backend
@@ -324,20 +298,21 @@ The main things I did:
 - The app reads its backend URL from one place (`constants/config.js`), so the
   local, network, and production setups don't drift apart.
 - The database does the location filtering and sorting, not the Node code. The
-  API just formats the result. This keeps the server simple.
+  API only merges a block's repeated segments and formats the result. This
+  keeps the server simple.
 - Responses are cached on the phone, so the app still shows something useful
   when the connection is bad.
 - The server fails loudly at startup if a required setting is missing, but
   handles a temporary database outage per request instead of crashing.
-
-## Design skills
-
-The design passes (audit, critique, polish and the rest) use the
-[impeccable](https://github.com/pbakaus/impeccable) skills. They're in
-`.claude/skills`, where Claude Code picks them up, so `/audit` or `/critique`
-works in any session on this repo. `.agents/skills` holds the same skills for
-other AI tools. The project's design brief, which every skill reads first, is
-`.impeccable.md`.
+- The welcome screen and the loaders play the real Spline scene, so the
+  pin's jump and twirl from the file's Code tab play as they do in Spline.
+  A still of the same 3D pin shows first and stays when the scene can't play
+  (offline, reduce motion, or a phone without WebGPU). Each screen lines its
+  3D pin up with the still by moving the scene's camera, and keeps the
+  Spline badge in its bottom-right corner. Everywhere else (the Home and
+  Park headers, the map, the map thumbnails) the pin is the flat ParkAid
+  logo.
+  Scene URLs and the runtime version live in `constants/spline.js`.
 
 ## Credits
 

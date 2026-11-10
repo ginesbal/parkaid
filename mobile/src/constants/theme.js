@@ -4,10 +4,11 @@
 //   - One accent (cerulean), no competing color ramps
 //   - Hairline borders instead of heavy shadows
 //   - Tinted near-black ink (never pure #000)
-//   - 3 weights total: 400 body, 500 numerics, 600 titles
+//   - 3 weights total: 400 body, 500 numerics, 600 titles (700 only for TYPOGRAPHY.hero)
 //   - Tokens kept backward-compatible by name; values simplified
+//   - bg matches the Spline scene background so the brand pin stills have no edge
 
-import { Platform } from 'react-native';
+import { Easing } from 'react-native';
 
 export function alpha(hex, a) {
     const h = hex.replace('#', '');
@@ -54,8 +55,8 @@ export const PALETTE = {
 // (header, active chips, numeric blocks) so information is visibly grouped without
 // competing with the content. Stay below alpha 0.18 to preserve the calm brand voice.
 export const TOKENS = {
-    // canvas
-    bg: '#F6F8FA',
+    // canvas — #F7F8FA is the Spline scene background; keep them equal
+    bg: '#F7F8FA',
     surface: '#FFFFFF',
     surfaceMuted: '#F1F4F8',
     surfaceRaised: '#FFFFFF',
@@ -79,8 +80,9 @@ export const TOKENS = {
     // text
     text: '#0F1A26',
     textMuted: '#5B6B7C',
-    textLight: '#90A0B0',
-    textFaint: '#90A0B0',
+    // 4.5:1 or better on every light surface above (white, bg, surfaceMuted, surfaceTint)
+    textLight: '#617183',
+    textFaint: '#617183',
 
     // primary (single accent) — 5 tint steps, low → medium → solid
     primary: PALETTE.cerulean[500],
@@ -95,27 +97,49 @@ export const TOKENS = {
     accent: PALETTE.cerulean[500],
     accentAlt: PALETTE.cerulean[400],
 
-    // content (text, icons) sitting on a solid fill — cerulean, a semantic
-    // color, or ink. White halos on the map use `surface`, not these.
-    onPrimary: '#FFFFFF',
-    onPrimaryMuted: 'rgba(255, 255, 255, 0.82)',
-
-    // semantic — base hue for dots, fills, borders and large text.
-    // The *Ink variants are for small/medium TEXT, where the base hue falls
-    // short of WCAG AA: warning is 3.3:1 on white, danger 4.4:1 on its soft
-    // banner. Ink keeps the hue but darkens it to pass on both grounds.
-    danger: '#B5524A',
-    dangerInk: '#9E4038',      // 6.5:1 on white, 5.8:1 on dangerSoft
+    // semantic — single value each, no ramps
+    danger: '#B5524A',                                 // fills and icons; 4.4:1, too light for text
+    dangerInk: '#9C3F37',                              // danger as text: 6.6:1 on white
     dangerSoft: 'rgba(181, 82, 74, 0.08)',
-    success: '#2C7A6B',        // 5.1:1 on white — already passes as text
+    success: '#2C7A6B',
     successSoft: 'rgba(44, 122, 107, 0.08)',
     warning: '#B8832D',
-    warningInk: '#8F6418',     // 5.2:1 on white, 4.8:1 on warningSoft
+    warningInk: '#8F6216',                             // warning as text: 5.3:1 on white
     warningSoft: 'rgba(184, 131, 45, 0.08)',
+
+    // ink canvas — focus screens (Details, Session) sit on prussian instead of bg
+    inkSurface: PALETTE.prussian[500],
+    inkMuted: '#A3B1BF',                               // 8:1 on inkSurface
+
+    // map illustration — the web map preview, not the live map
+    mapLand: '#E3E9EE',
+    mapWater: '#CFE2EC',
+    mapPark: '#DCEADB',
+    // "you are here", the blue every phone map uses for it
+    locationDot: '#2F7DF6',
 
     shadow: '#0F1A26',
     focus: alpha(PALETTE.cerulean[500], 0.22),
     focusRing: alpha(PALETTE.cerulean[500], 0.22),
+};
+
+// One look for "this one is chosen", on every chip, option, tile and toggle:
+// a cerulean fill, a thicker cerulean border and ink-blue text, so it never
+// rests on colour alone. Spread onto the unselected style, taking the extra
+// border width back out of the padding so the item keeps its size.
+export const SELECTED_BORDER = 2;
+
+export const SELECTED = {
+    surface: {
+        backgroundColor: TOKENS.primaryFill,
+        borderColor: TOKENS.primary,
+        borderWidth: SELECTED_BORDER,
+    },
+    text: {
+        color: TOKENS.primaryInk,
+        fontWeight: '600',
+    },
+    icon: TOKENS.primaryInk,
 };
 
 export const SPACING = {
@@ -126,6 +150,15 @@ export const SPACING = {
     xl: 20,
     '2xl': 24,
     '3xl': 32,
+};
+
+// Wider screens (tablets, a browser on a laptop) keep a phone-width column,
+// centred, and the map's sheet becomes a panel this wide on the left.
+export const LAYOUT = {
+    column: 520,
+    panel: 400,
+    // From this window width, the map's sheet and search are a side panel.
+    wide: 768,
 };
 
 // Radii — softer corners across the board. The redesign calls for a friendlier
@@ -177,7 +210,25 @@ export const SHADOWS = {
 
 // Deliberate 5-step type scale. Three weights only: 400 body, 500 numerics, 600 titles.
 // All numeric displays use tabular-nums for alignment.
+// Six text sizes, and only these (a test holds every screen to them):
+//   12 caption: badges, map pills, small notes
+//   14 secondary: meta lines, hints, labels
+//   16 body: text, buttons, inputs, and every spot name in a list or card
+//   20 title: screen and section titles
+//   28 display: the Details title, Welcome, big prices
+//   40 numeral: the session's time left
+// Numbers (prices, times, counts) are weight 500 with tabular figures.
+export const TYPE_SCALE = [12, 14, 16, 20, 28, 40];
+
 export const TYPOGRAPHY = {
+    // Welcome headline only. The one place the scale goes to 700.
+    hero: {
+        fontSize: 28,
+        lineHeight: 32,
+        fontWeight: '700',
+        letterSpacing: -0.6,
+        color: TOKENS.text,
+    },
     display: {
         fontSize: 28,
         lineHeight: 32,
@@ -212,15 +263,15 @@ export const TYPOGRAPHY = {
         color: TOKENS.textMuted,
     },
     caption: {
-        fontSize: 11,
-        lineHeight: 14,
+        fontSize: 12,
+        lineHeight: 16,
         fontWeight: '500',
         letterSpacing: 0.4,
         textTransform: 'uppercase',
         color: TOKENS.textMuted,
     },
     numLarge: {
-        fontSize: 32,
+        fontSize: 28,
         lineHeight: 34,
         fontWeight: '500',
         letterSpacing: -0.8,
@@ -244,7 +295,30 @@ export const TYPOGRAPHY = {
     },
 };
 
-// Animations run on the native thread on phones. The web has no native
-// animation module (React Native Web warns, then falls back to JavaScript),
-// so it asks for the JavaScript driver up front.
-export const NATIVE_DRIVER = Platform.OS !== 'web';
+// Motion — three durations, one easing curve, one spring. Use these instead of
+// literal numbers so every screen moves alike. Pair with reduce-motion checks:
+// when the OS asks for less motion, skip entrance animations entirely.
+export const MOTION = {
+    duration: {
+        fast: 180,   // presses, small state changes
+        base: 240,   // fades, crossfades
+        slow: 320,   // entrances, larger moves
+    },
+    // Ease-out-expo as a bezier: same feel as Easing.out(Easing.exp), but it
+    // lands exactly on 1 (Easing.exp stops at 0.999, leaving faint opacity/offset).
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
+    // The map sheet's expand spring; reuse it for anything that springs.
+    spring: {
+        tension: 68,
+        friction: 9,
+    },
+    // Slightly firmer, for things leaving: exits should feel quicker than entries.
+    springExit: {
+        tension: 76,
+        friction: 10,
+    },
+    pressScale: 0.97,
+    // Entrance: rise this many points while fading in, items staggered by `stagger`.
+    rise: 12,
+    stagger: 60,
+};

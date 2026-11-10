@@ -1,95 +1,87 @@
-import { memo, useCallback } from 'react';
-import { View } from 'react-native';
-import { Circle, Marker } from '../../../components/Map';
+import { memo } from 'react';
+import { Animated, View } from 'react-native';
+import { Circle, Marker } from 'react-native-maps';
 import { TOKENS, alpha } from '../../../constants/theme';
 import { styles } from '../styles';
-
-// One memoized marker per spot. Selecting a spot re-renders only the two
-// markers whose `isSelected` flips, instead of all ~100 on the map.
-const SpotMarker = memo(function SpotMarker({ spot, isSelected, onSelectSpot }) {
-    const handlePress = useCallback(() => onSelectSpot(spot), [onSelectSpot, spot]);
-
-    return (
-        <Marker
-            coordinate={{
-                latitude: spot.coordinates.coordinates[1],
-                longitude: spot.coordinates.coordinates[0],
-            }}
-            onPress={handlePress}
-            tracksViewChanges={false}
-            anchor={{ x: 0.5, y: 0.5 }}
-        >
-            <View style={styles.marker}>
-                <View
-                    style={[
-                        isSelected ? styles.markerDotSelected : styles.markerDot,
-                        !isSelected && spot.no_stopping && { backgroundColor: TOKENS.danger },
-                    ]}
-                />
-            </View>
-        </Marker>
-    );
-});
+import SpotMarker, { GroupMarker } from './SpotMarker';
+import { getGroupLabel, getMarkerKind } from './SpotPill';
 
 function MapOverlays({
     searchCenter,
-    placementCenter,
     searchRadius,
     searchMode,
     pinnedLocation,
-    placingPin,
-    spots,
+    pinDropAnim,
+    // The pins, with spots too close to tell apart grouped (utils/mapGroups).
+    groups,
     selectedSpot,
     onSelectSpot,
+    onOpenGroup,
+    // The time the pins are drawn for (useMinute).
+    now = Date.now(),
 }) {
     return (
         <>
-            {/* Radius ring — the settled current/pinned search area. While
-                placing, it previews the area under the reticle instead, and
-                only once the map stops moving (a map shape would trail the
-                drag). */}
-            {(placingPin ? placementCenter : searchCenter) && (
+            {searchCenter && (
                 <Circle
-                    center={placingPin ? placementCenter : searchCenter}
+                    center={searchCenter}
                     radius={searchRadius}
-                    fillColor={alpha(TOKENS.primary, 0.06)}
-                    strokeColor={alpha(TOKENS.primary, 0.22)}
+                    fillColor={alpha(
+                        searchMode === 'pinned' ? TOKENS.textMuted : TOKENS.primary,
+                        0.06
+                    )}
+                    strokeColor={alpha(
+                        searchMode === 'pinned' ? TOKENS.textMuted : TOKENS.primary,
+                        0.22
+                    )}
                     strokeWidth={2}
+                    lineDashPattern={searchMode === 'pinned' ? [8, 4] : null}
                 />
             )}
 
-            {/* Confirmed pin — a static marker (no entrance spring, so it is
-                safe with tracksViewChanges=false). The animated drop now lives
-                on the screen-fixed reticle, not here. */}
-            {!placingPin && pinnedLocation && searchMode === 'pinned' && (
-                <Marker
-                    coordinate={pinnedLocation}
-                    anchor={{ x: 0.5, y: 1 }}
-                    tracksViewChanges={false}
-                >
-                    <View style={styles.pinMarker}>
+            {pinnedLocation && (
+                <Marker coordinate={pinnedLocation} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
+                    <Animated.View
+                        style={[
+                            styles.pinMarker,
+                            {
+                                transform: [
+                                    { scale: pinDropAnim },
+                                    { translateY: pinDropAnim.interpolate({ inputRange: [0, 1], outputRange: [-30, 0] }) },
+                                ],
+                            },
+                        ]}
+                    >
                         <View style={styles.pinHead}>
                             <View style={styles.pinInner} />
                         </View>
                         <View style={styles.pinStem} />
-                    </View>
+                    </Animated.View>
                 </Marker>
             )}
 
-            {spots.map(spot => {
-                if (!spot.coordinates) return null;
+            {groups.map((group) => {
+                // Keys carry what the pin shows, so the marker remounts and
+                // re-snapshots its new look (a restriction starting, say).
+                if (group.spots.length > 1) {
+                    return (
+                        <GroupMarker
+                            key={`${group.key}:${getGroupLabel(group.spots, now)}`}
+                            group={group}
+                            onPress={onOpenGroup}
+                            now={now}
+                        />
+                    );
+                }
+                const spot = group.lead;
                 const isSelected = selectedSpot?.id === spot.id;
-
-                // With tracksViewChanges={false} the native marker keeps the
-                // bitmap it snapshotted on mount, so a style change alone may
-                // never reach the screen. Keying on selection remounts just
-                // the affected marker so the selected dot actually redraws.
                 return (
                     <SpotMarker
-                        key={isSelected ? `${spot.id}-selected` : String(spot.id)}
+                        key={`${spot.id}:${isSelected ? 'on' : 'off'}:${getMarkerKind(spot, now)}`}
                         spot={spot}
-                        isSelected={isSelected}
-                        onSelectSpot={onSelectSpot}
+                        selected={isSelected}
+                        onPress={onSelectSpot}
+                        now={now}
                     />
                 );
             })}

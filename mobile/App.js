@@ -1,11 +1,11 @@
 // App.js
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
-import * as Location from 'expo-location';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useEffect, useState } from 'react';
+import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,102 +14,123 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import HomeScreen from './src/screens/HomeScreen/index';
 import MapScreen from './src/screens/MapScreen/index';
 import SessionScreen from './src/screens/SessionScreen/index';
+import DetailsScreen from './src/screens/DetailsScreen/index';
+import WelcomeScreen from './src/screens/WelcomeScreen/index';
 
 // services
-import TabIcon from './src/navigation/TabIcon';
-import { initTimerReminders, useReminderTaps } from './src/services/timerReminders';
+import BrandLoader from './src/components/BrandLoader';
+import ConfirmHost from './src/components/ConfirmHost';
+import LiveStage from './src/components/LiveStage';
+import SessionStrip from './src/components/SessionStrip';
+import { FilterProvider } from './src/context/FilterContext';
+import { SessionProvider, useSessionStatus } from './src/context/SessionContext';
 import { getDeviceId } from './src/utils/device';
-import { USE_DEVICE_LOCATION } from './src/constants/parking';
-import { TOKENS } from './src/constants/theme';
+import './src/utils/focusRing';
+import { LAYOUT, TOKENS } from './src/constants/theme';
+import { useReduceMotion } from './src/hooks/useReduceMotion';
+import { hasSeenWelcome } from './src/utils/onboarding';
 
+const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const navigationRef = createNavigationContainerRef();
-// In a wide browser window (the web demo on a laptop) the app sits in a
-// phone-width column, the layout it was designed for, instead of stretching
-// across the screen.
-const WEB_COLUMN_WIDTH = 480;
-
-// On the web React Navigation draws each tab as a link, which a screen reader
-// announces as a list of links. A plain button keeps the tab role it's given,
-// and says which tab is selected (the web reads aria-selected).
-const WebTabButton = ({ to, children, accessibilityState, ...props }) => (
-    <Pressable {...props} accessibilityState={accessibilityState} aria-selected={accessibilityState?.selected}>
-        {children}
-    </Pressable>
-);
-
-// On the web the tab bar is the page's navigation landmark, so screen reader
-// users can jump straight to it.
-const WebTabBar = (props) => (
-    <View role="navigation" aria-label="Tabs">
-        <BottomTabBar {...props} />
-    </View>
-);
-
-const TAB_LABELS = {
-    Home: 'Home',
-    Map: 'Map',
-    Park: 'Park',
+const TAB_CONFIG = {
+    Home: {
+        label: 'Home',
+        activeIcon: 'home',
+        inactiveIcon: 'home-outline',
+    },
+    Map: {
+        label: 'Map',
+        activeIcon: 'map',
+        inactiveIcon: 'map-outline',
+    },
+    // The P of the brand pin, rather than a generic car.
+    Park: {
+        label: 'Park',
+        iconSet: MaterialCommunityIcons,
+        activeIcon: 'alpha-p-box',
+        inactiveIcon: 'alpha-p-box-outline',
+    },
 };
 
-function AppNavigation() {
-    const insets = useSafeAreaInsets();
+// The Park tab's dot while a session runs, coloured by its state.
+const SESSION_DOT = {
+    active: TOKENS.primary,
+    expiring: TOKENS.warning,
+    expired: TOKENS.danger,
+};
+
+// The tab bar, with the running session's strip above it everywhere but Park.
+function TabBarWithSession(props) {
+    const current = props.state.routes[props.state.index]?.name;
+    return (
+        <View>
+            <SessionStrip navigation={props.navigation} hidden={current === 'Park'} />
+            <BottomTabBar {...props} />
+        </View>
+    );
+}
+
+// Mounted only after Welcome, so the location prompt (asked by Home, see
+// useLocationManager) never covers it.
+function MainTabs() {
     const [, setDeviceId] = useState(null);
-    const [, setLocation] = useState(null);
-    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10, default: 10 }));
-    const tabBarHeight = 66 + tabBarBottomPadding;
-
-    // Parking reminders: show them even while the app is open, and open the
-    // Park tab when one is tapped. A tap can arrive before navigation is
-    // ready (it launched the app), so it waits for onReady.
-    useEffect(() => {
-        initTimerReminders();
-    }, []);
-    const pendingOpenParkRef = useRef(false);
-    const openPark = useCallback(() => {
-        if (navigationRef.isReady()) {
-            navigationRef.navigate('Park');
-        } else {
-            pendingOpenParkRef.current = true;
-        }
-    }, []);
-    const handleNavigationReady = useCallback(() => {
-        if (!pendingOpenParkRef.current) return;
-        pendingOpenParkRef.current = false;
-        navigationRef.navigate('Park');
-    }, []);
-    useReminderTaps(openPark);
 
     useEffect(() => {
-        (async () => {
-            const id = await getDeviceId();
-            setDeviceId(id);
-
-            // The web demo never asks (see USE_DEVICE_LOCATION).
-            if (!USE_DEVICE_LOCATION) return;
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status === 'granted') {
-                const loc = await Location.getCurrentPositionAsync({});
-                setLocation(loc.coords);
-                await AsyncStorage.setItem('userLocation', JSON.stringify(loc.coords));
-            }
-        })();
+        getDeviceId().then(setDeviceId);
     }, []);
 
     return (
-        <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
-            <Tab.Navigator
-                tabBar={Platform.OS === 'web' ? WebTabBar : undefined}
-                sceneContainerStyle={{
-                    backgroundColor: TOKENS.bg,
-                }}
-                screenOptions={({ route }) => ({
-                    headerShown: false,
-                    tabBarShowLabel: true,
-                    tabBarIcon: ({ focused, color, size }) => (
-                        <TabIcon route={route.name} focused={focused} color={color} size={size} />
-                    ),
-                    tabBarLabel: ({ focused, color }) => (
+        // Type and distance, the same on Home and Map
+        <FilterProvider>
+            <Tabs />
+        </FilterProvider>
+    );
+}
+
+function Tabs() {
+    const insets = useSafeAreaInsets();
+    const sessionStatus = useSessionStatus();
+    const tabBarBottomPadding = Math.max(insets.bottom, Platform.select({ ios: 12, android: 10 }));
+    const tabBarHeight = 66 + tabBarBottomPadding;
+    // On a wide window the tabs sit under the content's column, not spread
+    // across the window.
+    const { width } = useWindowDimensions();
+    const tabBarSide = Math.max(14, (width - LAYOUT.column) / 2);
+
+    // A moment, while the stored session is read: a driver who is parked
+    // opens straight on Park.
+    if (!sessionStatus.isLoaded) return <View style={navStyles.waiting} />;
+
+    return (
+        <Tab.Navigator
+            initialRouteName={sessionStatus.active ? 'Park' : 'Home'}
+            tabBar={(props) => <TabBarWithSession {...props} />}
+            sceneContainerStyle={{
+                backgroundColor: TOKENS.bg,
+            }}
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarShowLabel: true,
+                tabBarIcon: ({ focused, color, size }) => {
+                    const tabMeta = TAB_CONFIG[route.name];
+                    const Icon = tabMeta.iconSet || Ionicons;
+                    const dot = route.name === 'Park' && sessionStatus.active
+                        ? SESSION_DOT[sessionStatus.state] || SESSION_DOT.active
+                        : null;
+                    return (
+                        <View style={navStyles.iconWrap}>
+                            <Icon
+                                name={focused ? tabMeta.activeIcon : tabMeta.inactiveIcon}
+                                size={size}
+                                color={color}
+                            />
+                            {dot ? <View style={[navStyles.sessionDot, { backgroundColor: dot }]} /> : null}
+                        </View>
+                    );
+                },
+                tabBarLabel: ({ focused, color }) => {
+                    const tabMeta = TAB_CONFIG[route.name];
+                    return (
                         <Text
                             style={[
                                 navStyles.label,
@@ -117,106 +138,151 @@ function AppNavigation() {
                                 { color },
                             ]}
                         >
-                            {TAB_LABELS[route.name]}
+                            {tabMeta.label}
                         </Text>
-                    ),
-                    tabBarActiveTintColor: TOKENS.primary,
-                    tabBarInactiveTintColor: TOKENS.textMuted,
-                    tabBarHideOnKeyboard: true,
-                    tabBarButton: Platform.OS === 'web' ? WebTabButton : undefined,
-                    tabBarStyle: {
-                        backgroundColor: TOKENS.surface,
-                        borderTopWidth: StyleSheet.hairlineWidth,
-                        borderTopColor: TOKENS.hairline,
-                        height: tabBarHeight,
-                        paddingTop: 10,
-                        paddingBottom: tabBarBottomPadding,
-                        paddingHorizontal: 14,
-                        elevation: 0,
-                        shadowOpacity: 0,
-                    },
-                    tabBarLabelStyle: {
-                        marginBottom: Platform.select({ ios: 2, android: 3 }),
-                    },
-                    tabBarIconStyle: {
-                        marginTop: 0,
-                    },
-                    tabBarItemStyle: {
-                        minHeight: 52,
-                        borderRadius: 12,
-                        marginHorizontal: 3,
-                        marginTop: 1,
-                        paddingTop: 2,
-                        paddingBottom: 0,
-                    },
-                })}
+                    );
+                },
+                tabBarActiveTintColor: TOKENS.primary,
+                tabBarInactiveTintColor: TOKENS.textMuted,
+                tabBarHideOnKeyboard: true,
+                tabBarStyle: {
+                    backgroundColor: TOKENS.surface,
+                    borderTopWidth: StyleSheet.hairlineWidth,
+                    borderTopColor: TOKENS.hairline,
+                    height: tabBarHeight,
+                    paddingTop: 10,
+                    paddingBottom: tabBarBottomPadding,
+                    paddingHorizontal: tabBarSide,
+                    elevation: 0,
+                    shadowOpacity: 0,
+                },
+                tabBarLabelStyle: {
+                    marginBottom: Platform.select({ ios: 2, android: 3 }),
+                },
+                tabBarIconStyle: {
+                    marginTop: 0,
+                },
+                tabBarItemStyle: {
+                    minHeight: 52,
+                    marginHorizontal: 3,
+                    marginTop: 1,
+                    paddingTop: 2,
+                    paddingBottom: 0,
+                },
+            })}
+        >
+            <Tab.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{ tabBarLabel: 'Home' }}
+            />
+            <Tab.Screen
+                name="Map"
+                component={MapScreen}
+                options={{ tabBarLabel: 'Map' }}
+            />
+            <Tab.Screen
+                name="Park"
+                component={SessionScreen}
+                options={{
+                    tabBarLabel: 'Park',
+                    tabBarAccessibilityLabel: sessionStatus.active ? 'Park, you are parked' : 'Park',
+                }}
+            />
+        </Tab.Navigator>
+    );
+}
+
+function AppNavigation() {
+    // null until the first-run flag is read; then 'Welcome' or 'Tabs'
+    const [initialRoute, setInitialRoute] = useState(null);
+    const reduceMotion = useReduceMotion();
+    const insets = useSafeAreaInsets();
+
+    useEffect(() => {
+        hasSeenWelcome().then((seen) => setInitialRoute(seen ? 'Tabs' : 'Welcome'));
+    }, []);
+
+    // Usually resolves in a few ms; the loader only appears if storage is slow.
+    if (!initialRoute) {
+        return (
+            <LiveStage style={navStyles.boot} insetBottom={insets.bottom}>
+                <BrandLoader size={140} delay={400} live />
+            </LiveStage>
+        );
+    }
+
+    return (
+        <NavigationContainer>
+            <Stack.Navigator
+                initialRouteName={initialRoute}
+                screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: TOKENS.bg },
+                }}
             >
-                <Tab.Screen
-                    name="Home"
-                    component={HomeScreen}
-                    options={{ tabBarLabel: 'Home' }}
+                <Stack.Screen name="Welcome" component={WelcomeScreen} />
+                <Stack.Screen name="Tabs" component={MainTabs} options={{ animation: 'fade' }} />
+                {/* Pushed over the tabs, so the tab bar hides on this focus screen */}
+                <Stack.Screen
+                    name="Details"
+                    component={DetailsScreen}
+                    options={{
+                        contentStyle: { backgroundColor: TOKENS.inkSurface },
+                        // Crossfade instead of a sideways push under reduce motion.
+                        animation: reduceMotion ? 'fade' : 'default',
+                    }}
                 />
-                <Tab.Screen
-                    name="Map"
-                    component={MapScreen}
-                    options={{ tabBarLabel: 'Map' }}
-                />
-                <Tab.Screen
-                    name="Park"
-                    component={SessionScreen}
-                    // Mounted at launch (not on first visit), so a running
-                    // timer's dot shows on the tab right away.
-                    options={{ tabBarLabel: 'Park', lazy: false }}
-                />
-            </Tab.Navigator>
+            </Stack.Navigator>
         </NavigationContainer>
     );
 }
 
 export default function App() {
-    const { width } = useWindowDimensions();
-    const framed = Platform.OS === 'web' && width > WEB_COLUMN_WIDTH;
-
     return (
-        <GestureHandlerRootView style={[frameStyles.page, framed && frameStyles.pageFramed]}>
-            <View style={[frameStyles.app, framed && frameStyles.appFramed]}>
-                <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaProvider>
+                {/* Above the navigator, so Details, pushed over the tabs, knows
+                    when you are parked too */}
+                <SessionProvider>
                     <AppNavigation />
-                </SafeAreaProvider>
-            </View>
+                </SessionProvider>
+                {/* Web's yes/no questions (see utils/confirm); phones use the system alert. */}
+                {Platform.OS === 'web' ? <ConfirmHost /> : null}
+            </SafeAreaProvider>
         </GestureHandlerRootView>
     );
 }
 
-const frameStyles = StyleSheet.create({
-    page: {
-        flex: 1,
-    },
-    // A quiet tint around the column, so it reads as the app, not a gap.
-    pageFramed: {
-        alignItems: 'center',
-        backgroundColor: TOKENS.surfaceTint,
-    },
-    app: {
-        flex: 1,
-        width: '100%',
-    },
-    // overflow: hidden keeps the map, sheet and card inside the column.
-    appFramed: {
-        maxWidth: WEB_COLUMN_WIDTH,
-        overflow: 'hidden',
-        backgroundColor: TOKENS.bg,
-        borderLeftWidth: StyleSheet.hairlineWidth,
-        borderRightWidth: StyleSheet.hairlineWidth,
-        borderColor: TOKENS.hairline,
-        shadowColor: TOKENS.shadow,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.06,
-        shadowRadius: 24,
-    },
-});
-
 const navStyles = StyleSheet.create({
+    boot: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: TOKENS.bg,
+    },
+    iconWrap: {
+        width: 44,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 2,
+    },
+    // Top-right of the Park icon, ringed in the tab bar's white.
+    sessionDot: {
+        position: 'absolute',
+        top: 1,
+        right: 7,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        borderWidth: 2,
+        borderColor: TOKENS.surface,
+    },
+    waiting: {
+        flex: 1,
+        backgroundColor: TOKENS.bg,
+    },
     label: {
         fontSize: 12,
         letterSpacing: 0.1,

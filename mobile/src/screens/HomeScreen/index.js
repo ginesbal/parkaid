@@ -1,80 +1,138 @@
-import { StatusBar } from 'expo-status-bar';
-import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Animated, Linking, View, StyleSheet } from 'react-native';
+import ScreenStatusBar from '../../components/ScreenStatusBar';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, FlatList, LayoutAnimation, Linking, Platform, RefreshControl, Text, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import ScreenHeading from '../../components/ScreenHeading';
+import BrandLoader from '../../components/BrandLoader';
+import LiveStage from '../../components/LiveStage';
 import Header from './components/Header';
-import MapFAB from './components/MapFAB';
-import ParkingList from './components/ParkingList';
+import SpotRow from '../../components/SpotRow';
 import EmptyState from './components/ParkingList/EmptyState';
 import LoadingState from './components/ParkingList/LoadingState';
 
-import { useFilterState } from '../../hooks/useFilterState';
-import { useWalkMinutes } from '../../hooks/useWalkMinutes';
 import { useLocationManager } from '../../hooks/useLocationManager';
+import { useMinute } from '../../hooks/useMinute';
+import { useEntrance } from '../../hooks/useEntrance';
 import { useParkingSpots } from '../../hooks/useParkingSpots';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 
+import { useFilters } from '../../context/FilterContext';
+import { apiTypeFor, applyType } from '../../utils/filters';
+import { describeLocation } from '../../utils/geo';
+import { getGreeting } from '../../utils/greeting';
+import { describeSaved } from '../../utils/loadStatus';
 import { logger } from '../../utils/loggers';
-import { calculateQuickInfo } from '../../utils/parkingHelpers';
+import { getZoneShown, pickTopSpot, rankByValue, rankSpots } from '../../utils/spotPresentation';
 
-import { FETCH_RADIUS, WALK_MINUTES, minutesToMeters, walkPhrase } from '../../constants/parking';
+import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
 import { TOKENS } from '../../constants/theme';
 import { styles } from './HomeScreen.styles';
 
-// Never leave the pull-to-refresh spinner up if a refetch can't complete
-// (the API itself gives up after 8s).
-const REFRESH_TIMEOUT_MS = 10000;
+// Marks where permit-only blocks start in the list.
+const PERMIT_HEADING = { heading: 'permit' };
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function HomeScreen({ navigation }) {
   // location & filter state
-  const { location, isLoadingLocation, locationError, locationDenied } = useLocationManager();
-  // A refused permission is fixable — offer the way to fix it.
-  const openSettings = useCallback(() => {
-    Linking.openSettings().catch(() => {});
-  }, []);
+  const {
+    location,
+    isLoadingLocation,
+    source: locationSource,
+    savedAt: locationSavedAt,
+    permission,
+    locating,
+    refreshLocation,
+  } = useLocationManager();
 
-  const { activeFilter, setActiveFilter } = useFilterState();
-  // How far you'll walk: shared with the map, remembered between visits.
-  const [walkMinutes, setWalkMinutes] = useWalkMinutes();
-  const searchRadius = minutesToMeters(walkMinutes);
+  // A fresh fix each time Home opens (the hook asks at most once a minute).
+  useEffect(() => navigation.addListener('focus', () => refreshLocation()), [navigation, refreshLocation]);
 
-  // Bumped by pull-to-refresh and "Retry" to refetch, bypassing the cache.
-  const [reloadKey, setReloadKey] = useState(0);
+  // Where the list is measured from, when it is not the phone's location now.
+  // A saved place is only named once the fresh fix has failed.
+  const place = locating && locationSource === 'saved'
+    ? null
+    : describeLocation({ source: locationSource, savedAt: locationSavedAt, permission });
+  const placeAction = {
+    ask: { label: 'Turn on', onPress: () => refreshLocation({ force: true, ask: true }) },
+    settings: { label: 'Open Settings', onPress: () => Linking.openSettings() },
+    retry: { label: 'Try again', onPress: () => refreshLocation({ force: true }) },
+  }[place?.action] ?? null;
+  const fromDowntown = locationSource === 'default' || locationSource === 'outside';
+
+  // Type and distance, shared with Map (context/FilterContext).
+  const {
+    type: activeFilter,
+    setType: setActiveFilter,
+    radius: searchRadius,
+    setRadius: setSearchRadius,
+  } = useFilters();
+
+  // How the list is sorted: 'near' | 'value' — see ViewChips
+  const [view, setView] = useState('near');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const requestType = apiTypeFor(activeFilter);
+
+  // Badge count for the Filters button.
+  const filterCount =
+    (activeFilter !== 'all' ? 1 : 0) +
+    (searchRadius !== DEFAULT_SEARCH_RADIUS ? 1 : 0);
 
   // data fetching hook
-  // Fetched once at the longest walk, then narrowed here, so moving the walk
-  // slider is instant. The server returns the closest 100 either way, so the
-  // narrowed list is exactly what a narrower request would return.
-  const { spots: allSpots, loading, error, errorKind, lastUpdated, waking } = useParkingSpots(
-    location,
-    FETCH_RADIUS,
-    activeFilter,
-    reloadKey
-  );
-  const spots = useMemo(() => (
-    Array.isArray(allSpots)
-      ? allSpots.filter((s) => (typeof s.distance === 'number' ? s.distance : Infinity) <= searchRadius)
-      : allSpots
-  ), [allSpots, searchRadius]);
+  const { spots, loading, error, refetch, savedAt, stale } = useParkingSpots(location, searchRadius, requestType);
 
   // local UI state
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const refreshStartedAtRef = useRef(0);
-  const refreshTimeoutRef = useRef(null);
 
-  // animations (UI concern, not data concern)
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  // Full-screen loading only until the first answer. After that the header
+  // stays put and the list updates in place.
+  const [hasFetched, setHasFetched] = useState(false);
+  const wasLoadingRef = useRef(false);
+  useEffect(() => {
+    if (wasLoadingRef.current && !loading) setHasFetched(true);
+    wasLoadingRef.current = loading;
+  }, [loading]);
 
-  // calculate stats from spots
-  const quickInfo = useMemo(() => {
-    return calculateQuickInfo(spots);
-  }, [spots]);
+  // Nearest by walk (the cheaper first for the same walk), or cheapest first;
+  // blocks where a stay can't last an hour after the rest, then blocks with
+  // no parking right now, and permit-only blocks after everywhere a visitor
+  // can park.
+  // Re-ranked each minute: a restriction may start while the list is open.
+  const now = useMinute();
+  const visibleSpots = useMemo(() => {
+    const list = applyType(spots, activeFilter);
+    return view === 'value' ? rankByValue(list, activeFilter, now) : rankSpots(list, activeFilter, now);
+  }, [spots, view, activeFilter, now]);
+
+  const topPick = useMemo(
+    () => (visibleSpots.length ? pickTopSpot(visibleSpots, activeFilter, now) : null),
+    [visibleSpots, activeFilter, now]
+  );
+  const restSpots = useMemo(
+    () => visibleSpots.filter((s) => s !== topPick),
+    [visibleSpots, topPick]
+  );
+  // Permit-only blocks get their own heading, unless that is all the driver asked for.
+  const { parkable, listData } = useMemo(() => {
+    if (activeFilter === 'residential') return { parkable: restSpots, listData: restSpots };
+    const open = restSpots.filter((s) => s.spot_type !== 'residential');
+    const permits = restSpots.filter((s) => s.spot_type === 'residential');
+    return { parkable: open, listData: permits.length ? [...open, PERMIT_HEADING, ...permits] : open };
+  }, [restSpots, activeFilter]);
+
+  // Rows that share a block side with another, the top pick included, say
+  // their zone.
+  const zoneShown = useMemo(() => getZoneShown(visibleSpots), [visibleSpots]);
+
+  // Re-read on each render; a screen left open past noon should say so.
+  const greeting = getGreeting();
 
   // first screen mount + key inputs snapshot
-  React.useEffect(() => {
+  useEffect(() => {
     logger.log('home_mount', {
       hasLocation: !!location,
       activeFilter,
@@ -83,232 +141,219 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   // log when list transitions from empty->has data
-  const prevCountRef = React.useRef(0);
-  React.useEffect(() => {
+  const prevCountRef = useRef(0);
+  useEffect(() => {
     const count = Array.isArray(spots) ? spots.length : 0;
     if (count > 0 && prevCountRef.current === 0) {
       logger.log('spots_loaded', {
         count,
-        filter: activeFilter,
+        filter: requestType,
         radius: searchRadius
       });
     }
     prevCountRef.current = count;
-  }, [spots, activeFilter, searchRadius]);
+  }, [spots, requestType, searchRadius]);
 
   // capture empty-state scenarios
-  React.useEffect(() => {
-    if (!loading && !refreshing && Array.isArray(spots) && spots.length === 0) {
+  useEffect(() => {
+    if (hasFetched && !loading && !refreshing && visibleSpots.length === 0) {
       logger.log('spots_empty', {
         hasLocation: !!location,
-        filter: activeFilter,
+        view,
+        filter: requestType,
         radius: searchRadius,
         lastRefresh
       });
     }
-  }, [loading, refreshing, spots, location, activeFilter, searchRadius, lastRefresh]);
+  }, [hasFetched, loading, refreshing, visibleSpots.length, location, view, requestType, searchRadius, lastRefresh]);
 
   // navigation handlers
   const handleMapPress = () => {
-    logger.log('nav_to_map_from_home', { source: 'fab_or_header' });
+    logger.log('nav_to_map_from_home', { source: 'empty_state' });
     navigation.navigate('Map');
   };
 
-  // Stable, and called by the row with its spot — so memoized rows don't
-  // re-render every time Home does.
+  const handleSearchPress = () => {
+    logger.log('nav_to_map_from_home', { source: 'search' });
+    navigation.navigate('Map', { focusSearch: true });
+  };
+
+  // Without parking data, Park still times a session with the zone on the sign.
+  const handleStartSession = () => {
+    logger.log('nav_to_park_from_home', { source: 'load_error' });
+    navigation.navigate('Park');
+  };
+
   const handleSpotPress = useCallback((spot) => {
     logger.log('spot_selected_from_home', {
       spotId: spot?.id,
       address: spot?.address
     });
 
-    navigation.navigate('Map', {
-      initialSpot: spot,
-      fromList: true,
-    });
+    navigation.navigate('Details', { spot });
   }, [navigation]);
 
-  // The empty state's next step. Walk farther first — keeping the user's
-  // type filter — and only at the longest walk offer to clear the filter.
-  const canWiden = walkMinutes < WALK_MINUTES.max;
-  const canShowAllTypes = activeFilter !== 'all';
-  const expandLabel = canWiden
-    ? `Widen to ${walkPhrase(WALK_MINUTES.max)}`
-    : canShowAllTypes
-      ? 'Show all parking types'
-      : null;
-  const emptyHint = expandLabel
-    ? 'Walk a little farther, or switch to the map to look around the next block.'
-    : `Nothing within ${walkPhrase(WALK_MINUTES.max)}. Switch to the map to search somewhere else.`;
+  const handleViewChange = useCallback((next) => {
+    logger.log('home_view_changed', { from: view, to: next });
+    setView(next);
+  }, [view]);
+
+
+  const reduceMotion = useReduceMotion();
+  const toggleFilters = useCallback(() => {
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setFiltersOpen((open) => !open);
+  }, [reduceMotion]);
 
   const handleExpandSearch = () => {
-    if (canWiden) {
-      logger.log('expand_search', { oldMinutes: walkMinutes, newMinutes: WALK_MINUTES.max });
-      setWalkMinutes(WALK_MINUTES.max);
-      return;
-    }
-    if (canShowAllTypes) {
-      logger.log('expand_search', { clearedFilter: activeFilter });
-      setActiveFilter('all');
-    }
+    logger.log('expand_search', {
+      oldRadius: searchRadius,
+      newRadius: 1000,
+      view
+    });
+
+    setSearchRadius(1000);
+    // Parkade keeps its meaning; a wider radius is what finds one.
+    if (activeFilter !== 'parkade') setActiveFilter('all');
   };
 
-  // Pull-to-refresh refetches for real (bypassing the response cache) and
-  // the spinner stays up until that fetch has actually finished.
+  // Pull to refresh and Retry: refetch past the cache; the spinner stops when
+  // that request settles.
+  const refreshStartedRef = useRef(false);
   const handleRefresh = useCallback(() => {
+    if (!location) return;
     logger.log('home_refresh', {
-      filter: activeFilter,
+      filter: requestType,
       radius: searchRadius
     });
 
-    refreshStartedAtRef.current = Date.now();
+    refreshStartedRef.current = false;
     setRefreshing(true);
     setLastRefresh(new Date());
-    setReloadKey((key) => key + 1);
+    // Where you are now first, then the list for there.
+    refreshLocation({ force: true }).finally(refetch);
+  }, [location, requestType, searchRadius, refetch, refreshLocation]);
 
-    clearTimeout(refreshTimeoutRef.current);
-    refreshTimeoutRef.current = setTimeout(() => setRefreshing(false), REFRESH_TIMEOUT_MS);
-  }, [activeFilter, searchRadius]);
-
-  React.useEffect(() => {
-    if (refreshing && lastUpdated && lastUpdated >= refreshStartedAtRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-      setRefreshing(false);
+  useEffect(() => {
+    if (!refreshing) return;
+    if (loading) {
+      refreshStartedRef.current = true;
+      return;
     }
-  }, [refreshing, lastUpdated]);
-
-  React.useEffect(() => () => clearTimeout(refreshTimeoutRef.current), []);
+    if (refreshStartedRef.current) setRefreshing(false);
+  }, [refreshing, loading]);
 
   // filter/radius changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (activeFilter) {
       logger.log('filter_changed', { filter: activeFilter });
     }
   }, [activeFilter]);
 
-  React.useEffect(() => {
-    logger.log('walk_changed', { minutes: walkMinutes });
-  }, [walkMinutes]);
+  useEffect(() => {
+    if (searchRadius) {
+      logger.log('radius_changed', { radius: searchRadius });
+    }
+  }, [searchRadius]);
 
-  // Full-screen loading only for the very first load. After that, changing
-  // the parking type keeps the header (and the control just used) on screen
-  // and shows progress in place instead of blanking everything.
-  const isFirstLoad = isLoadingLocation || (loading && lastUpdated === null);
-  const isUpdating = loading && !refreshing && !isFirstLoad;
+  // The live loader holds its spot only while the list is at rest at the
+  // top (a pull to refresh moves it too).
+  const [scrolled, setScrolled] = useState(false);
 
-  if (isFirstLoad) {
-    logger.log('home_loading_state', {
-      loading,
-      refreshing,
-      isLoadingLocation
-    });
-    return <LoadingState walkMinutes={walkMinutes} waking={waking} />;
+  // The loader hands over to the list with one soft rise, not a hard cut.
+  // A saved list on screen ends it at once; the header then says "Updating…".
+  const showLoader = isLoadingLocation || (!hasFetched && !error && !spots?.length);
+  const [contentIn] = useEntrance(1, !showLoader);
+
+  // initial loading state
+  if (showLoader) {
+    return <LoadingState searchRadius={searchRadius} phase={isLoadingLocation ? 'location' : 'spots'} />;
   }
 
-  // While new results load, dim the current ones so it's clear they're
-  // about to change — without moving anything.
-  const renderSpot = ({ item }) => (
-    <View style={isUpdating ? listStyles.updating : null}>
-      <ParkingList.Item
-        spot={item}
-        onPress={handleSpotPress}
-        fadeAnim={fadeAnim}
-        slideAnim={slideAnim}
-      />
-    </View>
-  );
+  // One grouped inset list per section: the permit heading closes one
+  // group and opens the next.
+  const renderSpot = ({ item, index }) => (item === PERMIT_HEADING ? (
+    <Text style={styles.listHeading} accessibilityRole="header">Permit holders only</Text>
+  ) : (
+    <SpotRow
+      spot={item}
+      onPress={handleSpotPress}
+      chevron
+      now={now}
+      showZone={zoneShown.has(item.id)}
+      first={index === 0 || listData[index - 1] === PERMIT_HEADING}
+      last={index === listData.length - 1 || listData[index + 1] === PERMIT_HEADING}
+    />
+  ));
 
-  // Inset hairline between rows — begins where the address begins
-  // (padding 20 + walk block 56 + gap 10 = 86), matching the map's bottom sheet.
-  const renderSeparator = () => <View style={listStyles.rowSeparator} />;
+  const emptyComponent = loading ? (
+    <View style={styles.updating}>
+      <BrandLoader size={56} label="Updating the list" delay={150} live suspended={scrolled} />
+    </View>
+  ) : (
+    <EmptyState
+      onExpandSearch={handleExpandSearch}
+      onViewMap={handleMapPress}
+      onStartSession={handleStartSession}
+      onRetry={handleRefresh}
+      error={error}
+      type={activeFilter}
+      searchRadius={searchRadius}
+    />
+  );
 
   return (
     <>
-      <StatusBar style="dark" />
-      <SafeAreaView edges={['top']} style={{ backgroundColor: TOKENS.surface }} />
-      {/* No 'bottom' edge: the tab bar already covers the home indicator,
-          and bottom tabs gives screens the raw insets — adding it again
-          left a blank strip above the tab bar. */}
-      <SafeAreaView edges={['left', 'right']} style={styles.container} role="main">
-        <ScreenHeading>Parking near you</ScreenHeading>
-        <FlatList
-          data={spots}
-          renderItem={renderSpot}
-          extraData={isUpdating}
-          accessibilityState={{ busy: isUpdating }}
-          keyExtractor={(item) => String(item.id)}
-          ItemSeparatorComponent={renderSeparator}
-          ListHeaderComponent={
-            <Header
-              location={location}
-              spots={spots}
-              quickInfo={quickInfo}
-              activeFilter={activeFilter}
-              setActiveFilter={setActiveFilter}
-              walkMinutes={walkMinutes}
-              setWalkMinutes={setWalkMinutes}
-              fadeAnim={fadeAnim}
-              slideAnim={slideAnim}
-              onLocationPress={handleMapPress}
-              // Only the location notice: a failed load already explains
-              // itself, with a way out, in the empty state below.
-              statusMessage={locationError}
-              statusAction={locationDenied ? { label: 'Open Settings', onPress: openSettings } : null}
-            />
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={TOKENS.primary}
-              colors={[TOKENS.primary]}
-            />
-          }
-          ListEmptyComponent={
-            // Loading with nothing on screen yet: a quiet spinner, not
-            // "Nothing nearby" — that would be an answer we don't have.
-            loading ? (
-              <View style={listStyles.inlineLoading}>
-                <ActivityIndicator color={TOKENS.primary} accessibilityLabel="Looking for spots" />
-              </View>
-            ) : (
-              <EmptyState
-                onExpandSearch={handleExpandSearch}
-                onViewMap={handleMapPress}
-                onRetry={handleRefresh}
-                hasError={Boolean(error)}
-                errorKind={errorKind}
-                title={`No spots within ${walkPhrase(walkMinutes)}`}
-                expandLabel={expandLabel}
-                hint={emptyHint}
+      <ScreenStatusBar style="dark" />
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+        <LiveStage>
+          <Animated.View style={[styles.content, contentIn]}>
+          <FlatList
+            data={listData}
+            renderItem={renderSpot}
+            extraData={now}
+            keyExtractor={(item) => (item === PERMIT_HEADING ? 'permit-heading' : String(item.id))}
+            ListHeaderComponent={
+              <Header
+                greeting={greeting}
+                statusMessage={place?.text}
+                statusAction={placeAction}
+                fromDowntown={fromDowntown}
+                onSearchPress={handleSearchPress}
+                view={view}
+                onViewChange={handleViewChange}
+                filtersOpen={filtersOpen}
+                onToggleFilters={toggleFilters}
+                filterCount={filterCount}
+                activeFilter={activeFilter}
+                setActiveFilter={setActiveFilter}
+                searchRadius={searchRadius}
+                setSearchRadius={setSearchRadius}
+                topPick={topPick}
+                onViewSpot={handleSpotPress}
+                moreCount={parkable.length}
+                savedNote={describeSaved({ savedAt, stale, updating: loading })}
+                now={now}
               />
-            )
-          }
-          contentContainerStyle={Array.isArray(spots) && spots.length === 0 ? styles.emptyList : listStyles.listEnd}
-        />
-
-        <MapFAB onPress={handleMapPress} />
+            }
+            ListEmptyComponent={topPick ? null : emptyComponent}
+            ListFooterComponent={<View style={styles.footer} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={TOKENS.primary}
+                colors={[TOKENS.primary]}
+              />
+            }
+            contentContainerStyle={[styles.list, visibleSpots.length === 0 && styles.emptyList]}
+            keyboardShouldPersistTaps="handled"
+            onScroll={(e) => setScrolled(Math.abs(e.nativeEvent.contentOffset.y) > 1)}
+            scrollEventThrottle={16}
+          />
+          </Animated.View>
+        </LiveStage>
       </SafeAreaView>
     </>
   );
 }
-
-const listStyles = StyleSheet.create({
-  // Room under the last row, so it can scroll clear of the floating Map
-  // button (24 from the bottom + 48 tall + 16 breathing room).
-  listEnd: {
-    paddingBottom: 88,
-  },
-  rowSeparator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: TOKENS.divider,
-    marginLeft: 86,
-  },
-  updating: {
-    opacity: 0.45,
-  },
-  inlineLoading: {
-    paddingVertical: 48,
-    alignItems: 'center',
-  },
-});

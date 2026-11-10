@@ -2,10 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/env');
 const { jlog } = require('../utils/logger');
-
-// Prices: the app reads each block's rate schedule (zone_info.html_zone_rate)
-// and shows the rate in effect at the time. price_zone is only the zone's
-// name ("4a", "14"), not a dollar amount, so no price is derived from it here.
+const { NOT_PUBLIC_ZONES, mergeSegments, toSpot } = require('../utils/spotRows');
 
 router.get('/nearby', async (req, res) => {
   const started = Date.now();
@@ -24,6 +21,11 @@ router.get('/nearby', async (req, res) => {
     where.push(`ST_DWithin(location, ST_MakePoint($${p + 1}, $${p})::geography, $${p + 2})`);
     params.push(lat, lng, radius);
     p += 3;
+
+    // Taxi, valet and other zones the public can't park in.
+    where.push(`(zone_type IS NULL OR zone_type <> ALL($${p}))`);
+    params.push(NOT_PUBLIC_ZONES);
+    p += 1;
 
     if (type && type !== 'all') {
       where.push(`spot_type = $${p}`);
@@ -72,10 +74,13 @@ router.get('/nearby', async (req, res) => {
       FROM parking_spots
       WHERE ${where.join(' AND ')}
       ORDER BY distance
-      LIMIT 100
+      LIMIT 250
     `;
 
     const result = await pool.query(sql, params);
+    // The segments of one zone's stretch of a block come back as one spot;
+    // more rows are read so that 100 places are left after that.
+    const spots = mergeSegments(result.rows).slice(0, 100);
     const ms = Date.now() - started;
 
     jlog('nearby_search_completed', {
@@ -83,57 +88,15 @@ router.get('/nearby', async (req, res) => {
       radius: `${radius}m`,
       type: type || 'all',
       freeOnly: free === 'true',
-      spotsFound: result.rows.length,
+      spotsFound: spots.length,
+      rowsRead: result.rows.length,
       queryTimeMs: ms,
     });
 
     res.json({
       success: true,
-      count: result.rows.length,
-      data: result.rows.map((spot) => ({
-        id: spot.id,
-        spot_type: spot.spot_type,
-        address: spot.address_desc || 'Unknown Address',
-        coordinates: spot.coordinates,
-        distance: Math.round(spot.distance),
-        walkingTime: Math.ceil(spot.distance / 80),
-
-        capacity: spot.zone_cap || spot.seg_cap || 0,
-        available: spot.zone_cap || spot.seg_cap || 0,
-
-        zone_info: {
-          permit_zone: spot.permit_zone,
-          price_zone: spot.price_zone,
-          html_zone_rate: spot.html_zone_rate,
-          zone_type: spot.zone_type,
-          parking_zone: spot.parking_zone,
-          enforceable_time: spot.enforceable_time,
-        },
-
-        metadata: {
-          stall_type: spot.stall_type,
-          camera: spot.camera,
-          block_side: spot.block_side,
-          max_time: spot.max_time,
-          zone_cap: spot.zone_cap,
-          seg_cap: spot.seg_cap,
-          lot_name: spot.lot_name,
-          lot_num: spot.lot_num,
-          parking_type: spot.parking_type,
-          home_page: spot.home_page,
-          time_restriction: spot.time_restriction,
-          parking_restriction: spot.parking_restriction,
-          parking_restrict_type: spot.parking_restrict_type,
-          parking_restrict_time: spot.parking_restrict_time,
-          no_stopping: spot.no_stopping,
-          description: spot.description,
-          ctp_class: spot.ctp_class,
-          dot: spot.dot,
-          octant: spot.octant,
-        },
-
-        max_duration_minutes: spot.max_time ? parseFloat(spot.max_time) : null,
-      })),
+      count: spots.length,
+      data: spots.map((row) => toSpot(row)),
     });
   } catch (error) {
     jlog('nearby_search_error', { error: error.message }, 'error');

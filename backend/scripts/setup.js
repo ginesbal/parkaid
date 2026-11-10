@@ -1,26 +1,8 @@
 require('dotenv').config();
 const axios = require('axios');
 const { Pool } = require('pg');
-
-// Street blocks' rates are in a second dataset, "On-Street Parking Zones with
-// Rates", which lists the same blocks with each one's rate schedule
-// (html_zone_rate). It has no parking_zone, which the row ids below are built
-// from, so its fields are merged into the on-street records, matched by each
-// block's first point: re-running this updates rows instead of adding copies.
-const STREET_RATES_ENDPOINT = '45az-7kh9.json';
-const RATE_FIELDS = ['html_zone_rate', 'zone_cap', 'zone_length', 'seg_cap', 'seg_length', 'camera', 'dot'];
-
-const firstPoint = (geometry) => {
-    const point = geometry?.coordinates?.[0]?.[0];
-    return point ? `${point[0].toFixed(6)},${point[1].toFixed(6)}` : null;
-};
-
-async function loadStreetRates() {
-    const response = await axios.get(`https://data.calgary.ca/resource/${STREET_RATES_ENDPOINT}`, {
-        params: { $limit: 5000, $$app_token: process.env.CALGARY_API_TOKEN }
-    });
-    return new Map(response.data.map((record) => [firstPoint(record.the_geom), record]));
-}
+const { lineMidpoint } = require('../utils/geometry');
+const { fetchZoneRates } = require('../utils/zoneRates');
 
 async function loadParkingData() {
     const pool = new Pool({
@@ -40,6 +22,16 @@ async function loadParkingData() {
 
     let totalLoaded = 0;
 
+    // Street rates by zone and time of day, from the City's map layer; the
+    // open-data list of zones has no rates.
+    let ratesByZone = new Map();
+    try {
+        ratesByZone = await fetchZoneRates(axios.get);
+        console.log(`Loaded rates for ${ratesByZone.size} street zones`);
+    } catch (error) {
+        console.error(`  Failed to load street rates: ${error.message}`);
+    }
+
     for (const dataset of datasets) {
         console.log(`\nLoading ${dataset.type} parking...`);
 
@@ -56,20 +48,13 @@ async function loadParkingData() {
 
             let loaded = 0;
             let skipped = 0;
-            let rated = 0;
-            const streetRates = dataset.type === 'on_street' ? await loadStreetRates() : null;
 
             for (const record of response.data) {
                 try {
-                    const rates = streetRates?.get(firstPoint(record.line));
-                    if (rates) {
-                        for (const field of RATE_FIELDS) {
-                            if (record[field] == null && rates[field] != null) record[field] = rates[field];
-                        }
-                        if (record.html_zone_rate) rated++;
-                    }
-
                     let lng, lat;
+                    // Where a line starts: it names a record without an id
+                    // of its own, as it always has.
+                    let start = null;
 
                     // Extract coordinates based on geometry type
                     if (dataset.type === 'off_street' && record.multipolygon?.coordinates) {
@@ -77,7 +62,9 @@ async function loadParkingData() {
                         lng = polygon.reduce((sum, pt) => sum + pt[0], 0) / polygon.length;
                         lat = polygon.reduce((sum, pt) => sum + pt[1], 0) / polygon.length;
                     } else if (record.line?.coordinates?.[0]?.[0]) {
-                        [lng, lat] = record.line.coordinates[0][0];
+                        // Halfway along the block, not at its corner.
+                        start = record.line.coordinates[0][0];
+                        [lng, lat] = lineMidpoint(record.line.coordinates);
                     } else if (record.the_geom?.coordinates?.[0]?.[0]) {
                         [lng, lat] = record.the_geom.coordinates[0][0];
                     } else if (record.point?.coordinates) {
@@ -88,8 +75,9 @@ async function loadParkingData() {
                     }
 
                     // Generate a unique ID if not provided
+                    const [idLng, idLat] = start || [lng, lat];
                     const globalId = record.globalid_guid || record.globalid ||
-                        `${dataset.type}-${record.parking_zone || ''}-${lng.toFixed(6)}-${lat.toFixed(6)}`;
+                        `${dataset.type}-${record.parking_zone || ''}-${idLng.toFixed(6)}-${idLat.toFixed(6)}`;
 
                     await pool.query(`
                         INSERT INTO parking_spots (
@@ -120,6 +108,7 @@ async function loadParkingData() {
                             $32, $33
                         )
                         ON CONFLICT (global_id) DO UPDATE SET
+                            location = EXCLUDED.location,
                             address_desc = EXCLUDED.address_desc,
                             status = EXCLUDED.status,
                             permit_zone = EXCLUDED.permit_zone,
@@ -159,7 +148,8 @@ async function loadParkingData() {
                         record.status || 'Active',                   // $6 status
                         record.permit_zone || null,                  // $7 permit_zone
                         record.price_zone || null,                   // $8 price_zone
-                        record.html_zone_rate || null,               // $9 html_zone_rate
+                        (dataset.type === 'on_street' && ratesByZone.get(String(record.parking_zone)))
+                            || record.html_zone_rate || null,       // $9 html_zone_rate
                         record.block_side || null,                   // $10 block_side
                         record.enforceable_time || null,             // $11 enforceable_time
                         parseInt(record.zone_cap) || null,           // $12 zone_cap
@@ -193,7 +183,6 @@ async function loadParkingData() {
             }
 
             console.log(`  Loaded ${loaded} ${dataset.type} spots (skipped ${skipped} without coordinates)`);
-            if (streetRates) console.log(`  ${rated} of them have the City's rate schedule`);
             totalLoaded += loaded;
 
         } catch (error) {

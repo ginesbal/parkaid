@@ -1,187 +1,304 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import ScreenStatusBar from '../../components/ScreenStatusBar';
 import React from 'react';
-import { Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { STORAGE_KEYS } from '../../constants/session';
-import { TOKENS } from '../../constants/theme';
-import { useSessionManager } from '../../hooks/useSessionManager';
-import TabIcon from '../../navigation/TabIcon';
+import BrandLoader from '../../components/BrandLoader';
+import LiveStage from '../../components/LiveStage';
+import { PENDING_SPOT_MAX_AGE, STORAGE_KEYS } from '../../constants/session';
+import { useSession } from '../../context/SessionContext';
+import { useLocationManager } from '../../hooks/useLocationManager';
+import { orderPlaces, recallSearch } from '../../services/recentSearch';
 import { logger } from '../../utils/loggers';
+import { getSpotName, isParkedAt, nameApart } from '../../utils/spotPresentation';
 import ActiveSession from './components/ActiveSession';
 import EmptyState from './components/EmptyState';
+import EndSummary from './components/EmptyState/EndSummary';
+import { ELSEWHERE } from './components/EmptyState/SpotPicker';
 import { styles } from './SessionScreen.styles';
 
-// The Park tab's dot while a timer runs: what it looks like, and what a
-// screen reader says about it.
-const TIMER_DOT = {
-  active: { color: TOKENS.primary, spoken: 'timer running' },
-  expiring: { color: TOKENS.warning, spoken: 'timer ends soon' },
-  expired: { color: TOKENS.danger, spoken: "time's up" },
+/**
+ * SessionScreen - parking session management. Details hands a spot over as
+ * the `spot` route param; it prefills the setup for that spot, and is kept
+ * on the phone until its session starts, in case the app is closed first.
+ * Without one, the driver picks where they parked from the last search's
+ * places nearest the phone, or somewhere else. Nothing is picked for them.
+ * The session itself lives in SessionContext, shared with Home and Map.
+ */
+
+const rememberPendingSpot = (spot) => {
+  const write = spot
+    ? AsyncStorage.setItem(STORAGE_KEYS.PENDING_SPOT, JSON.stringify({ spot, savedAt: Date.now() }))
+    : AsyncStorage.removeItem(STORAGE_KEYS.PENDING_SPOT);
+  write.catch((error) => console.warn('Failed to remember the spot:', error));
 };
 
-const sameSpot = (a, b) =>
-  Boolean(a && b) && (a.id != null ? a.id === b.id : a.address === b.address);
-
-/**
- * SessionScreen — the Park tab's parking timer.
- */
+const recallPendingSpot = async () => {
+  try {
+    const saved = JSON.parse(await AsyncStorage.getItem(STORAGE_KEYS.PENDING_SPOT));
+    return saved && Date.now() - saved.savedAt < PENDING_SPOT_MAX_AGE ? saved.spot : null;
+  } catch (error) {
+    return null;
+  }
+};
 export default function SessionScreen({ route, navigation }) {
   const {
     session,
+    isLoaded,
     sessionState,
+    maxExtendMinutes,
+    extendLimit,
+    timeRemaining,
     timeRemainingMs,
     elapsedTime,
-    estimatedCost,
-    endTime,
-    remainingAllowance,
-    canExtendBy,
-    lastExtension,
-    reminderStatus,
+    progress,
     startSession,
     endSession,
+    finishSession,
     extendSession,
-    undoExtension,
-    timerSpot,
-    setTimerSpot,
+    undoExtend,
+    endedSession,
+    dismissEnded,
+    vehiclePlate,
+    setVehiclePlate,
     selectedDuration,
     setSelectedDuration,
-  } = useSessionManager();
+    totalCost,
+    endTime,
+  } = useSession();
 
   const hasSession = Boolean(session);
 
-  // Keep the Park tab's dot in step with the timer, so it's visible from
-  // Home and the map. Its label keeps the platform's "tab, 3 of 3" shape.
-  React.useEffect(() => {
-    if (!navigation?.setOptions) return;
-    const dot = hasSession ? TIMER_DOT[sessionState] : null;
-    let label;
-    if (dot) {
-      const state = navigation.getState?.();
-      const index = state?.routes?.findIndex((r) => r.key === route?.key) ?? -1;
-      label = Platform.OS === 'ios' && index >= 0
-        ? `Park, ${dot.spoken}, tab, ${index + 1} of ${state.routes.length}`
-        : `Park, ${dot.spoken}`;
-    }
-    navigation.setOptions({
-      tabBarIcon: (props) => <TabIcon route="Park" {...props} dotColor={dot?.color} />,
-      tabBarAccessibilityLabel: label,
-    });
-  }, [navigation, route?.key, hasSession, sessionState]);
+  // Spot handed over from Details. Consumed once storage is read, so we know
+  // whether a session is already running.
+  const routeSpot = route?.params?.spot ?? null;
+  const [pendingSpot, setPendingSpot] = React.useState(null);
+  const [notice, setNotice] = React.useState(null);
 
-  // "Park here" on a spot's card hands that spot over. If a timer is already
-  // running, the spot waits — and the running timer offers to switch to it.
-  const incomingSpot = route?.params?.spot;
   React.useEffect(() => {
-    if (!incomingSpot) return;
-    logger.log('park_here_received', { spotId: incomingSpot.id }, 'UI_EVENT');
-    setTimerSpot(incomingSpot);
+    if (!routeSpot || !isLoaded) return;
     navigation?.setParams({ spot: undefined });
-  }, [incomingSpot, navigation, setTimerSpot]);
+    // Already parked there: the running session is all there is to show.
+    if (isParkedAt(session, routeSpot)) return;
+    // A new spot to park at replaces the last session's summary.
+    dismissEnded();
+    // Keep the new spot either way: if a session is running, it is set up
+    // as soon as that session ends, as the notice promises.
+    setPendingSpot(routeSpot);
+    rememberPendingSpot(routeSpot);
+    if (session) {
+      // Two blocks of one street are told apart by their cross streets and side.
+      const next = getSpotName(routeSpot);
+      const here = nameApart(session.locationName, session.locationAddress, next.title);
+      setNotice(
+        `You\u2019re already parked${here ? ` at ${here}` : ''}. End this session to park at ${nameApart(next.title, next.detail, session.locationName)}.`
+      );
+    }
+  }, [routeSpot, isLoaded, session, navigation, dismissEnded]);
 
-  // The last public spot opened on the map, offered as a one-tap
-  // suggestion — so nobody has to remember the rate or the time limit.
-  const [suggestedSpot, setSuggestedSpot] = React.useState(null);
-  useFocusEffect(
-    React.useCallback(() => {
-      let active = true;
-      AsyncStorage.getItem(STORAGE_KEYS.LAST_SPOT)
-        .then((raw) => {
-          if (!active) return;
-          try {
-            setSuggestedSpot(raw ? JSON.parse(raw) : null);
-          } catch {
-            setSuggestedSpot(null);
-          }
-        })
-        .catch(() => {});
-      return () => {
-        active = false;
-      };
-    }, [])
-  );
-
-  const handleStart = React.useCallback(() => {
-    logger.log('timer_start', {
-      spotId: timerSpot?.id ?? null,
-      durationMin: selectedDuration,
+  // Without a spot from Details, pick up one handed over before the app
+  // was closed. Once only, so a started session's spot does not come back.
+  const recalled = React.useRef(false);
+  React.useEffect(() => {
+    if (!isLoaded || routeSpot || recalled.current) return;
+    recalled.current = true;
+    recallPendingSpot().then((spot) => {
+      if (spot) setPendingSpot((current) => current ?? spot);
     });
-    startSession();
-  }, [timerSpot, selectedDuration, startSession]);
+  }, [isLoaded, routeSpot]);
+
+  // Where the phone is now, to put the places nearest it first. Only a fresh
+  // fix: an old one may be from before the drive. Park never asks for
+  // permission; Home does.
+  const { location, source, refreshLocation } = useLocationManager({ ask: false });
+  const here = source === 'gps' ? location : null;
+
+  // Where the car might be: the last search's closest places, read again
+  // each time Park opens, since Home or Map may have searched since.
+  const [recent, setRecent] = React.useState(null);
+  React.useEffect(() => {
+    if (hasSession || !navigation) return undefined;
+    const recall = () => {
+      recallSearch().then(setRecent);
+      refreshLocation();
+    };
+    recall();
+    return navigation.addListener('focus', recall);
+  }, [hasSession, navigation, refreshLocation]);
+  const places = React.useMemo(() => orderPlaces(recent?.spots ?? [], here), [recent, here]);
+
+  // The picked place's id, or ELSEWHERE. Nothing is picked for the driver:
+  // a wrong place means paying ParkPlus for the wrong zone. With no places
+  // to offer, "Somewhere else" is the only answer.
+  const [choice, setChoice] = React.useState(null);
+  const [zone, setZone] = React.useState('');
+  const picked = places.find((spot) => String(spot.id) === choice) ?? null;
+  const elsewhere = choice === ELSEWHERE || places.length === 0;
+  const spot = pendingSpot ?? picked;
+
+  const pickAnother = React.useCallback(() => {
+    setPendingSpot(null);
+    rememberPendingSpot(null);
+  }, []);
+
+  // The notice only applies to the session it was about.
+  React.useEffect(() => {
+    if (!hasSession) setNotice(null);
+  }, [hasSession]);
+
+  React.useEffect(() => {
+    logger.log('session_screen_mount');
+  }, []);
+
+  React.useEffect(() => {
+    logger.log('session_state_update', {
+      hasSession,
+      state: sessionState || 'idle',
+      totalCost,
+      endTime,
+    });
+  }, [endTime, hasSession, sessionState, totalCost]);
+
+  React.useEffect(() => {
+    if (hasSession) {
+      logger.log('session_view_active', {
+        timeRemainingSec: timeRemaining,
+        progress,
+      });
+      return;
+    }
+
+    logger.log('session_view_empty');
+  }, [hasSession, progress, timeRemaining]);
+
+  // `duration`: what the setup shows, within the spot's maximum.
+  const handleStart = React.useCallback((duration) => {
+    logger.log('session_start_request', {
+      plate: vehiclePlate || null,
+      durationMin: duration,
+      spotId: spot?.id ?? null,
+      handedOver: Boolean(pendingSpot),
+    });
+    startSession(spot, { zone: spot ? null : zone || null, duration }).then((started) => {
+      if (!started) return;
+      setPendingSpot(null);
+      rememberPendingSpot(null);
+      setChoice(null);
+      setZone('');
+    });
+  }, [vehiclePlate, startSession, spot, pendingSpot, zone]);
 
   const handleExtend = React.useCallback((minutes) => {
-    logger.log('timer_extend', { minutes, currentEndTime: endTime });
-    return extendSession(minutes);
-  }, [extendSession, endTime]);
+    logger.log('session_extend_request', {
+      minutes,
+      currentEndTime: endTime,
+      elapsedSec: elapsedTime,
+    });
+    extendSession(minutes);
+  }, [extendSession, endTime, elapsedTime]);
 
   const handleEnd = React.useCallback(() => {
-    logger.log('timer_end_request', { elapsedMin: elapsedTime });
+    logger.log('session_end_request', {
+      elapsedSec: elapsedTime,
+      totalCost,
+    });
     endSession();
-  }, [endSession, elapsedTime]);
+  }, [endSession, elapsedTime, totalCost]);
 
-  const handleFindSpot = React.useCallback(() => {
-    navigation?.navigate('Map');
-  }, [navigation]);
+  // Time is up: end it, and maybe go and look for somewhere else.
+  const handleDone = React.useCallback(() => {
+    logger.log('session_done', { elapsedSec: elapsedTime });
+    finishSession();
+  }, [finishSession, elapsedTime]);
 
-  // A spot handed over while a timer runs (and still running — once time's
-  // up, "Start a new timer" already leads to it).
-  const pendingSpot = hasSession && sessionState !== 'expired' && timerSpot && !sameSpot(timerSpot, session.spot)
-    ? timerSpot
-    : null;
+  const findParking = React.useCallback(() => {
+    logger.log('session_find_parking', { hadSession: hasSession });
+    if (hasSession) finishSession();
+    dismissEnded();
+    navigation?.navigate('Home');
+  }, [finishSession, dismissEnded, hasSession, navigation]);
 
-  // The prompt already says the current timer ends, so no second confirm.
-  const handleSwitchSpot = React.useCallback(() => {
-    logger.log('timer_switch_spot', { from: session?.spot?.id ?? null, to: timerSpot?.id ?? null }, 'UI_EVENT');
-    endSession({ confirm: false });
-  }, [endSession, session, timerSpot]);
+  const prevFormRef = React.useRef({
+    plate: vehiclePlate,
+    duration: selectedDuration,
+  });
 
-  const handleKeepTimer = React.useCallback(() => {
-    setTimerSpot(session?.spot ?? null);
-  }, [session, setTimerSpot]);
+  React.useEffect(() => {
+    const prev = prevFormRef.current;
 
-  // No 'bottom' edge: the tab bar already sits on the home indicator, and
-  // bottom tabs hands screens the raw insets — adding it again leaves a gap.
+    if (vehiclePlate !== prev.plate) {
+      logger.log('form_plate_changed', { plateLen: vehiclePlate?.length || 0 });
+      prev.plate = vehiclePlate;
+    }
+    if (selectedDuration !== prev.duration) {
+      logger.log('form_duration_changed', { minutes: selectedDuration });
+      prev.duration = selectedDuration;
+    }
+  }, [vehiclePlate, selectedDuration]);
+
+  if (!isLoaded) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+        <ScreenStatusBar style="dark" />
+        <LiveStage style={styles.loading}>
+          <BrandLoader size={88} label="Checking your session" delay={250} live />
+        </LiveStage>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hasSession && endedSession && !pendingSpot) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+        <ScreenStatusBar style="dark" />
+        <EndSummary session={endedSession} onParkAgain={dismissEnded} onFindParking={findParking} />
+      </SafeAreaView>
+    );
+  }
+
   if (!hasSession) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container} role="main">
-        <StatusBar style="dark" />
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+        <ScreenStatusBar style="dark" />
         <EmptyState
-          timerSpot={timerSpot}
-          // Don't suggest the spot that's already chosen.
-          suggestedSpot={suggestedSpot && suggestedSpot.id !== timerSpot?.id ? suggestedSpot : null}
-          onUseSpot={setTimerSpot}
-          onClearSpot={() => setTimerSpot(null)}
-          onFindSpot={handleFindSpot}
+          spot={spot}
+          handedOver={Boolean(pendingSpot)}
+          places={places}
+          searchedAt={recent?.savedAt ?? null}
+          nearYou={Boolean(here)}
+          choice={picked ? String(picked.id) : elsewhere ? ELSEWHERE : null}
+          onChoose={setChoice}
+          onPickAnother={pickAnother}
+          zone={zone}
+          setZone={setZone}
+          now={Date.now()}
+          vehiclePlate={vehiclePlate}
+          setVehiclePlate={setVehiclePlate}
           selectedDuration={selectedDuration}
           setSelectedDuration={setSelectedDuration}
-          onStart={handleStart}
-          reminderStatus={reminderStatus}
+          onStartSession={handleStart}
         />
       </SafeAreaView>
     );
   }
 
+  // A running session is a focus moment: ink canvas, like Details.
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container} role="main">
-      <StatusBar style="dark" />
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, styles.ink]}>
+      <ScreenStatusBar style="light" />
       <ActiveSession
         session={session}
         sessionState={sessionState}
         timeRemainingMs={timeRemainingMs}
-        elapsedTime={elapsedTime}
-        estimatedCost={estimatedCost}
+        totalCost={totalCost}
         endTime={endTime}
-        remainingAllowance={remainingAllowance}
-        canExtendBy={canExtendBy}
-        lastExtension={lastExtension}
-        reminderStatus={reminderStatus}
-        pendingSpot={pendingSpot}
-        onSwitchSpot={handleSwitchSpot}
-        onKeepTimer={handleKeepTimer}
+        maxExtendMinutes={maxExtendMinutes}
+        extendLimit={extendLimit}
+        notice={notice}
         onExtend={handleExtend}
-        onUndoExtend={undoExtension}
+        onUndo={undoExtend}
         onEnd={handleEnd}
+        onDone={handleDone}
+        onFindParking={findParking}
       />
     </SafeAreaView>
   );

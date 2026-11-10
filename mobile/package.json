@@ -9,8 +9,7 @@
     "web": "expo start --web",
     "export:web": "npx expo export --platform web",
     "test": "jest",
-    "test:watch": "jest --watch",
-    "icons:web": "node scripts/web-icons.js"
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -21,11 +20,12 @@
     "@react-navigation/native-stack": "^6.9.13",
     "@teovilla/react-native-web-maps": "^0.9.5",
     "expo": "~54.0.0",
+    "expo-clipboard": "~8.0.8",
     "expo-device": "~8.0.7",
     "expo-location": "~19.0.7",
     "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.8",
-    "maplibre-gl": "~5.24.0",
+    "maplibre-gl": "5.24.0",
     "metro-minify-terser": "^0.83.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -34,14 +34,15 @@
     "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "^0.21.0",
+    "react-native-webview": "13.15.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@testing-library/react-native": "^13.3.3",
     "jest": "^30.2.0",
-    "react-test-renderer": "^19.1.0",
-    "subset-font": "^2.9.0"
+    "jest-expo": "~54.0.18",
+    "react-test-renderer": "^19.1.0"
   },
   "private": true,
   "overrides": {
@@ -49,5 +50,14 @@
       "expo-file-system": "18..",
       "react-native": ">=0.76.7 <1.0.0"
     }
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": [
+      "./jest.setup.js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
   }
 }

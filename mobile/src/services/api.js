@@ -7,19 +7,29 @@ const CACHE_PREFIX = '@parkaid:';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const OFFLINE_TTL = 24 * 60 * 60 * 1000; // 24 hours for offline mode
 
-// The backend runs on Render's free plan, which puts the server to sleep
-// after a quiet spell; the first request then waits about a minute while it
-// wakes. So until the server has answered once, wait that long; after that,
-// a few seconds is plenty.
-const REQUEST_TIMEOUT_MS = 8000;
-const WAKE_TIMEOUT_MS = 75000;
+// A failed request, by what went wrong, so screens can say it plainly:
+// 'offline' (no connection), 'timeout' (no answer in time) or 'server'
+// (the service answered with an error). See utils/loadStatus.
+export class ApiError extends Error {
+  constructor(kind, message, status = null) {
+    super(message);
+    this.name = 'ApiError';
+    this.kind = kind;
+    this.status = status;
+  }
+}
+
+// How long to wait for an answer. With a saved copy on screen to fall back
+// on, ParkAid gives up sooner (see useParkingSpots).
+const REQUEST_TIMEOUT = 8000;
+export const FALLBACK_TIMEOUT = 4000;
+// A saved copy younger than this is used without asking the network.
+export const FRESH_FOR = CACHE_TTL;
 
 class ParkingAPI {
   constructor() {
     this.isOnline = true;
     this.pendingRequests = new Map();
-    // True once the server has answered anything this session.
-    this.serverAwake = false;
   }
 
   // generate cache key
@@ -28,11 +38,11 @@ class ParkingAPI {
   }
 
   // cache management
-  async setCache(key, data) {
+  async setCache(key, data, timestamp = Date.now()) {
     try {
       const cacheData = {
         data,
-        timestamp: Date.now(),
+        timestamp,
         version: '1.0'
       };
       await AsyncStorage.setItem(key, JSON.stringify(cacheData));
@@ -41,38 +51,39 @@ class ParkingAPI {
     }
   }
 
+  // { data, timestamp } when a copy younger than maxAge is stored, else null.
   async getCache(key, maxAge = CACHE_TTL) {
     try {
       const cached = await AsyncStorage.getItem(key);
       if (!cached) return null;
 
-      const { data, timestamp } = JSON.parse(cached);
-      const age = Date.now() - timestamp;
-
-      // return cached data if within TTL or offline
-      if (age < maxAge || !this.isOnline) {
-        if (__DEV__) console.log(`Cache hit for ${key} (age: ${Math.round(age / 1000)}s)`);
-        return data;
-      }
-
-      return null;
+      const entry = JSON.parse(cached);
+      const age = Date.now() - entry.timestamp;
+      return age < maxAge ? entry : null;
     } catch (error) {
       console.warn('Cache read failed:', error);
       return null;
     }
   }
 
-  // network request with retry and fallback
+  // Responses carry when their data was saved (`savedAt`, ms), and, when it
+  // is an older copy shown because the network failed, why (`staleBecause`).
   async request(endpoint, options = {}) {
     const url = `${API_URL}${endpoint}`;
     const cacheKey = this.getCacheKey(endpoint, options.params);
 
-    // check cache first — unless the user explicitly asked for fresh data
-    // (pull-to-refresh, "Try again"). A successful response still re-caches,
-    // and a failed one still falls back to the stale copy.
-    if (!options.skipCache) {
-      const cached = await this.getCache(cacheKey);
-      if (cached) return cached;
+    // check cache first
+    // `fresh` skips the 5-minute cache (pull to refresh, Retry). A stale copy
+    // is still the fallback if the network fails.
+    if (!options.fresh) {
+      const cached = await this.getCache(cacheKey, this.isOnline ? CACHE_TTL : OFFLINE_TTL);
+      if (cached) {
+        return {
+          ...cached.data,
+          savedAt: cached.timestamp,
+          staleBecause: this.isOnline ? null : 'offline',
+        };
+      }
     }
 
     // deduplicate requests
@@ -80,7 +91,7 @@ class ParkingAPI {
       return this.pendingRequests.get(cacheKey);
     }
 
-    const requestPromise = this._performRequest(url, options, cacheKey, endpoint);
+    const requestPromise = this._performRequest(url, options, cacheKey);
     this.pendingRequests.set(cacheKey, requestPromise);
 
     try {
@@ -91,136 +102,72 @@ class ParkingAPI {
     }
   }
 
-  async _performRequest(url, options, cacheKey, endpoint) {
+  async _performRequest(url, options, cacheKey) {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      this.serverAwake ? REQUEST_TIMEOUT_MS : WAKE_TIMEOUT_MS
-    );
+    const timeout = setTimeout(() => controller.abort(), options.timeout || REQUEST_TIMEOUT);
 
     try {
-      if (__DEV__) console.log(`Fetching: ${url}`);
-
-      const response = await fetch(url, {
-        method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        },
-        body: options.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-      // Any answer, even an error, means the server is up.
-      this.serverAwake = true;
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      let response;
+      try {
+        response = await fetch(url, {
+          method: options.method || 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          body: options.body ? JSON.stringify(options.body) : undefined,
+          signal: controller.signal
+        });
+      } catch (error) {
+        // fetch only rejects when nothing came back: no connection, or our abort.
+        throw error.name === 'AbortError'
+          ? new ApiError('timeout', 'The request timed out')
+          : new ApiError('offline', error.message || 'Network request failed');
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new ApiError('server', `HTTP ${response.status}`, response.status);
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new ApiError('server', 'The response was not JSON', response.status);
+      }
 
       if (!data.success) {
-        throw new Error(data.error || 'Request failed');
+        throw new ApiError('server', data.error || 'Request failed', response.status);
       }
 
       // cache successful response
       this.isOnline = true;
-      await this.setCache(cacheKey, data);
+      const savedAt = Date.now();
+      await this.setCache(cacheKey, data, savedAt);
 
-      return data;
+      return { ...data, savedAt, staleBecause: null };
     } catch (error) {
-      clearTimeout(timeout);
-      console.error('Request failed:', error);
+      const failure = error instanceof ApiError ? error : new ApiError('server', error.message);
+      console.warn('Request failed:', failure.kind, failure.message);
 
-      // What kind of failure, so screens can say what actually happened:
-      //   offline — the request never got a response (fetch's TypeError:
-      //             "Network request failed", or "Failed to fetch" on web)
-      //   slow    — no answer within the timeout above
-      //   server  — the server answered, but with an error
-      error.kind = error.name === 'AbortError' ? 'slow'
-        : error instanceof TypeError ? 'offline'
-        : 'server';
-
-      // mark as offline
-      if (error.kind !== 'server') {
+      if (failure.kind === 'offline' || failure.kind === 'timeout') {
         this.isOnline = false;
       }
 
-      // try to get stale cache data
+      // An older copy, saying how old and why, beats an error.
       const staleCache = await this.getCache(cacheKey, OFFLINE_TTL);
       if (staleCache) {
-        if (__DEV__) console.log('Using stale cache due to network error');
-        return staleCache;
+        return { ...staleCache.data, savedAt: staleCache.timestamp, staleBecause: failure.kind };
       }
 
-      // return mock data for development
-      if (__DEV__ && endpoint.includes('/nearby')) {
-        return this.getMockData();
-      }
-
-      throw error;
+      throw failure;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
-  // mock data for development/testing
-  getMockData() {
-    return {
-      success: true,
-      data: [
-        {
-          id: 'mock-1',
-          spot_type: 'on_street',
-          address: '123 Main St SW (Mock Data - Check Connection)',
-          coordinates: {
-            type: 'Point',
-            coordinates: [-114.0629, 51.0453]
-          },
-          distance: 150,
-          walkingTime: 2,
-          capacity: 5,
-          available: 3,
-          zone_info: {
-            price_zone: '3',
-            html_zone_rate: '<b>Mon-Fri 9AM-6PM</b><br>$2.00 per Hour<br><b>Sat-Sun</b><br>Free'
-          }
-        },
-        {
-          id: 'mock-2',
-          spot_type: 'off_street',
-          address: 'City Center Parkade (Mock)',
-          coordinates: {
-            type: 'Point',
-            coordinates: [-114.0635, 51.0448]
-          },
-          distance: 300,
-          walkingTime: 4,
-          capacity: 50,
-          available: 25,
-          metadata: { lot_name: 'Mock Lot' }
-        },
-        {
-          id: 'mock-3',
-          spot_type: 'residential',
-          address: '456 Residential Ave SW (Mock)',
-          coordinates: {
-            type: 'Point',
-            coordinates: [-114.064, 51.0445]
-          },
-          distance: 200,
-          walkingTime: 3,
-          capacity: 2,
-          available: 1,
-          zone_info: { permit_zone: 'R' }
-        }
-      ]
-    };
-  }
-
   // API Methods
-  // `force` skips the 5-minute response cache for a user-requested refresh.
-  async findNearbySpots(lat, lng, radius = 500, params = {}, { force = false } = {}) {
+  nearbyEndpoint(lat, lng, radius, params = {}) {
     const queryParams = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
@@ -228,8 +175,18 @@ class ParkingAPI {
       ...(params.type && params.type !== 'all' ? { type: params.type } : {}),
       ...(params.free ? { free: 'true' } : {})
     });
+    return `/api/parking/nearby?${queryParams}`;
+  }
 
-    return this.request(`/api/parking/nearby?${queryParams}`, { skipCache: force });
+  async findNearbySpots(lat, lng, radius = 500, params = {}, { fresh = false, timeout } = {}) {
+    return this.request(this.nearbyEndpoint(lat, lng, radius, params), { fresh, timeout });
+  }
+
+  // The saved copy of a search, however old (up to a day), without asking the
+  // network: { ...response, savedAt }, or null.
+  async peekNearbySpots(lat, lng, radius = 500, params = {}) {
+    const entry = await this.getCache(this.getCacheKey(this.nearbyEndpoint(lat, lng, radius, params)), OFFLINE_TTL);
+    return entry ? { ...entry.data, savedAt: entry.timestamp, staleBecause: null } : null;
   }
 
   // utilities

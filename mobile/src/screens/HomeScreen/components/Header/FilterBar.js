@@ -1,20 +1,56 @@
 import React from 'react';
-import { View } from 'react-native';
-import TypeSwitch from '../../../../components/Filters/TypeSwitch';
-import WalkSlider from '../../../../components/Filters/WalkSlider';
+import { Pressable, Text, View } from 'react-native';
+import { DISTANCE_OPTIONS, TYPE_OPTIONS, getTypeLabel } from '../../../../utils/filters';
+import { getDistanceLabel } from '../../../../utils/parkingHelpers';
 import { styles } from './styles';
 
-// Two quiet controls: which kind of parking, and how far you'll walk. The
-// walk is a free choice (any minute from 1 to 25), shared with the map.
-const FilterBar = ({
-    activeFilter,
-    setActiveFilter,
-    walkMinutes,
-    setWalkMinutes,
-}) => (
-    <View style={styles.filterBar}>
-        <TypeSwitch value={activeFilter} onChange={setActiveFilter} stretch />
-        <WalkSlider minutes={walkMinutes} onChange={setWalkMinutes} />
+function OptionRow({ label, options, selected, onSelect, renderLabel }) {
+    return (
+        <View style={styles.filterGroup}>
+            <Text style={styles.filterGroupLabel}>{label}</Text>
+            <View style={styles.filterOptions} accessibilityRole="radiogroup" accessibilityLabel={label}>
+                {options.map((value) => {
+                    const isSelected = selected === value;
+                    return (
+                        <Pressable
+                            key={value}
+                            onPress={() => onSelect?.(value)}
+                            style={({ pressed }) => [
+                                styles.filterOption,
+                                isSelected && styles.filterOptionSelected,
+                                pressed && styles.pressed,
+                            ]}
+                            accessibilityRole="radio"
+                            aria-checked={isSelected}
+                        >
+                            <Text style={[styles.filterOptionText, isSelected && styles.filterOptionTextSelected]}>
+                                {renderLabel(value)}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
+        </View>
+    );
+}
+
+// Type and distance, shared with Map. Lives behind the Filters button on Home.
+const FilterBar = ({ activeFilter, setActiveFilter, searchRadius, setSearchRadius }) => (
+    <View style={styles.filterPanel}>
+        <OptionRow
+            label="Parking type"
+            options={TYPE_OPTIONS.map((f) => f.key)}
+            selected={activeFilter}
+            onSelect={setActiveFilter}
+            renderLabel={getTypeLabel}
+        />
+        <OptionRow
+            label="Distance"
+            options={DISTANCE_OPTIONS}
+            selected={searchRadius}
+            onSelect={setSearchRadius}
+            renderLabel={getDistanceLabel}
+        />
     </View>
 );
 

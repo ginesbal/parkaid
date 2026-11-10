@@ -1,17 +1,23 @@
-import { act, renderHook } from '@testing-library/react-hooks';
+import { act, renderHook } from '@testing-library/react-native';
 import { parkingAPI } from '../../services/api';
 import { useParkingSpots } from '../useParkingSpots';
 
 jest.mock('../../services/api', () => ({
+    FALLBACK_TIMEOUT: 4000,
+    FRESH_FOR: 300000,
     parkingAPI: {
         findNearbySpots: jest.fn(),
+        peekNearbySpots: jest.fn(),
     },
 }));
+
+const CALGARY = { latitude: 51.0, longitude: -114.0 };
 
 describe('useParkingSpots', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
+        parkingAPI.peekNearbySpots.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -50,51 +56,27 @@ describe('useParkingSpots', () => {
             -114.0,
             500,
             {},
-            { force: false }
+            { fresh: true, timeout: undefined }
         );
     });
 
-    it('refetches with the cache bypassed when reloadKey is bumped', async () => {
-        parkingAPI.findNearbySpots.mockResolvedValue({ data: [{ id: 1 }] });
-        const loc = { latitude: 51.0, longitude: -114.0 };
-
-        const { rerender } = renderHook(
-            ({ reloadKey }) => useParkingSpots(loc, 500, 'all', reloadKey),
-            { initialProps: { reloadKey: 0 } }
-        );
-        await act(async () => {
-            jest.advanceTimersByTime(300);
-        });
-        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { force: false });
-
-        // Pull-to-refresh / "Try again" bumps the key: same inputs, fresh data.
-        rerender({ reloadKey: 1 });
-        await act(async () => {
-            jest.advanceTimersByTime(300);
-        });
-        expect(parkingAPI.findNearbySpots).toHaveBeenCalledTimes(2);
-        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { force: true });
-    });
-
-    it('flags loading immediately and reports when the fetch finished', async () => {
+    it('reports loading from the moment a search is scheduled', async () => {
         parkingAPI.findNearbySpots.mockResolvedValue({ data: [] });
 
-        const { result } = renderHook(() =>
-            useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500)
-        );
-        // Loading from the moment a fetch is scheduled, not after the debounce.
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
+
+        // Inside the debounce window: no request yet, but not "no spots" either.
         expect(result.current.loading).toBe(true);
-        expect(result.current.lastUpdated).toBeNull();
 
         await act(async () => {
             jest.advanceTimersByTime(300);
         });
+
         expect(result.current.loading).toBe(false);
-        expect(typeof result.current.lastUpdated).toBe('number');
     });
 
     it('handles errors properly', async () => {
-        parkingAPI.findNearbySpots.mockRejectedValue(new Error('Network error'));
+        parkingAPI.findNearbySpots.mockRejectedValue(Object.assign(new Error('Network error'), { kind: 'offline' }));
 
         const { result } = renderHook(() =>
             useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500)
@@ -104,98 +86,85 @@ describe('useParkingSpots', () => {
             jest.advanceTimersByTime(300);
         });
 
-        expect(result.current.error).toBe('Network error');
-        expect(result.current.errorKind).toBe('offline'); // unknown failures default to offline
+        expect(result.current.error).toBe('offline');
         expect(result.current.spots).toEqual([]);
     });
 
-    it('reports what kind of failure it was, and clears it on the next good load', async () => {
-        parkingAPI.findNearbySpots.mockRejectedValueOnce(Object.assign(new Error('HTTP 503'), { kind: 'server' }));
+    it('refetch() asks past the cache', async () => {
+        parkingAPI.findNearbySpots.mockResolvedValue({ data: [{ id: 1 }] });
 
-        const { result, rerender } = renderHook(
-            ({ reload }) => useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500, 'all', reload),
-            { initialProps: { reload: 0 } }
-        );
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
         await act(async () => {
             jest.advanceTimersByTime(300);
         });
-        expect(result.current.errorKind).toBe('server');
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true, timeout: undefined });
 
-        parkingAPI.findNearbySpots.mockResolvedValueOnce({ data: [{ id: 1 }] });
-        rerender({ reload: 1 }); // "Try again"
+        await act(async () => {
+            result.current.refetch();
+        });
         await act(async () => {
             jest.advanceTimersByTime(300);
         });
-        expect(result.current.errorKind).toBeNull();
-        expect(result.current.error).toBeNull();
+
+        expect(parkingAPI.findNearbySpots).toHaveBeenCalledTimes(2);
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true, timeout: undefined });
+        // Refresh does not go back to the saved copy first.
+        expect(parkingAPI.peekNearbySpots).toHaveBeenCalledTimes(1);
     });
 
-    it('ignores a slow response for a location the user already moved away from', async () => {
-        let resolveStale;
-        parkingAPI.findNearbySpots
-            .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }))
-            .mockResolvedValueOnce({ data: [{ id: 'fresh' }] });
-
-        const { result, rerender } = renderHook(
-            ({ loc }) => useParkingSpots(loc, 500, 'all'),
-            { initialProps: { loc: { latitude: 51.0, longitude: -114.0 } } }
-        );
-
-        // First request goes out and hangs on a slow network.
+    it('shows a saved copy at once, then the fresh answer', async () => {
+        let answer;
+        parkingAPI.peekNearbySpots.mockResolvedValue({ data: [{ id: 'saved' }], savedAt: Date.now() - 20 * 60000 });
+        parkingAPI.findNearbySpots.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
         await act(async () => {
             jest.advanceTimersByTime(300);
         });
-
-        // The user moves the pin; the second request resolves immediately.
-        rerender({ loc: { latitude: 51.1, longitude: -114.0 } });
-        await act(async () => {
-            jest.advanceTimersByTime(300);
-        });
-        expect(result.current.spots).toEqual([{ id: 'fresh' }]);
-
-        // The stale response finally lands — it must not overwrite the fresh one.
-        await act(async () => {
-            resolveStale({ data: [{ id: 'stale' }] });
-        });
+        expect(result.current.spots).toEqual([{ id: 'saved' }]);
+        expect(result.current.loading).toBe(true);
+        // Something to fall back on: give up on the network sooner.
+        expect(parkingAPI.findNearbySpots).toHaveBeenLastCalledWith(51.0, -114.0, 500, {}, { fresh: true, timeout: 4000 });
+        await act(async () => answer({ data: [{ id: 'fresh' }], savedAt: Date.now() }));
         expect(result.current.spots).toEqual([{ id: 'fresh' }]);
         expect(result.current.loading).toBe(false);
     });
-});
-describe('useParkingSpots — while the server wakes up', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        jest.useFakeTimers();
-    });
-    afterEach(() => {
-        jest.runOnlyPendingTimers();
-        jest.useRealTimers();
-        parkingAPI.serverAwake = undefined;
-    });
 
-    it('says so after a few seconds on the first search, and stops once spots arrive', async () => {
-        parkingAPI.serverAwake = false;
-        let answer;
-        parkingAPI.findNearbySpots.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
-
-        const { result } = renderHook(() => useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500));
-        await act(async () => { jest.advanceTimersByTime(300 + 3900); });
-        expect(result.current.waking).toBe(false); // a normal wait first
-
-        await act(async () => { jest.advanceTimersByTime(200); });
-        expect(result.current.waking).toBe(true);
-        expect(result.current.loading).toBe(true);
-
-        await act(async () => { answer({ data: [{ id: 1 }] }); });
-        expect(result.current.waking).toBe(false);
-        expect(result.current.spots).toEqual([{ id: 1 }]);
+    it('uses a saved copy only minutes old without asking the network', async () => {
+        parkingAPI.peekNearbySpots.mockResolvedValue({ data: [{ id: 'saved' }], savedAt: Date.now() - 60000 });
+        const { result } = renderHook(() => useParkingSpots(CALGARY, 500));
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.spots).toEqual([{ id: 'saved' }]);
+        expect(result.current.loading).toBe(false);
+        expect(parkingAPI.findNearbySpots).not.toHaveBeenCalled();
     });
 
-    it("doesn't once the server has answered this session", async () => {
-        parkingAPI.serverAwake = true;
-        parkingAPI.findNearbySpots.mockImplementation(() => new Promise(() => {}));
+    it('ignores a slower, older response', async () => {
+        let resolveOld;
+        parkingAPI.findNearbySpots
+            .mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }))
+            .mockResolvedValueOnce({ data: [{ id: 'new' }] });
 
-        const { result } = renderHook(() => useParkingSpots({ latitude: 51.0, longitude: -114.0 }, 500));
-        await act(async () => { jest.advanceTimersByTime(300 + 10000); });
-        expect(result.current.waking).toBe(false);
+        const { result, rerender } = renderHook(
+            ({ radius }) => useParkingSpots(CALGARY, radius),
+            { initialProps: { radius: 150 } }
+        );
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+
+        rerender({ radius: 500 });
+        await act(async () => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(result.current.spots).toEqual([{ id: 'new' }]);
+
+        // The first request finishes last; it must not overwrite the newer result.
+        await act(async () => {
+            resolveOld({ data: [{ id: 'old' }] });
+        });
+        expect(result.current.spots).toEqual([{ id: 'new' }]);
+        expect(result.current.loading).toBe(false);
     });
 });
