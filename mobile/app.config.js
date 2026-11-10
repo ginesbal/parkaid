@@ -5,6 +5,9 @@ export default {
     slug: "parkaid",
     version: "1.0.0",
     orientation: "portrait",
+    // Icon, splash and notification images come from create-assets.js: a
+    // white parking "P" on the app's cerulean. Swap in a designed logo any
+    // time by replacing those files.
     icon: "src/utils/assets/icon.png",
     userInterfaceStyle: "light",
 
@@ -14,7 +17,7 @@ export default {
     splash: {
       image: "src/utils/assets/splash.png",
       resizeMode: "contain",
-      backgroundColor: "#001d4a"
+      backgroundColor: "#1d6d8b"
     },
     assetBundlePatterns: [
       "**/*"
@@ -29,7 +32,7 @@ export default {
       permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
       adaptiveIcon: {
         foregroundImage: "src/utils/assets/adaptive-icon.png",
-        backgroundColor: "#001d4a"
+        backgroundColor: "#1d6d8b"
       },
       package: "com.parkaid.app"
     },
@@ -51,9 +54,13 @@ export default {
     },
 
     plugins: [
-      // Parking reminders. Applies on prebuild only: the committed android/
-      // project sets the colour itself, and the library brings POST_NOTIFICATIONS.
-      ["expo-notifications", { color: "#1d6d8b" }]
+      // Parking reminders, with the Android status-bar icon and tint. Applies
+      // on prebuild only: the committed android/ project sets both itself, and
+      // the library brings POST_NOTIFICATIONS.
+      ["expo-notifications", {
+        icon: "./src/utils/assets/notification-icon.png",
+        color: "#1d6d8b"
+      }]
     ],
 
     extra: {
