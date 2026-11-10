@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLoader from '../../components/BrandLoader';
 import LiveStage from '../../components/LiveStage';
 import { PENDING_SPOT_MAX_AGE, STORAGE_KEYS } from '../../constants/session';
+import { TAB_SCREEN_EDGES } from '../../constants/theme';
 import { useSession } from '../../context/SessionContext';
 import { useLocationManager } from '../../hooks/useLocationManager';
 import { orderPlaces, recallSearch } from '../../services/recentSearch';
@@ -237,7 +238,7 @@ export default function SessionScreen({ route, navigation }) {
 
   if (!isLoaded) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+      <SafeAreaView edges={TAB_SCREEN_EDGES} style={styles.container}>
         <ScreenStatusBar style="dark" />
         <LiveStage style={styles.loading}>
           <BrandLoader size={88} label="Checking your session" delay={250} live />
@@ -248,7 +249,7 @@ export default function SessionScreen({ route, navigation }) {
 
   if (!hasSession && endedSession && !pendingSpot) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+      <SafeAreaView edges={TAB_SCREEN_EDGES} style={styles.container}>
         <ScreenStatusBar style="dark" />
         <EndSummary session={endedSession} onParkAgain={dismissEnded} onFindParking={findParking} />
       </SafeAreaView>
@@ -257,7 +258,7 @@ export default function SessionScreen({ route, navigation }) {
 
   if (!hasSession) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
+      <SafeAreaView edges={TAB_SCREEN_EDGES} style={styles.container}>
         <ScreenStatusBar style="dark" />
         <EmptyState
           spot={spot}
@@ -283,7 +284,7 @@ export default function SessionScreen({ route, navigation }) {
 
   // A running session is a focus moment: ink canvas, like Details.
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, styles.ink]}>
+    <SafeAreaView edges={TAB_SCREEN_EDGES} style={[styles.container, styles.ink]}>
       <ScreenStatusBar style="light" />
       <ActiveSession
         session={session}

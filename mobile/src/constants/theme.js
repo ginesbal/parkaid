@@ -152,6 +152,11 @@ export const SPACING = {
     '3xl': 32,
 };
 
+// Safe-area edges for a screen inside the tabs: the tab bar keeps the bottom
+// inset. A record, not an array: on the web, react-native-safe-area-context 5
+// also pads the edges an array leaves out.
+export const TAB_SCREEN_EDGES = { top: 'additive', left: 'additive', right: 'additive', bottom: 'off' };
+
 // Wider screens (tablets, a browser on a laptop) keep a phone-width column,
 // centred, and the map's sheet becomes a panel this wide on the left.
 export const LAYOUT = {

@@ -55,6 +55,13 @@ records for the blocks around 11 Ave SW and 5 St SW: their zones, hours, rates
 and rush-hour restrictions. On web the map is MapLibre with OpenStreetMap tiles
 from OpenFreeMap; iOS and Android use Google Maps.
 
+## Case study and walkthrough
+
+- [Case study (PDF)](docs/case-study/ParkAid-case-study.pdf): the problem, my
+  part in it, the main decisions, the testing, and what is still open.
+- [Walkthrough](docs/walkthrough): seven short recordings of the real build,
+  one per feature.
+
 ## Tech stack
 
 Mobile app

@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ParkAid case study</title>
+<style>
+@font-face { font-family: 'Barlow'; src: url('fonts/Barlow-400.woff') format('woff'); font-weight: 400; }
+@font-face { font-family: 'Barlow'; src: url('fonts/Barlow-600.woff') format('woff'); font-weight: 600; }
+@font-face { font-family: 'Barlow Condensed'; src: url('fonts/BarlowCondensed-600.woff') format('woff'); font-weight: 600; }
+@font-face { font-family: 'Barlow Condensed'; src: url('fonts/BarlowCondensed-700.woff') format('woff'); font-weight: 700; }
+:root {
+  --ink: #0D1218; --text: #111418; --sub: #1E262E; --muted: #3D4852;
+  --line: #E1E6EB; --asphalt: #E8ECF0; --paint: #FFFFFF;
+  --brand: #1D6D8B; --brand-ink: #15495D; --brand-50: #EDF6F9;
+  --amber: #8F6216; --amber-50: #FBF4E6;
+}
+@page { size: 1280px 720px; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #fff; }
+body { font-family: 'Barlow', sans-serif; color: var(--text); font-size: 15.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: var(--brand-ink); text-decoration: none; }
+b { font-weight: 600; color: var(--ink); }
+.cond { font-family: 'Barlow Condensed', sans-serif; }
+.page { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #fff; break-after: page; page-break-after: always; }
+.page:last-child { break-after: auto; page-break-after: auto; }
+.body { position: absolute; left: 64px; right: 64px; top: 96px; bottom: 72px; }
+
+/* Street-sign section plate */
+.hdr { position: absolute; top: 30px; left: 64px; right: 64px; height: 36px; display: flex; align-items: center; justify-content: space-between; }
+.plate { display: inline-flex; height: 34px; border-radius: 7px; overflow: hidden; font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; font-size: 17px; line-height: 34px; position: relative; }
+.plate .pn { background: var(--brand); color: #fff; padding: 0 11px; }
+.plate .pt { background: var(--ink); color: #fff; padding: 0 14px 0 12px; }
+.plate::after { content: ''; position: absolute; inset: 3px; border: 1.5px solid rgba(255,255,255,.85); border-radius: 5px; pointer-events: none; }
+
+
+/* Footer with the next sign */
+.ftr { position: absolute; left: 64px; right: 64px; bottom: 24px; height: 36px; display: flex; align-items: center; justify-content: space-between;
+  font-size: 13.5px; color: var(--muted); }
+.nextsign { display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 14px; border-radius: 7px; background: var(--brand); color: #fff;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 16px; position: relative; }
+.nextsign::after { content: ''; position: absolute; inset: 3px; border: 1.5px solid rgba(255,255,255,.85); border-radius: 5px; }
+.nextsign .nl { opacity: .75; }
+.endnote { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 15px; color: var(--muted); }
+
+/* Text */
+h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 46px; line-height: 1.04; color: var(--ink); letter-spacing: -.003em; text-wrap: balance; }
+h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 21px; line-height: 1.2; color: var(--ink); letter-spacing: .01em; }
+.lead { font-size: 17.5px; line-height: 1.5; color: var(--sub); margin-top: 10px; }
+.small { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+ol.items { list-style: none; display: grid; gap: 18px; font-size: 16px; }
+ol.items li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start; }
+.num, .mk { width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; font: 600 13px/24px 'Barlow', sans-serif; text-align: center; }
+.num.amber, .mk.amber { background: var(--amber); }
+ul.dots { list-style: none; }
+ul.dots li { position: relative; padding-left: 18px; }
+ul.dots li + li { margin-top: 6px; }
+ul.dots li::before { content: ''; position: absolute; left: 3px; top: .62em; width: 6px; height: 6px; border-radius: 1px; background: var(--brand); }
+.label { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+
+/* iPhone frame */
+.phone { position: relative; flex: none; width: max-content; }
+.pbody { background: #0C0D0F; border: 2px solid #4A4F56; }
+.pwrap { position: relative; }
+.pscreen { position: absolute; inset: 0; overflow: hidden; background: #fff; }
+.pscreen img { display: block; width: 100%; height: 100%; }
+.psb { position: absolute; left: 0; right: 0; top: 0; height: calc(54px * var(--s)); color: #0F1A26; }
+.psb.light { color: #fff; }
+.ptime { position: absolute; left: 17%; top: calc(29px * var(--s)); transform: translate(-50%, -50%); font: 600 calc(16.5px * var(--s)) 'Barlow', sans-serif; letter-spacing: .01em; }
+.picons { position: absolute; left: 83%; top: calc(29px * var(--s)); transform: translate(-50%, -50%) scale(var(--s)); line-height: 0; }
+.pisland { position: absolute; left: 50%; top: calc(11px * var(--s)); width: calc(124px * var(--s)); height: calc(36px * var(--s)); transform: translateX(-50%);
+  background: #000; border-radius: 999px; }
+.phome { position: absolute; left: 50%; bottom: calc(8px * var(--s)); width: calc(136px * var(--s)); height: calc(5px * var(--s)); transform: translateX(-50%);
+  background: #0F1A26; border-radius: 999px; }
+.pbtn { position: absolute; width: 3px; background: #3C4046; border-radius: 1.5px; }
+.pbtn.l { left: -1px; }
+.pbtn.r { right: -1px; }
+.mk { position: absolute; width: 22px; height: 22px; font-size: 12px; line-height: 22px; margin: -11px 0 0 -11px; box-shadow: 0 0 0 2px #fff; z-index: 2; }
+.pcap.top { margin: 0 0 8px; }
+.pcap { margin-top: 10px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: center; }
+
+/* Tables and blocks */
+table { width: 100%; border-collapse: collapse; }
+td, th { text-align: left; vertical-align: top; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); }
+th { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding-top: 0; }
+td.k { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.was { color: #7A520F; }
+.box { background: #F4F6F8; border-radius: 12px; padding: 16px 18px; }
+.box.amber { background: var(--amber-50); }
+
+/* Regulation-sign fact panel (cover) */
+.lp { height: .72em; width: auto; vertical-align: baseline; margin-right: .01em; }
+/* The real letter P, kept in the text (search, copy) under the logo drawn in its place. */
+.lpt { color: rgba(255, 255, 255, .01); margin-right: -.46em; }
+.sep { margin: 0 .55em; opacity: .55; }
+.regsign { border: 2.5px solid var(--ink); border-radius: 12px; overflow: hidden; background: #fff; }
+.regsign .rh { display: flex; align-items: center; gap: 12px; background: var(--ink); color: #fff; padding: 8px 14px;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 17px; letter-spacing: .07em; text-transform: uppercase; }
+.regsign .rp { width: 30px; height: 30px; border-radius: 6px; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0; }
+.regsign .rr { display: grid; grid-template-columns: 104px 1fr; gap: 12px; padding: 9px 16px; border-top: 1px solid var(--line); font-size: 15px; }
+.regsign .rr:first-of-type { border-top: 0; }
+.regsign .rk { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-top: 1px; }
+
+/* Contents blocks */
+.lot { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--asphalt); border-radius: 8px; }
+.lot a { display: flex; flex-direction: column; padding: 18px 14px 20px; border-right: 3px solid var(--paint); color: inherit; min-height: 188px; }
+.lot a:last-child { border-right: 0; }
+.lot .ln { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 34px; line-height: 1; color: var(--brand); }
+.lot .lt { margin-top: 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 18px; line-height: 1.15; color: var(--ink); text-transform: uppercase; letter-spacing: .03em; }
+.lot .ld { margin-top: 6px; font-size: 13.5px; line-height: 1.35; color: var(--sub); }
+
+/* System diagram as direction signs */
+.flow { display: flex; align-items: stretch; gap: 0; }
+.flow .node { flex: 1; border: 2px solid var(--ink); border-radius: 9px; padding: 10px 12px; background: #fff; }
+.flow .node .nt { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 17px; line-height: 1.15; color: var(--ink); text-transform: uppercase; letter-spacing: .03em; }
+.flow .node .nd { font-size: 13.5px; line-height: 1.35; color: var(--sub); margin-top: 3px; }
+.flow .node.app { background: var(--brand); border-color: var(--brand); }
+.flow .node.app .nt, .flow .node.app .nd { color: #fff; }
+.flow .arrow { display: flex; align-items: center; padding: 0 6px; color: var(--muted); }
+
+.linksign { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-radius: 10px; background: var(--ink); color: #fff; position: relative; }
+.linksign::after { content: ''; position: absolute; inset: 4px; border: 1.5px solid rgba(255,255,255,.8); border-radius: 7px; pointer-events: none; }
+.linksign .lk { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 22px; letter-spacing: .05em; text-transform: uppercase; }
+.linksign .lu { font-size: 15px; opacity: .85; margin-top: 2px; }
+.linksign .lu.url { font-size: 13.5px; opacity: .7; margin-top: 0; }
+.linksign.brand { background: var(--brand); }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <div style="position:absolute; left:64px; top:56px; width:540px">
+    <div class="plate"><span class="pt">Case study</span></div>
+    <div class="cond" style="font-weight:700; font-size:104px; line-height:.95; color:var(--ink); margin-top:18px; letter-spacing:-.005em"><span class="lpt">P</span><img class="lp" src="img/logo.png" alt="">arkAid</div>
+    <p class="lead" style="font-size:19.5px; margin-top:12px; max-width:520px">A mobile app for finding street parking in downtown Calgary, built on the City of Calgary’s open data for parking zones, rates and restrictions.</p>
+    <div class="regsign" style="margin-top:26px">
+      <div class="rh"><span>Project details</span></div>
+      <div class="rr"><span class="rk">Role</span><span>Team member in a five-person SAIT capstone. Afterward, I continued the project on my own, with AI coding tools.</span></div>
+      <div class="rr"><span class="rk">Timeline</span><span>Capstone in Year 2, Semester 2. Follow-up work from September 2025 to November 2026.</span></div>
+      <div class="rr"><span class="rk">Platforms</span><span>iOS, Android and web from one React Native (Expo) codebase.</span></div>
+      <div class="rr"><span class="rk">Built with</span><span>React Native, Expo, MapLibre GL JS, react-native-maps, Node.js, Express, PostgreSQL with PostGIS, Jest.</span></div>
+    </div>
+  </div>
+  <div style="position:absolute; right:64px; top:56px; display:flex; gap:34px; align-items:flex-start">
+    <div class="phone" style="--s:0.6410">
+  <i class="pbtn l" style="top:77px;height:21px"></i><i class="pbtn l" style="top:113px;height:38px"></i><i class="pbtn l" style="top:158px;height:38px"></i><i class="pbtn r" style="top:132px;height:62px"></i>
+  <div class="pbody" style="padding:7.7px;border-radius:43.5px">
+    <div class="pwrap" style="width:250px;height:541px">
+      <div class="pscreen" style="border-radius:33.8px">
+        <img src="img/home.jpg" alt="Home">
+        <div class="psb "><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="phone" style="--s:0.6410">
+  <i class="pbtn l" style="top:77px;height:21px"></i><i class="pbtn l" style="top:113px;height:38px"></i><i class="pbtn l" style="top:158px;height:38px"></i><i class="pbtn r" style="top:132px;height:62px"></i>
+  <div class="pbody" style="padding:7.7px;border-radius:43.5px">
+    <div class="pwrap" style="width:250px;height:541px">
+      <div class="pscreen" style="border-radius:33.8px">
+        <img src="img/details.jpg" alt="Spot details">
+        <div class="psb light"><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+  <footer class="ftr"><span>Ehrl Balquin<span class="sep">|</span><a href="https://www.linkedin.com/in/ehrlbalquin/">linkedin.com/in/ehrlbalquin</a><span class="sep">|</span><a href="https://github.com/ginesbal/parkaid">github.com/ginesbal/parkaid</a></span><span class="nextsign"><span class="nl">Next</span><span class="nt">02<span class="sep">|</span>Summary</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer>
+</section><section class="page" id="p2"><header class="hdr"><div class="plate"><span class="pn">02</span><span class="pt">Summary</span></div></header><div class="body">
+<h1>The project in short</h1>
+<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:28px; margin-top:16px">
+  <div><h2>The problem</h2><p style="margin-top:6px; font-size:16px">The capstone version showed prices that did not match the City’s rates, used raw City addresses, and listed the same block several times.</p></div><div><h2>My role</h2><p style="margin-top:6px; font-size:16px">One of five in the capstone. Afterward I continued alone. Claude Code, an AI coding tool, wrote most of the code from March 2026, from my instructions.</p></div><div><h2>What changed</h2><p style="margin-top:6px; font-size:16px">The app reads the City’s rates by time of day and its rush-hour rules, shows each block once, and names it by block, side of the street and zone.</p></div><div><h2>Results</h2><p style="margin-top:6px; font-size:16px">Rates and rules match the City’s data for the tested blocks. 45 overlapping pins became 15. 170 automated tests pass. No usability testing yet.</p></div>
+</div>
+<div class="label" style="margin-top:46px">Contents</div>
+<div class="lot" style="margin-top:10px"><a href="#p3"><div class="ln">03</div><div class="lt">Before and after</div><div class="ld">The Home screen, capstone and current</div></a><a href="#p4"><div class="ln">04</div><div class="lt">Four questions</div><div class="ld">What a driver needs to know at the curb</div></a><a href="#p5"><div class="ln">05</div><div class="lt">The map</div><div class="ld">45 parking blocks within 250 m</div></a><a href="#p6"><div class="ln">06</div><div class="lt">Parking a car</div><div class="ld">Length, cost and paying</div></a><a href="#p7"><div class="ln">07</div><div class="lt">How it is built</div><div class="ld">System, my front-end work, the hard parts</div></a><a href="#p8"><div class="ln">08</div><div class="lt">How I worked</div><div class="ld">Role, AI tools and testing</div></a><a href="#p9"><div class="ln">09</div><div class="lt">Links</div><div class="ld">Source code, demo, Figma and next steps</div></a></div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">03<span class="sep">|</span>Before and after</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p3"><header class="hdr"><div class="plate"><span class="pn">03</span><span class="pt">Before and after</span></div></header><div class="body">
+<div style="display:grid; grid-template-columns: 1fr auto; gap:40px; height:100%">
+  <div>
+    <h1>The Home screen, capstone and current</h1>
+    <p class="lead">The same blocks on the same Tuesday at 1:40 PM. Left: the capstone code from October 2025. Right: the current version.</p>
+    <table style="margin-top:18px; font-size:14.5px">
+      <tr><th style="width:36px"></th><th style="width:78px"></th><th>Capstone</th><th>Current</th></tr>
+      <tr><td><span class="num amber" style="display:inline-block">1</span></td><td class="k">Price</td><td class="was">FREE, from a lookup on the zone code</td><td>$1.75 an hour, the City’s rate now</td></tr><tr><td><span class="num amber" style="display:inline-block">2</span></td><td class="k">Location</td><td class="was">“11 Av SW , Fr 5 St SW To 6 St SW”</td><td>“5–6 St, north side · Zone 3100”</td></tr><tr><td><span class="num amber" style="display:inline-block">3</span></td><td class="k">Rows</td><td class="was">One row per City segment, so blocks repeat</td><td>One row per block: 277 of 1,178 rows were repeats</td></tr><tr><td><span class="num " style="display:inline-block">4</span></td><td class="k">Rules</td><td class="was">Not shown</td><td>“No parking from 3:30 PM”</td></tr>
+    </table>
+    <p class="small" style="margin-top:12px">Numbers match the markers on the screens. Row 3 has no marker on the current screen: the repeats are gone.</p>
+  </div>
+  <div style="display:flex; gap:26px; align-items:flex-start">
+    <div><div class="pcap top">Capstone</div><div class="phone" style="--s:0.5846">
+  <i class="pbtn l" style="top:70px;height:19px"></i><i class="pbtn l" style="top:103px;height:35px"></i><i class="pbtn l" style="top:144px;height:35px"></i><i class="pbtn r" style="top:120px;height:56px"></i>
+  <div class="pbody" style="padding:7.0px;border-radius:39.8px">
+    <div class="pwrap" style="width:228px;height:493px">
+      <div class="pscreen" style="border-radius:30.8px">
+        <img src="img/before-home.jpg" alt="Capstone Home">
+        <div class="psb "><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div><span class="mk amber" style="left:76.92%;top:33.65%">1</span><span class="mk amber" style="left:76.92%;top:44.55%">2</span><span class="mk amber" style="left:6.15%;top:38.39%">3</span>
+    </div>
+  </div>
+</div></div>
+    <div><div class="pcap top">Current</div><div class="phone" style="--s:0.5846">
+  <i class="pbtn l" style="top:70px;height:19px"></i><i class="pbtn l" style="top:103px;height:35px"></i><i class="pbtn l" style="top:144px;height:35px"></i><i class="pbtn r" style="top:120px;height:56px"></i>
+  <div class="pbody" style="padding:7.0px;border-radius:39.8px">
+    <div class="pwrap" style="width:228px;height:493px">
+      <div class="pscreen" style="border-radius:30.8px">
+        <img src="img/home.jpg" alt="Current Home">
+        <div class="psb "><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div><span class="mk " style="left:47.69%;top:51.07%">1</span><span class="mk " style="left:86.67%;top:44.31%">2</span><span class="mk " style="left:58.97%;top:47.16%">4</span>
+    </div>
+  </div>
+</div></div>
+  </div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">04<span class="sep">|</span>Four questions</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p4"><header class="hdr"><div class="plate"><span class="pn">04</span><span class="pt">Four questions</span></div></header><div class="body">
+<div style="display:grid; grid-template-columns: 1fr auto; gap:64px; height:100%">
+  <div>
+    <h1>What a driver needs to know at the curb</h1>
+    <p class="lead">The Spot details screen answers four questions for one block: 11 Ave SW, between 5 St and 6 St, north side.</p>
+    <ol class="items" style="margin-top:28px; gap:30px; font-size:16.5px"><li><span class="num">1</span><div><div class="cond" style="font-weight:600; font-size:21px; line-height:1.2; color:var(--ink)">Can I park here now?</div><p style="margin-top:2px">Yes, until 3:30 PM. From 3:30 to 6 PM on weekdays, nobody may park on this block.</p></div></li><li><span class="num">2</span><div><div class="cond" style="font-weight:600; font-size:21px; line-height:1.2; color:var(--ink)">What does it cost right now?</div><p style="margin-top:2px">$1.75 an hour. The rate changes at 11 AM and 1:30 PM, and the day’s rates are listed further down.</p></div></li><li><span class="num">3</span><div><div class="cond" style="font-weight:600; font-size:21px; line-height:1.2; color:var(--ink)">How long can I stay?</div><p style="margin-top:2px">Two hours at most. The app adds that the signs at the curb have the final say.</p></div></li><li><span class="num">4</span><div><div class="cond" style="font-weight:600; font-size:21px; line-height:1.2; color:var(--ink)">Which zone do I pay?</div><p style="margin-top:2px">Zone 3100. One tap copies it for MyParking, the City’s ParkPlus app.</p></div></li></ol>
+  </div>
+  <div><div class="phone" style="--s:0.6308">
+  <i class="pbtn l" style="top:76px;height:20px"></i><i class="pbtn l" style="top:111px;height:38px"></i><i class="pbtn l" style="top:155px;height:38px"></i><i class="pbtn r" style="top:130px;height:61px"></i>
+  <div class="pbody" style="padding:7.6px;border-radius:42.8px">
+    <div class="pwrap" style="width:246px;height:532px">
+      <div class="pscreen" style="border-radius:33.2px">
+        <img src="img/details.jpg" alt="Spot details">
+        <div class="psb light"><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div><span class="mk " style="left:54.36%;top:50.71%">1</span><span class="mk " style="left:45.13%;top:47.04%">2</span><span class="mk " style="left:52.56%;top:65.28%">3</span><span class="mk " style="left:53.08%;top:94.43%">4</span>
+    </div>
+  </div>
+</div></div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">05<span class="sep">|</span>The map</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p5"><header class="hdr"><div class="plate"><span class="pn">05</span><span class="pt">The map</span></div></header><div class="body">
+<div style="display:grid; grid-template-columns: 1fr auto; gap:64px; height:100%">
+  <div>
+    <h1>45 parking blocks within 250 m</h1>
+    <p class="lead">Downtown, the pins pile up. Pins that would touch are grouped, so every pin on the map can be read.</p>
+    <ol class="items" style="margin-top:18px">
+      <li><span class="num ">1</span><div><b>Group pin.</b> How many spots it holds and the lowest rate. A tap zooms in until they separate.</div></li>
+      <li><span class="num ">2</span><div><b>Price pin.</b> One spot and its rate right now. The selected pin turns dark.</div></li>
+      <li><span class="num ">3</span><div><b>Sheet.</b> The suggested spot. “Show all 44 spots” opens the list.</div></li>
+    </ol>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-top:22px">
+      <div><h2>Sorting</h2><p style="margin-top:4px; font-size:15px"><b>Near me:</b> walking time, then price. <b>Best value:</b> rate now, then distance.</p></div>
+      <div><h2>Filters</h2><p style="margin-top:4px; font-size:15px">Street, lot, parkade or permit, within 150 m to 1 km. The list and the map share them.</p></div>
+    </div>
+    <div class="box" style="margin-top:22px; font-size:15px"><b>The grouping rule.</b> Pins closer than a group pill (70 × 34 px at the current zoom) share one pin, led by the best-ranked spot. If every spot in a group is within 12 m, a tap selects it instead of zooming. The same code runs on Google Maps and on MapLibre.</div>
+    <p class="small" style="margin-top:10px">Measured on the opening web view: 45 pins with 44 overlapping became 15 pins with 4 touching.</p>
+  </div>
+  <div><div class="phone" style="--s:0.6308">
+  <i class="pbtn l" style="top:76px;height:20px"></i><i class="pbtn l" style="top:111px;height:38px"></i><i class="pbtn l" style="top:155px;height:38px"></i><i class="pbtn r" style="top:130px;height:61px"></i>
+  <div class="pbody" style="padding:7.6px;border-radius:42.8px">
+    <div class="pwrap" style="width:246px;height:532px">
+      <div class="pscreen" style="border-radius:33.2px">
+        <img src="img/map.jpg" alt="Map">
+        <div class="psb "><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div><span class="mk " style="left:48.21%;top:32.70%">1</span><span class="mk " style="left:61.54%;top:16.59%">2</span><span class="mk " style="left:33.85%;top:66.00%">3</span>
+    </div>
+  </div>
+</div></div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">06<span class="sep">|</span>Parking a car</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p6"><header class="hdr"><div class="plate"><span class="pn">06</span><span class="pt">Parking a car</span></div></header><div class="body">
+<div style="display:grid; grid-template-columns: 1fr auto; gap:64px; height:100%">
+  <div>
+    <h1>Length, cost and paying, before the session starts</h1>
+    <p class="lead">The Park screen for the same block at 1:40 PM. No parking starts at 3:30 PM.</p>
+    <ol class="items" style="margin-top:18px">
+      <li><span class="num ">1</span><div><b>Lengths stop at the rule.</b> The longest choice is 1 hour 50 min, so the car is gone by 3:30 PM.</div></li>
+      <li><span class="num ">2</span><div><b>The reason is on screen.</b> “No parking from 3:30 PM, so the longest here is 1 hour 50 min.”</div></li>
+      <li><span class="num ">3</span><div><b>Cost before starting.</b> Ends at 2:40 PM and costs $1.75, at the City’s rate.</div></li>
+      <li><span class="num ">4</span><div><b>Paying.</b> ParkAid only keeps time. The driver pays in ParkPlus with zone 3100, and is reminded to end that session too.</div></li>
+    </ol>
+    <div class="box" style="margin-top:22px; font-size:15px"><b>Later the same day.</b> At 2:40 PM the longest stay on this block is 50 min. At 3:40 PM the list says “No parking until 6:00 PM”, and Spot details offers no Start. Both are in the rush-hour recording.</div>
+    <p class="small" style="margin-top:10px">The capstone version had a demo here: the driver picked a rate of $1.50, $2.50 or $3.50 an hour.</p>
+  </div>
+  <div><div class="phone" style="--s:0.6308">
+  <i class="pbtn l" style="top:76px;height:20px"></i><i class="pbtn l" style="top:111px;height:38px"></i><i class="pbtn l" style="top:155px;height:38px"></i><i class="pbtn r" style="top:130px;height:61px"></i>
+  <div class="pbody" style="padding:7.6px;border-radius:42.8px">
+    <div class="pwrap" style="width:246px;height:532px">
+      <div class="pscreen" style="border-radius:33.2px">
+        <img src="img/park.jpg" alt="Park">
+        <div class="psb "><span class="ptime">1:40</span><span class="picons"><svg width="72" height="13" viewBox="0 0 72 13" aria-hidden="true" fill="currentColor"><rect x="0" y="8.5" width="3.2" height="4" rx="1"/><rect x="4.6" y="6.5" width="3.2" height="6" rx="1"/><rect x="9.2" y="4" width="3.2" height="8.5" rx="1"/><rect x="13.8" y="1.5" width="3.2" height="11" rx="1"/><path d="M30.2 3.1c2.7 0 5.2 1 7.1 2.8l1.3-1.4C36.3 2.3 33.4 1.1 30.2 1.1S24 2.3 21.7 4.5L23 5.9c1.9-1.8 4.4-2.8 7.2-2.8zM30.2 6.4c1.8 0 3.4.7 4.7 1.8l1.3-1.4c-1.6-1.4-3.7-2.3-6-2.3s-4.4.9-6 2.3l1.3 1.4c1.3-1.1 2.9-1.8 4.7-1.8zM30.2 9.6c.9 0 1.7.3 2.3.9l-2.3 2.4-2.3-2.4c.6-.6 1.4-.9 2.3-.9z"/><rect x="44.5" y="1" width="23" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="1"/><rect x="46.5" y="3" width="19" height="7.5" rx="1.8"/><path d="M69 4.6c.9.3 1.5 1.1 1.5 2.1s-.6 1.8-1.5 2.1z" fill-opacity=".45"/></svg></span></div>
+        <span class="pisland"></span>
+        <span class="phome"></span>
+      </div><span class="mk " style="left:53.85%;top:47.63%">1</span><span class="mk " style="left:61.54%;top:56.16%">2</span><span class="mk " style="left:42.31%;top:71.92%">3</span><span class="mk " style="left:92.31%;top:78.67%">4</span>
+    </div>
+  </div>
+</div></div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">07<span class="sep">|</span>How it is built</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p7"><header class="hdr"><div class="plate"><span class="pn">07</span><span class="pt">How it is built</span></div></header><div class="body">
+<h1>One codebase for iOS, Android and web</h1>
+<p class="lead" style="font-size:15.5px">Expo SDK 54<span class="sep">|</span>React Native 0.81<span class="sep">|</span>React Navigation<span class="sep">|</span>react-native-maps<span class="sep">|</span>MapLibre GL JS<span class="sep">|</span>Node.js<span class="sep">|</span>Express<span class="sep">|</span>PostgreSQL + PostGIS on Supabase<span class="sep">|</span>Render<span class="sep">|</span>Jest</p>
+<div class="flow" style="margin-top:18px"><div class="node"><div class="nt">City of Calgary open data</div><div class="nd">Zones, rates, restrictions</div></div><div class="arrow"><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></div><div class="node"><div class="nt">Import script</div><div class="nd">Four datasets into one table</div></div><div class="arrow"><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></div><div class="node"><div class="nt">PostgreSQL + PostGIS</div><div class="nd">Supabase; finds nearby spots</div></div><div class="arrow"><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></div><div class="node"><div class="nt">Express API</div><div class="nd">Render; merges block segments</div></div><div class="arrow"><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></div><div class="node app"><div class="nt">React Native app</div><div class="nd">Google Maps on iOS and Android, MapLibre on the web</div></div></div>
+<div style="display:grid; grid-template-columns: 1fr 1.1fr; gap:48px; margin-top:24px">
+  <div><h2>My front-end work</h2><ul class="dots" style="margin-top:8px; font-size:15px; display:grid; gap:4px"><li><b>Screens:</b> Welcome, Home, Map, Spot details, Park and Session, with React Navigation.</li><li><b>Components:</b> spot rows, map and group pins, payment actions.</li><li><b>Rules in tested functions:</b> rates, rush hour, ranking, grouping.</li><li><b>Platform code:</b> a web map file, a smaller pin for Android.</li><li><b>State:</b> a session context, hooks for location and spots, cached responses.</li><li><b>Accessibility:</b> screen reader labels, Reduce Motion, keyboard order on the web.</li></ul></div>
+  <div><h2>The hard parts</h2>
+    <table style="margin-top:4px; font-size:14.5px"><tr><td class="k" style="white-space:normal; width:170px">Rates change during the day</td><td>The City’s rate bands become time ranges; costs count only charged hours.</td></tr><tr><td class="k" style="white-space:normal; width:170px">Rush-hour rules</td><td>Checked against the time now and the end of a planned stay.</td></tr><tr><td class="k" style="white-space:normal; width:170px">Repeated segments</td><td>The API merges rows for the same stretch of a block.</td></tr><tr><td class="k" style="white-space:normal; width:170px">Crowded map</td><td>Pins grouped by distance on screen, on both map libraries.</td></tr><tr><td class="k" style="white-space:normal; width:170px">Android markers</td><td>Drawn into 100 × 100 px images, which cut off labels; Android gets a smaller badge.</td></tr></table>
+  </div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">08<span class="sep">|</span>How I worked</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p8"><header class="hdr"><div class="plate"><span class="pn">08</span><span class="pt">How I worked</span></div></header><div class="body">
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:56px; height:100%">
+  <div>
+    <h1>My role, AI tools and testing</h1>
+    <h2 style="margin-top:16px">Role</h2>
+    <p style="margin-top:4px; font-size:15px">In the SAIT capstone, a team of five built the base app: list, map, session screen, API and data import. This repo starts from that code (September 29, 2025), so the team’s commits are not in it. After the capstone, I continued on my own.</p>
+    <h2 style="margin-top:14px">AI tools</h2>
+    <p style="margin-top:4px; font-size:15px">Up to October 28, 2026, Claude Code wrote 101 of the 128 commits, from my instructions. 27 are under my accounts; a few came from an OpenAI Codex branch. I decided what to build and fix, and in what order.</p>
+    <h2 style="margin-top:14px">Each review round</h2>
+    <ol class="items" style="margin-top:8px; gap:6px; font-size:15px"><li><span class="num">1</span><div><b>Capture:</b> the web build with City data at a fixed day and time</div></li><li><span class="num">2</span><div><b>Review:</b> usability, wording, contrast, keyboard, screen sizes</div></li><li><span class="num">3</span><div><b>Decide:</b> I chose the order: rates and rules first</div></li><li><span class="num">4</span><div><b>Fix:</b> one change per commit</div></li><li><span class="num">5</span><div><b>Verify:</b> tests, three screen widths, Android build</div></li></ol>
+  </div>
+  <div style="padding-top:66px">
+    <h2>What was tested</h2>
+    <table style="margin-top:4px; font-size:14.5px"><tr><td class="k" style="width:120px">Unit tests</td><td>152 app and 18 backend tests pass</td></tr><tr><td class="k" style="width:120px">Real data</td><td>1,672 City records near 11 Ave SW and 5 St SW</td></tr><tr><td class="k" style="width:120px">Map density</td><td>45 pins (44 overlapping) to 15 (4 touching)</td></tr><tr><td class="k" style="width:120px">Contrast</td><td>Gray on selected rows 4.23:1 to 4.74:1; AA is 4.5:1</td></tr><tr><td class="k" style="width:120px">Keyboard (web)</td><td>Pins skipped, the list has them; search first</td></tr><tr><td class="k" style="width:120px">Small screens</td><td>At 360 × 640, Add time and End session now on screen</td></tr><tr><td class="k" style="width:120px">Builds</td><td>Web at 360, 390, 1280 px; Android bundle</td></tr></table>
+    <div class="box amber" style="margin-top:14px; font-size:15px"><b style="color:var(--amber)">Not tested yet:</b> usability with drivers, a physical phone, the database test suites, query speed.</div>
+  </div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="nextsign"><span class="nl">Next</span><span class="nt">09<span class="sep">|</span>Links</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></span></footer></section><section class="page" id="p9"><header class="hdr"><div class="plate"><span class="pn">09</span><span class="pt">Links</span></div></header><div class="body">
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:56px; height:100%">
+  <div>
+    <h1>See it, read the code, open the design</h1>
+    <div style="display:grid; gap:12px; margin-top:20px">
+      <a class="linksign" href="https://github.com/ginesbal/parkaid"><div><div class="lk">Source code</div><div class="lu">github.com/ginesbal/parkaid</div></div><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></a>
+      <a class="linksign brand" href="https://github.com/ginesbal/parkaid/tree/main/docs/walkthrough"><div><div class="lk">Demo recordings</div><div class="lu">Seven clips of the real build</div><div class="lu url">github.com/ginesbal/parkaid/tree/main/docs/walkthrough</div></div><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></a>
+      <a class="linksign" href="https://www.figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF/ParkAid"><div><div class="lk">Figma file</div><div class="lu">Variables, icons, 11 components, 5 screens</div><div class="lu url">figma.com/design/dLkYCXg0Xzfm4NAGWAwcJF</div></div><svg class="arw" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" fill="currentColor"/></svg></a>
+    </div>
+    <p class="small" style="margin-top:12px">Recordings: 1 Finding parking, 2 The map, 3 Spot details, 4 Parking, 5 Rush hour, 6 Details while parked, 7 On a laptop. The Figma file is rebuilt from the code; its session screens and prototype links are not finished.</p>
+  </div>
+  <div style="padding-top:12px">
+    <h2>Next steps</h2>
+    <ul class="dots" style="margin-top:8px; font-size:15px">
+      <li>Usability tests with five drivers downtown.</li>
+      <li>Testing on a physical iPhone and Android phone.</li>
+      <li>Loading the new data import into the live database.</li>
+      <li>Finishing the Figma file.</li>
+    </ul>
+    <h2 style="margin-top:22px">About the screens</h2>
+    <p style="margin-top:6px; font-size:15px">The current screens are the app’s web build in an iPhone-sized window (390 × 844 pt) with iPhone safe areas emulated. The capstone screen is its October 2025 web build, with a plain status bar added above it. All show the City’s records on a Tuesday at 1:40 PM. The phone frames and status bars are drawn on.</p>
+    <p class="small" style="margin-top:14px">This case study was drafted with Claude Code. Its numbers come from the repository and from test runs.</p>
+  </div>
+</div></div><footer class="ftr"><span>ParkAid case study<span class="sep">|</span>Ehrl Balquin</span><span class="endnote">End of case study</span></footer></section>
+</body>
+</html>
