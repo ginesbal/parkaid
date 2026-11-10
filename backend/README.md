@@ -92,8 +92,8 @@ push to the connected branch then auto-deploys.
 | `GET`  | `/health` | Liveness check (used by Render) — always 200 when the process is up |
 | `GET`  | `/api/test-db` | Strict database connectivity + row count in `parking_spots` |
 | `GET`  | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Spatial search. `type`: `on_street`/`off_street`/`residential`/`school`; `free=true` filters unpriced |
-| `GET`  | `/api/places/autocomplete?input=` | Google Places proxy — needs `GOOGLE_PLACES_API_KEY` (optional) |
-| `GET`  | `/api/places/details?place_id=` | Google Places proxy — needs `GOOGLE_PLACES_API_KEY` (optional) |
+| `GET`  | `/api/places/autocomplete?input=` | Address search, kept to Calgary. Free OpenStreetMap search (Photon) by default; Google Places API (New) when `GOOGLE_PLACES_API_KEY` is set |
+| `GET`  | `/api/places/details?place_id=` | Coordinates (and, with Google, name and address) for one suggestion |
 
 ---
 
@@ -103,7 +103,7 @@ push to the connected branch then auto-deploys.
 | -------- | -------- | ------- |
 | `DATABASE_URL` | **Yes** | Supabase Postgres connection (pooler URI) |
 | `PORT` | No | Listen port (Render sets this; defaults to `3000`) |
-| `GOOGLE_PLACES_API_KEY` | No | Enables the `/api/places/*` proxy |
+| `GOOGLE_PLACES_API_KEY` | No | Switches address search from free OpenStreetMap search to Google. The key needs **Places API (New)** enabled (Google no longer offers the older Places API to new projects) |
 | `CALGARY_API_TOKEN` | No | Higher rate limit for `npm run setup` |
 | `LOG_DIR` / `LOG_FILE` | No | Also write structured logs to a file (off by default) |
 

@@ -71,13 +71,14 @@ Backend
 - Node.js and Express for the API
 - node-postgres (`pg`) to talk to the database with plain SQL
 - PostGIS for the "find spots within X meters" queries
-- axios to call the Google Places API from the server
+- axios to call the address search services from the server
 
 Database and data
 - PostgreSQL, hosted on Supabase
 - Parking data from Calgary's Open Data (about 2,700 spots)
 - Street rates by zone and time of day from the City's on-street parking map
-- Google Places API for address search
+- Address search: OpenStreetMap search (Photon) for free, or Google Places
+  when a key is set
 
 Hosting and testing
 - Render hosts the backend and redeploys when you push to GitHub
@@ -93,13 +94,14 @@ routes running SQL.
 Mobile app          Express API              PostgreSQL + PostGIS
 (React Native)  ->  (on Render)         ->   (Supabase)
                     finds nearby spots,       parking_spots table
-                    proxies Google Places
+                    proxies address search
 ```
 
 When you search, the app sends your location to the backend. The backend runs a
 database query to find the closest spots and sends back a list. The address
-search and map also go through the backend. That way the Google API key stays on
-the server and is never shipped inside the app.
+search and map also go through the backend. Address search uses free
+OpenStreetMap search (Photon), or Google when `GOOGLE_PLACES_API_KEY` is set on
+the server, so no search key is shipped inside the app.
 
 ## Project structure
 
@@ -248,8 +250,8 @@ at `/api/test-db` instead.
 | GET | `/health` | Says the server is up. Used by Render. Always returns 200 when running. |
 | GET | `/api/test-db` | Checks the database connection and returns how many spots are stored. |
 | GET | `/api/parking/nearby?lat=&lng=&radius=&type=&free=` | Finds nearby spots. `type` can be `on_street`, `off_street`, `residential`, or `school`. `free=true` shows only unpriced spots. Street spots include the City's rates by time of day (`rates`) and rush-hour restrictions. Taxi, valet and other zones the public can't use are left out. The City splits a zone's stretch of a block into segments; each stretch comes once, at its nearest segment. |
-| GET | `/api/places/autocomplete?input=` | Address search suggestions (calls Google from the server). |
-| GET | `/api/places/details?place_id=` | Details for one address (calls Google from the server). |
+| GET | `/api/places/autocomplete?input=` | Address search suggestions in Calgary. Uses free OpenStreetMap search (Photon), or Google Places when `GOOGLE_PLACES_API_KEY` is set. |
+| GET | `/api/places/details?place_id=` | Coordinates (and, with Google, name and address) for one suggestion. |
 
 ## What I worked on
 

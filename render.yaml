@@ -20,6 +20,7 @@ services:
       # service's Environment tab). Use your Supabase pooler URI (port 6543).
       - key: DATABASE_URL
         sync: false
-      # Optional — uncomment to enable the /api/places/* proxy.
+      # Optional. Address search works without it (free OpenStreetMap search).
+      # Uncomment to use Google instead; the key needs "Places API (New)".
       # - key: GOOGLE_PLACES_API_KEY
       #   sync: false
