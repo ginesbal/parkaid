@@ -13,6 +13,10 @@ const { chromium } = require('playwright');
         width: '1280px',
         height: '720px',
         printBackground: true,
+        // Bookmarks from the page headings, and tags so screen readers get
+        // the text in reading order.
+        outline: true,
+        tagged: true,
     });
     await browser.close();
 })();
