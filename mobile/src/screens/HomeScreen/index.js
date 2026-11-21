@@ -25,7 +25,7 @@ import { logger } from '../../utils/loggers';
 import { getZoneShown, pickTopSpot, rankByValue, rankSpots } from '../../utils/spotPresentation';
 
 import { DEFAULT_SEARCH_RADIUS } from '../../constants/parking';
-import { TOKENS } from '../../constants/theme';
+import { TAB_SCREEN_EDGES, TOKENS } from '../../constants/theme';
 import { styles } from './HomeScreen.styles';
 
 // Marks where permit-only blocks start in the list.
@@ -305,7 +305,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <>
       <ScreenStatusBar style="dark" />
-      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+      <SafeAreaView edges={TAB_SCREEN_EDGES} style={styles.container}>
         <LiveStage>
           <Animated.View style={[styles.content, contentIn]}>
           <FlatList
